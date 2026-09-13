@@ -9,9 +9,13 @@ on:
       - '.github/workflows/build-speedhunt-mod.yml'
   workflow_dispatch: {}
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     defaults:
       run:
         working-directory: speedhunt-mod
@@ -37,3 +41,18 @@ jobs:
           name: speedhunt-mod-jar
           path: speedhunt-mod/build/libs/*.jar
           if-no-files-found: error
+
+      - name: Commit built jar back to the repo
+        run: |
+          JAR=$(ls build/libs/*.jar | grep -v -- '-sources.jar' | head -1)
+          mkdir -p dist
+          cp "$JAR" dist/speedhunt-mod.jar
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f dist/speedhunt-mod.jar
+          if git diff --cached --quiet; then
+            echo "Jar unchanged, nothing to commit."
+          else
+            git commit -m "Update built mod jar [skip ci]"
+            git push
+          fi
