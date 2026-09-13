@@ -1,0 +1,28 @@
+{
+	"schemaVersion": 1,
+	"id": "speedhunt",
+	"version": "${version}",
+	"name": "Speedhunt: Speedrunner vs Hunter",
+	"description": "Спидраннер против охотника (Manhunt) — случайная выдача ролей, отсчёт неприкосновенности, HUD, бонусные ресурсы и настройки прямо на сервере.",
+	"authors": [
+		"naglyadno.team"
+	],
+	"contact": {},
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.naglyadno.speedhunt.SpeedHuntMod"
+		],
+		"client": [
+			"com.naglyadno.speedhunt.client.SpeedHuntClient"
+		]
+	},
+	"mixins": [],
+	"depends": {
+		"fabricloader": ">=0.16.9",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
