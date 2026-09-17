@@ -1,5 +1,7 @@
 package com.naglyadno.speedhunt.client.gui;
 
+import com.naglyadno.speedhunt.client.ClientGameState;
+import com.naglyadno.speedhunt.network.GameStatePayload;
 import com.naglyadno.speedhunt.network.SetLoadoutPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
@@ -37,6 +39,7 @@ public class LootEditScreen extends Screen {
 	private int scrollRow;
 
 	private final List<ItemStack> loadout = new ArrayList<>();
+	private boolean enabled;
 
 	private int gridX;
 	private int gridY;
@@ -51,16 +54,24 @@ public class LootEditScreen extends Screen {
 				.filter(item -> item != Items.AIR)
 				.collect(Collectors.toList());
 		this.filtered = this.allItems;
+
+		GameStatePayload state = ClientGameState.latest();
+		this.enabled = state == null || ("HUNTER".equals(role) ? state.hunterLootEnabled() : state.speedrunnerLootEnabled());
 	}
 
 	@Override
 	protected void init() {
 		gridX = this.width / 2 - (GRID_COLUMNS * SLOT_SIZE) / 2;
-		gridY = 46;
+		gridY = 66;
 		loadoutX = this.width / 2 - (LOADOUT_SLOTS * SLOT_SIZE) / 2;
 		loadoutY = gridY + GRID_ROWS * SLOT_SIZE + 30;
 
-		searchField = new TextFieldWidget(this.textRenderer, gridX, 24, GRID_COLUMNS * SLOT_SIZE, 16,
+		this.addDrawableChild(ButtonWidget.builder(enabledButtonText(), button -> {
+			enabled = !enabled;
+			button.setMessage(enabledButtonText());
+		}).dimensions(this.width / 2 - 100, 22, 200, 20).build());
+
+		searchField = new TextFieldWidget(this.textRenderer, gridX, 46, GRID_COLUMNS * SLOT_SIZE, 16,
 				Text.literal("Поиск"));
 		searchField.setChangedListener(this::onSearchChanged);
 		this.addDrawableChild(searchField);
@@ -70,6 +81,11 @@ public class LootEditScreen extends Screen {
 				.dimensions(this.width / 2 - 104, loadoutY + SLOT_SIZE + 14, 100, 20).build());
 		this.addDrawableChild(ButtonWidget.builder(Text.literal("Отмена"), b -> this.client.setScreen(parent))
 				.dimensions(this.width / 2 + 4, loadoutY + SLOT_SIZE + 14, 100, 20).build());
+	}
+
+	private Text enabledButtonText() {
+		return Text.literal("Выдавать лут при старте: " + (enabled ? "ВКЛ" : "ВЫКЛ"))
+				.formatted(enabled ? Formatting.GREEN : Formatting.RED);
 	}
 
 	private void onSearchChanged(String query) {
@@ -92,7 +108,7 @@ public class LootEditScreen extends Screen {
 			ids.add(Registries.ITEM.getId(stack.getItem()).toString());
 			counts.add(stack.getCount());
 		}
-		ClientPlayNetworking.send(new SetLoadoutPayload(role, ids, counts));
+		ClientPlayNetworking.send(new SetLoadoutPayload(role, ids, counts, enabled));
 		this.client.setScreen(parent);
 	}
 

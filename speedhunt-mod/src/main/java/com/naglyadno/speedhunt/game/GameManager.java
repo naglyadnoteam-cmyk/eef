@@ -343,20 +343,33 @@ public class GameManager {
 		}
 	}
 
-	/** Меняет стартовый лут роли (только пока матч не начат). Вызывается из меню редактора лута. */
-	public Text setLoadout(String roleName, List<SpeedHuntConfig.LootEntry> entries) {
+	/** Меняет стартовый лут и его вкл/выкл для роли (только пока матч не начат). Вызывается из редактора лута. */
+	public Text setLoadout(String roleName, List<SpeedHuntConfig.LootEntry> entries, boolean enabled) {
 		if (state != GameState.WAITING) {
 			return Text.literal("Менять лут можно только до начала матча.").formatted(Formatting.RED);
 		}
 		if ("HUNTER".equals(roleName)) {
 			config.hunterLoadout = entries;
+			config.hunterBonusEnabled = enabled;
 		} else if ("SPEEDRUNNER".equals(roleName)) {
 			config.speedrunnerLoadout = entries;
+			config.speedrunnerBonusEnabled = enabled;
 		} else {
 			return Text.literal("Неизвестная роль.").formatted(Formatting.RED);
 		}
 		config.save(configPath);
-		return Text.literal("Стартовый лут обновлён.").formatted(Formatting.GREEN);
+		return Text.literal(enabled ? "Стартовый лут обновлён и включён." : "Стартовый лут сохранён, но выдача выключена.")
+				.formatted(Formatting.GREEN);
+	}
+
+	/** Задаёт минимальное число игроков онлайн для старта матча (поддерживает любое количество, не только двоих). */
+	public Text setMinPlayers(int value) {
+		if (value < 2) {
+			return Text.literal("Минимум 2 игрока.").formatted(Formatting.RED);
+		}
+		config.minPlayers = value;
+		config.save(configPath);
+		return Text.literal("Минимум игроков для старта: " + value).formatted(Formatting.GREEN);
 	}
 
 	public void onRespawn(ServerPlayerEntity player) {
@@ -432,7 +445,10 @@ public class GameManager {
 					tracker,
 					yaw,
 					dist,
-					lastResultMessage
+					lastResultMessage,
+					config.hunterBonusEnabled,
+					config.speedrunnerBonusEnabled,
+					config.minPlayers
 			);
 			ServerPlayNetworking.send(player, payload);
 		}

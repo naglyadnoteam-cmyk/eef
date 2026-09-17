@@ -1,6 +1,7 @@
 package com.naglyadno.speedhunt.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.naglyadno.speedhunt.SpeedHuntMod;
 import com.naglyadno.speedhunt.game.GameManager;
 import net.minecraft.command.CommandRegistryAccess;
@@ -9,7 +10,7 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
-/** Команды /speedhunt start | stop | status. */
+/** Команды /speedhunt start | stop | status | minplayers. */
 public final class SpeedHuntCommand {
 
 	private SpeedHuntCommand() {
@@ -28,6 +29,9 @@ public final class SpeedHuntCommand {
 						.executes(SpeedHuntCommand::stop))
 				.then(CommandManager.literal("status")
 						.executes(SpeedHuntCommand::status))
+				.then(CommandManager.literal("minplayers")
+						.then(CommandManager.argument("count", IntegerArgumentType.integer(2))
+								.executes(SpeedHuntCommand::minPlayers)))
 		);
 	}
 
@@ -59,6 +63,17 @@ public final class SpeedHuntCommand {
 		}
 		ctx.getSource().sendFeedback(() -> Text.literal("Состояние матча: " + manager.state().name())
 				.formatted(Formatting.AQUA), false);
+		return 1;
+	}
+
+	private static int minPlayers(com.mojang.brigadier.context.CommandContext<ServerCommandSource> ctx) {
+		GameManager manager = SpeedHuntMod.getGameManager();
+		if (manager == null) {
+			ctx.getSource().sendError(Text.literal("Speedhunt ещё не готов."));
+			return 0;
+		}
+		int count = IntegerArgumentType.getInteger(ctx, "count");
+		ctx.getSource().sendFeedback(() -> manager.setMinPlayers(count), true);
 		return 1;
 	}
 }

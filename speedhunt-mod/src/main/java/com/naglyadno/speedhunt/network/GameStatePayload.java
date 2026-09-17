@@ -18,7 +18,10 @@ public record GameStatePayload(
 		boolean trackerActive,
 		float trackerYaw,
 		float trackerDistance,
-		String lastResultMessage
+		String lastResultMessage,
+		boolean hunterLootEnabled,
+		boolean speedrunnerLootEnabled,
+		int minPlayers
 ) implements CustomPayload {
 
 	public static final CustomPayload.Id<GameStatePayload> ID =
@@ -36,6 +39,9 @@ public record GameStatePayload(
 		buf.writeFloat(payload.trackerYaw);
 		buf.writeFloat(payload.trackerDistance);
 		buf.writeString(payload.lastResultMessage);
+		buf.writeBoolean(payload.hunterLootEnabled);
+		buf.writeBoolean(payload.speedrunnerLootEnabled);
+		buf.writeInt(payload.minPlayers);
 	}
 
 	private static GameStatePayload read(RegistryByteBuf buf) {
@@ -47,7 +53,10 @@ public record GameStatePayload(
 				buf.readBoolean(),
 				buf.readFloat(),
 				buf.readFloat(),
-				buf.readString()
+				buf.readString(),
+				buf.readBoolean(),
+				buf.readBoolean(),
+				buf.readInt()
 		);
 	}
 

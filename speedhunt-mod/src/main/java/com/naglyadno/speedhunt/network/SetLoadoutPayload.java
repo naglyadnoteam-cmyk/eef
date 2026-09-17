@@ -9,8 +9,12 @@ import net.minecraft.util.Identifier;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Клиент -> сервер: новый стартовый лут для роли ("HUNTER" или "SPEEDRUNNER"), задан из редактора лута. */
-public record SetLoadoutPayload(String role, List<String> itemIds, List<Integer> counts) implements CustomPayload {
+/**
+ * Клиент -> сервер: новый стартовый лут для роли ("HUNTER" или "SPEEDRUNNER"),
+ * задан из редактора лута, плюс включена ли вообще выдача этого лута.
+ */
+public record SetLoadoutPayload(String role, List<String> itemIds, List<Integer> counts, boolean enabled)
+		implements CustomPayload {
 
 	public static final CustomPayload.Id<SetLoadoutPayload> ID =
 			new CustomPayload.Id<>(Identifier.of(SpeedHuntMod.MOD_ID, "set_loadout"));
@@ -25,6 +29,7 @@ public record SetLoadoutPayload(String role, List<String> itemIds, List<Integer>
 			buf.writeString(payload.itemIds.get(i));
 			buf.writeInt(payload.counts.get(i));
 		}
+		buf.writeBoolean(payload.enabled);
 	}
 
 	private static SetLoadoutPayload read(RegistryByteBuf buf) {
@@ -36,7 +41,8 @@ public record SetLoadoutPayload(String role, List<String> itemIds, List<Integer>
 			ids.add(buf.readString());
 			counts.add(buf.readInt());
 		}
-		return new SetLoadoutPayload(role, ids, counts);
+		boolean enabled = buf.readBoolean();
+		return new SetLoadoutPayload(role, ids, counts, enabled);
 	}
 
 	@Override

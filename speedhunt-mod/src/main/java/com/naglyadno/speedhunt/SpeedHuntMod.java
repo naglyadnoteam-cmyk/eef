@@ -71,7 +71,7 @@ public class SpeedHuntMod implements ModInitializer {
 					for (int i = 0; i < payload.itemIds().size(); i++) {
 						entries.add(new LootEntry(payload.itemIds().get(i), payload.counts().get(i)));
 					}
-					Text result = manager.setLoadout(payload.role(), entries);
+					Text result = manager.setLoadout(payload.role(), entries, payload.enabled());
 					context.player().sendMessage(result, false);
 				}));
 
