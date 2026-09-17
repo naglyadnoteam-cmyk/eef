@@ -24,13 +24,16 @@ public final class HudOverlay {
 		if (!settings.hudEnabled) {
 			return;
 		}
-		GameStatePayload payload = ClientGameState.latest();
-		if (payload == null) {
-			return;
-		}
 
 		MinecraftClient client = MinecraftClient.getInstance();
 		if (client.player == null || client.options.hudHidden) {
+			return;
+		}
+
+		renderBanner(context, client);
+
+		GameStatePayload payload = ClientGameState.latest();
+		if (payload == null) {
 			return;
 		}
 
@@ -63,6 +66,20 @@ public final class HudOverlay {
 			context.drawText(client.textRenderer, line, x1 + PADDING, textY, 0xFFFFFF, true);
 			textY += lineHeight;
 		}
+	}
+
+	private static void renderBanner(DrawContext context, MinecraftClient client) {
+		String banner = ClientGameState.activeBanner();
+		if (banner == null) {
+			return;
+		}
+		int screenWidth = context.getScaledWindowWidth();
+		Text text = Text.literal(banner).formatted(Formatting.YELLOW, Formatting.BOLD);
+		int textWidth = client.textRenderer.getWidth(text);
+		int x = screenWidth / 2 - textWidth / 2;
+		int y = 24;
+		context.fill(x - 6, y - 4, x + textWidth + 6, y + client.textRenderer.fontHeight + 4, 0xA0101010);
+		context.drawText(client.textRenderer, text, x, y, 0xFFFFFF, true);
 	}
 
 	private static List<Text> buildLines(GameStatePayload payload, ClientSettings settings) {

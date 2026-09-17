@@ -8,6 +8,8 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Настройки геймплея Speedhunt. Хранятся в config/speedhunt.json и
@@ -42,15 +44,41 @@ public class SpeedHuntConfig {
 	/** На сколько секунд трекер остаётся активным. */
 	public int trackerDurationSeconds = 6;
 
-	// --- Бонусные ресурсы ---
+	// --- Стартовый лут (редактируется в игровом меню, кнопка "Изменить лут", до начала матча) ---
 	public boolean hunterBonusEnabled = true;
-	public int hunterBonusGoldenApples = 1;
-	public int hunterBonusIronIngots = 8;
-	public int hunterBonusArrows = 16;
+	public List<LootEntry> hunterLoadout = defaultHunterLoadout();
 
 	public boolean speedrunnerBonusEnabled = true;
-	public int speedrunnerBonusGoldenApples = 1;
-	public int speedrunnerBonusEnderPearls = 2;
+	public List<LootEntry> speedrunnerLoadout = defaultSpeedrunnerLoadout();
+
+	/** Один предмет стартового набора: id предмета (например "minecraft:golden_apple") и количество. */
+	public static class LootEntry {
+		public String item;
+		public int count;
+
+		public LootEntry() {
+		}
+
+		public LootEntry(String item, int count) {
+			this.item = item;
+			this.count = count;
+		}
+	}
+
+	private static List<LootEntry> defaultHunterLoadout() {
+		List<LootEntry> list = new ArrayList<>();
+		list.add(new LootEntry("minecraft:golden_apple", 1));
+		list.add(new LootEntry("minecraft:iron_ingot", 8));
+		list.add(new LootEntry("minecraft:arrow", 16));
+		return list;
+	}
+
+	private static List<LootEntry> defaultSpeedrunnerLoadout() {
+		List<LootEntry> list = new ArrayList<>();
+		list.add(new LootEntry("minecraft:golden_apple", 1));
+		list.add(new LootEntry("minecraft:ender_pearl", 2));
+		return list;
+	}
 
 	public static SpeedHuntConfig loadOrCreate(Path path) {
 		try {

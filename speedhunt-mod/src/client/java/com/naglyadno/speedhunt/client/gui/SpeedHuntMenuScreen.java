@@ -2,6 +2,7 @@ package com.naglyadno.speedhunt.client.gui;
 
 import com.naglyadno.speedhunt.client.ClientSettings;
 import com.naglyadno.speedhunt.network.RequestActionPayload;
+import com.naglyadno.speedhunt.network.RequestCompassPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -21,7 +22,7 @@ public class SpeedHuntMenuScreen extends Screen {
 	@Override
 	protected void init() {
 		int centerX = this.width / 2;
-		int y = this.height / 2 - 64;
+		int y = this.height / 2 - 118;
 
 		this.addDrawableChild(ButtonWidget.builder(
 				Text.literal("Начать матч").formatted(Formatting.GREEN),
@@ -38,6 +39,27 @@ public class SpeedHuntMenuScreen extends Screen {
 					ClientPlayNetworking.send(new RequestActionPayload(false));
 					close();
 				}
+		).dimensions(centerX - 100, y, 200, 20).build());
+
+		y += 32;
+		this.addDrawableChild(ButtonWidget.builder(
+				Text.literal("Получить компас на соперника"),
+				button -> {
+					ClientPlayNetworking.send(new RequestCompassPayload());
+					close();
+				}
+		).dimensions(centerX - 100, y, 200, 20).build());
+
+		y += 32;
+		this.addDrawableChild(ButtonWidget.builder(
+				Text.literal("Изменить лут: Спидраннер").formatted(Formatting.GREEN),
+				button -> this.client.setScreen(new LootEditScreen(this, "SPEEDRUNNER"))
+		).dimensions(centerX - 100, y, 200, 20).build());
+
+		y += 24;
+		this.addDrawableChild(ButtonWidget.builder(
+				Text.literal("Изменить лут: Охотник").formatted(Formatting.RED),
+				button -> this.client.setScreen(new LootEditScreen(this, "HUNTER"))
 		).dimensions(centerX - 100, y, 200, 20).build());
 
 		y += 32;
@@ -71,11 +93,11 @@ public class SpeedHuntMenuScreen extends Screen {
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
 		this.renderBackground(context, mouseX, mouseY, delta);
 		super.render(context, mouseX, mouseY, delta);
-		context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, this.height / 2 - 94, 0xFFFFFF);
+		context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, this.height / 2 - 140, 0xFFFFFF);
 		context.drawCenteredTextWithShadow(
 				this.textRenderer,
-				Text.literal("Нужно минимум 2 игрока онлайн. Результат придёт в чат.").formatted(Formatting.GRAY),
-				this.width / 2, this.height / 2 + 68, 0xAAAAAA
+				Text.literal("Лут можно менять только до старта матча.").formatted(Formatting.GRAY),
+				this.width / 2, this.height / 2 + 128, 0xAAAAAA
 		);
 	}
 

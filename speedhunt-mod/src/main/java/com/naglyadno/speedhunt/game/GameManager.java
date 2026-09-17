@@ -1,6 +1,7 @@
 package com.naglyadno.speedhunt.game;
 
 import com.naglyadno.speedhunt.config.SpeedHuntConfig;
+import com.naglyadno.speedhunt.network.BannerPayload;
 import com.naglyadno.speedhunt.network.GameStatePayload;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.Entity;
@@ -15,16 +16,23 @@ import net.minecraft.item.Items;
 import net.minecraft.network.packet.s2c.play.SubtitleS2CPacket;
 import net.minecraft.network.packet.s2c.play.TitleFadeS2CPacket;
 import net.minecraft.network.packet.s2c.play.TitleS2CPacket;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.scoreboard.Team;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.world.World;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,6 +47,7 @@ public class GameManager {
 
 	private final MinecraftServer server;
 	private final SpeedHuntConfig config;
+	private final Path configPath;
 	private final Random random = new Random();
 
 	private GameState state = GameState.WAITING;
@@ -48,15 +57,17 @@ public class GameManager {
 	private int ticksRemaining;
 	private int elapsedTicks;
 	private int broadcastTickCounter;
+	private int compassTickCounter;
 
 	private int trackerCooldownTicks;
 	private int trackerActiveTicksLeft;
 
 	private String lastResultMessage = "";
 
-	public GameManager(MinecraftServer server, SpeedHuntConfig config) {
+	public GameManager(MinecraftServer server, SpeedHuntConfig config, Path configPath) {
 		this.server = server;
 		this.config = config;
+		this.configPath = configPath;
 	}
 
 	public SpeedHuntConfig config() {
@@ -142,6 +153,10 @@ public class GameManager {
 			case RUNNING -> {
 				elapsedTicks++;
 				tickTracker();
+				compassTickCounter++;
+				if (compassTickCounter % 10 == 0) {
+					tickCompasses();
+				}
 			}
 			case ENDED -> {
 				ticksRemaining--;
@@ -249,6 +264,99 @@ public class GameManager {
 				&& getRole(player.getUuid()) == Role.SPEEDRUNNER) {
 			endGame(Role.HUNTER, "Спидраннер вышел с сервера — победили охотники!");
 		}
+	}
+
+	/** Выдаёт запросившему игроку компас, указывающий на противоположную роль. */
+	public void giveCompassOnRequest(ServerPlayerEntity player) {
+		Role role = getRole(player.getUuid());
+		if (role != Role.SPEEDRUNNER && role != Role.HUNTER) {
+			player.sendMessage(Text.literal("Сейчас у вас нет роли в матче.").formatted(Formatting.RED), false);
+			return;
+		}
+		Role tracks = role == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
+		ItemStack compass = TrackerCompass.create(tracks);
+		if (!player.getInventory().insertStack(compass)) {
+			player.dropItem(compass, false);
+		}
+		player.sendMessage(Text.literal("Вам выдан компас.").formatted(Formatting.AQUA), false);
+	}
+
+	/** Раз в ~0.5с обновляет цель у всех выданных компасов-трекеров, пока матч идёт. */
+	private void tickCompasses() {
+		ServerPlayerEntity speedrunner = speedrunnerId != null ? server.getPlayerManager().getPlayer(speedrunnerId) : null;
+		ServerPlayerEntity anyHunter = null;
+		for (Map.Entry<UUID, Role> entry : roles.entrySet()) {
+			if (entry.getValue() == Role.HUNTER) {
+				ServerPlayerEntity candidate = server.getPlayerManager().getPlayer(entry.getKey());
+				if (candidate != null) {
+					anyHunter = candidate;
+					break;
+				}
+			}
+		}
+		for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+			Role role = getRole(player.getUuid());
+			if (role == Role.HUNTER && speedrunner != null) {
+				updateTrackerStacks(player, Role.SPEEDRUNNER, speedrunner);
+			} else if (role == Role.SPEEDRUNNER && anyHunter != null) {
+				updateTrackerStacks(player, Role.HUNTER, anyHunter);
+			}
+		}
+	}
+
+	private void updateTrackerStacks(ServerPlayerEntity holder, Role tracks, ServerPlayerEntity target) {
+		ServerWorld world = target.getServerWorld();
+		BlockPos pos = target.getBlockPos();
+		for (ItemStack stack : holder.getInventory().main) {
+			if (TrackerCompass.tracksRole(stack, tracks)) {
+				TrackerCompass.pointAt(stack, world, pos);
+			}
+		}
+		for (ItemStack stack : holder.getInventory().offHand) {
+			if (TrackerCompass.tracksRole(stack, tracks)) {
+				TrackerCompass.pointAt(stack, world, pos);
+			}
+		}
+	}
+
+	/** Предупреждение вверху экрана всем игрокам, когда спидраннер входит/выходит из Нижнего мира или Энда. */
+	public void onPlayerChangeWorld(ServerPlayerEntity player, ServerWorld origin, ServerWorld destination) {
+		if (state != GameState.RUNNING && state != GameState.GRACE) {
+			return;
+		}
+		if (getRole(player.getUuid()) != Role.SPEEDRUNNER) {
+			return;
+		}
+		RegistryKey<World> key = destination.getRegistryKey();
+		String message;
+		if (key == World.NETHER) {
+			message = "⚠ Спидраннер вошёл в НИЖНИЙ МИР!";
+		} else if (key == World.END) {
+			message = "⚠ Спидраннер вошёл в ЭНД!";
+		} else if (key == World.OVERWORLD) {
+			message = "Спидраннер вернулся в Верхний мир.";
+		} else {
+			return;
+		}
+		for (ServerPlayerEntity p : server.getPlayerManager().getPlayerList()) {
+			ServerPlayNetworking.send(p, new BannerPayload(message));
+		}
+	}
+
+	/** Меняет стартовый лут роли (только пока матч не начат). Вызывается из меню редактора лута. */
+	public Text setLoadout(String roleName, List<SpeedHuntConfig.LootEntry> entries) {
+		if (state != GameState.WAITING) {
+			return Text.literal("Менять лут можно только до начала матча.").formatted(Formatting.RED);
+		}
+		if ("HUNTER".equals(roleName)) {
+			config.hunterLoadout = entries;
+		} else if ("SPEEDRUNNER".equals(roleName)) {
+			config.speedrunnerLoadout = entries;
+		} else {
+			return Text.literal("Неизвестная роль.").formatted(Formatting.RED);
+		}
+		config.save(configPath);
+		return Text.literal("Стартовый лут обновлён.").formatted(Formatting.GREEN);
 	}
 
 	public void onRespawn(ServerPlayerEntity player) {
@@ -364,13 +472,30 @@ public class GameManager {
 				continue;
 			}
 			if (entry.getValue() == Role.HUNTER && config.hunterBonusEnabled) {
-				giveItem(player, Items.GOLDEN_APPLE, config.hunterBonusGoldenApples);
-				giveItem(player, Items.IRON_INGOT, config.hunterBonusIronIngots);
-				giveItem(player, Items.ARROW, config.hunterBonusArrows);
+				giveLoadout(player, config.hunterLoadout);
 			} else if (entry.getValue() == Role.SPEEDRUNNER && config.speedrunnerBonusEnabled) {
-				giveItem(player, Items.GOLDEN_APPLE, config.speedrunnerBonusGoldenApples);
-				giveItem(player, Items.ENDER_PEARL, config.speedrunnerBonusEnderPearls);
+				giveLoadout(player, config.speedrunnerLoadout);
 			}
+		}
+	}
+
+	private void giveLoadout(ServerPlayerEntity player, List<SpeedHuntConfig.LootEntry> loadout) {
+		if (loadout == null) {
+			return;
+		}
+		for (SpeedHuntConfig.LootEntry entry : loadout) {
+			if (entry == null || entry.item == null) {
+				continue;
+			}
+			Identifier id = Identifier.tryParse(entry.item);
+			if (id == null) {
+				continue;
+			}
+			Item item = Registries.ITEM.get(id);
+			if (item == Items.AIR) {
+				continue;
+			}
+			giveItem(player, item, entry.count);
 		}
 	}
 

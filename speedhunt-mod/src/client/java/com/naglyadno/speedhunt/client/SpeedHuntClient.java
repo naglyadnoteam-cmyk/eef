@@ -1,6 +1,7 @@
 package com.naglyadno.speedhunt.client;
 
 import com.naglyadno.speedhunt.client.gui.SpeedHuntMenuScreen;
+import com.naglyadno.speedhunt.network.BannerPayload;
 import com.naglyadno.speedhunt.network.GameStatePayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -27,6 +28,9 @@ public class SpeedHuntClient implements ClientModInitializer {
 
 		ClientPlayNetworking.registerGlobalReceiver(GameStatePayload.ID, (payload, context) ->
 				context.client().execute(() -> ClientGameState.update(payload)));
+
+		ClientPlayNetworking.registerGlobalReceiver(BannerPayload.ID, (payload, context) ->
+				context.client().execute(() -> ClientGameState.showBanner(payload.text())));
 
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientGameState.clear());
 
