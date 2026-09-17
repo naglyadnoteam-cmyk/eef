@@ -16,12 +16,15 @@ public final class SpeedHuntCommand {
 	}
 
 	public static void register(CommandDispatcher<ServerCommandSource> dispatcher) {
+		// Намеренно без requires(hasPermissionLevel(...)): мод рассчитан на игру с
+		// друзьями в обычном мире (в т.ч. Open to LAN без читов), где ни один из
+		// игроков обычно не является оператором. Если нужно ограничить запуск
+		// матча только операторами на публичном сервере — верните
+		// .requires(source -> source.hasPermissionLevel(2)) на start/stop.
 		dispatcher.register(CommandManager.literal("speedhunt")
 				.then(CommandManager.literal("start")
-						.requires(source -> source.hasPermissionLevel(2))
 						.executes(SpeedHuntCommand::start))
 				.then(CommandManager.literal("stop")
-						.requires(source -> source.hasPermissionLevel(2))
 						.executes(SpeedHuntCommand::stop))
 				.then(CommandManager.literal("status")
 						.executes(SpeedHuntCommand::status))

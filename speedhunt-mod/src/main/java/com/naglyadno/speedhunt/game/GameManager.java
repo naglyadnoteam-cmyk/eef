@@ -47,6 +47,7 @@ public class GameManager {
 
 	private int ticksRemaining;
 	private int elapsedTicks;
+	private int broadcastTickCounter;
 
 	private int trackerCooldownTicks;
 	private int trackerActiveTicksLeft;
@@ -150,7 +151,8 @@ public class GameManager {
 			}
 		}
 
-		if (elapsedTicks % 4 == 0) {
+		broadcastTickCounter++;
+		if (broadcastTickCounter % 4 == 0) {
 			broadcastState();
 		}
 	}
@@ -214,7 +216,7 @@ public class GameManager {
 		if (getRole(victimPlayer.getUuid()) != Role.SPEEDRUNNER) {
 			return true;
 		}
-		if (state != GameState.GRACE) {
+		if (state != GameState.GRACE && state != GameState.ASSIGNING) {
 			return true;
 		}
 		Entity attacker = source.getAttacker();

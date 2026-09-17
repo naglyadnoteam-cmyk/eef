@@ -4,6 +4,7 @@ import com.naglyadno.speedhunt.command.SpeedHuntCommand;
 import com.naglyadno.speedhunt.config.SpeedHuntConfig;
 import com.naglyadno.speedhunt.game.GameManager;
 import com.naglyadno.speedhunt.network.GameStatePayload;
+import com.naglyadno.speedhunt.network.RequestActionPayload;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
@@ -12,7 +13,9 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.text.Text;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,6 +31,17 @@ public class SpeedHuntMod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		PayloadTypeRegistry.playS2C().register(GameStatePayload.ID, GameStatePayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(RequestActionPayload.ID, RequestActionPayload.CODEC);
+
+		ServerPlayNetworking.registerGlobalReceiver(RequestActionPayload.ID, (payload, context) ->
+				context.server().execute(() -> {
+					GameManager manager = gameManager;
+					if (manager == null) {
+						return;
+					}
+					Text result = payload.start() ? manager.start() : manager.stop();
+					context.player().sendMessage(result, false);
+				}));
 
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			Path configPath = FabricLoader.getInstance().getConfigDir().resolve("speedhunt.json");
