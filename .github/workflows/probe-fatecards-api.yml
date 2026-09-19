@@ -29,52 +29,33 @@ jobs:
         run: |
           set +e
           COMMON=$(find ~/.gradle/caches/fabric-loom/minecraftMaven -ipath "*minecraft-common/*" -iname "minecraft-common-*.jar" | grep -v sources | grep -v intermediary | head -1)
-          CLIENTONLY=$(find ~/.gradle/caches/fabric-loom/minecraftMaven -ipath "*minecraft-clientonly/*" -iname "minecraft-clientonly-*.jar" | grep -v sources | grep -v intermediary | head -1)
-          AUTHLIB=$(find ~/.gradle/caches/modules-2 -ipath "*authlib*" -iname "*.jar" | grep -v sources | head -1)
           echo "COMMON=$COMMON"
-          echo "CLIENTONLY=$CLIENTONLY"
-          echo "AUTHLIB=$AUTHLIB"
 
           mkdir -p /tmp/classes
           cd /tmp/classes
 
-          echo "===== ItemEntity path search in COMMON ====="
+          echo "===== full listing search for ItemEntity ====="
           unzip -l "$COMMON" | grep -i "itementity"
 
-          echo "===== extracting from COMMON ====="
-          unzip -oq "$COMMON" "net/minecraft/server/network/ServerPlayerEntity.class" "net/minecraft/entity/player/PlayerInventory.class" "net/minecraft/entity/EntityType.class" "net/minecraft/entity/attribute/EntityAttributes.class" "net/minecraft/entity/LivingEntity.class" "net/minecraft/entity/Entity.class"
+          unzip -oq "$COMMON" "net/minecraft/entity/Entity.class" "net/minecraft/server/network/ServerPlayerEntity.class"
+
+          echo "===== Entity: getpos / getPos (loose) ====="
+          javap -p net/minecraft/entity/Entity.class 2>/dev/null | grep -i "getpos"
+          echo "===== Entity: ALL Vec3d-returning no-arg methods ====="
+          javap -p net/minecraft/entity/Entity.class 2>/dev/null | grep -i "Vec3d get"
+
+          echo "===== ServerPlayerEntity: playsound (loose) ====="
+          javap -p net/minecraft/server/network/ServerPlayerEntity.class 2>/dev/null | grep -i "sound"
+          echo "===== ServerPlayerEntity: getpos (loose) ====="
+          javap -p net/minecraft/server/network/ServerPlayerEntity.class 2>/dev/null | grep -i "getpos"
+
           ITEMENTITY_PATH=$(unzip -l "$COMMON" | grep -i "itementity.class" | awk '{print $NF}' | head -1)
-          echo "ITEMENTITY_PATH=$ITEMENTITY_PATH"
-          if [ -n "$ITEMENTITY_PATH" ]; then unzip -oq "$COMMON" "$ITEMENTITY_PATH"; fi
-
-          if [ -n "$AUTHLIB" ]; then
-            unzip -oq "$AUTHLIB" "com/mojang/authlib/GameProfile.class" 2>/dev/null
-          fi
-
-          echo "===== ServerPlayerEntity: ALL public methods with world/pos/teleport/velocity/sound ====="
-          javap -p net/minecraft/server/network/ServerPlayerEntity.class 2>/dev/null | grep -iE "world|pos\(|teleport|velocity|playsound"
-
-          echo "===== Entity: ALL methods mentioning World or Pos or velocity ====="
-          javap -p net/minecraft/entity/Entity.class 2>/dev/null | grep -iE "\bworld|\bpos\(|velocity"
-
-          echo "===== LivingEntity: teleport methods ====="
-          javap -p net/minecraft/entity/LivingEntity.class 2>/dev/null | grep -iE "teleport"
-
+          echo "ITEMENTITY_PATH=[$ITEMENTITY_PATH]"
           if [ -n "$ITEMENTITY_PATH" ]; then
-            CLASSFILE=$(basename "$ITEMENTITY_PATH")
-            echo "===== ItemEntity: world/pos methods ====="
-            javap -p "$CLASSFILE" 2>/dev/null | grep -iE "world|pos\("
+            unzip -oq "$COMMON" "$ITEMENTITY_PATH"
+            CLASSFILE=$(find . -iname "ItemEntity.class")
+            echo "CLASSFILE=$CLASSFILE"
+            echo "===== ItemEntity: getpos (loose) ====="
+            javap -p "$CLASSFILE" 2>/dev/null | grep -i "getpos"
           fi
-
-          echo "===== PlayerInventory: main/getMain/size/getStack/setStack ====="
-          javap -p net/minecraft/entity/player/PlayerInventory.class 2>/dev/null | grep -iE "main|getmain|size\(|getstack|setstack"
-
-          echo "===== EntityType: create( ====="
-          javap -p net/minecraft/entity/EntityType.class 2>/dev/null | grep -i "create("
-
-          echo "===== EntityAttributes: all public static fields ====="
-          javap -p net/minecraft/entity/attribute/EntityAttributes.class 2>/dev/null | grep -iE "public static"
-
-          echo "===== GameProfile: name/id ====="
-          javap -p com/mojang/authlib/GameProfile.class 2>/dev/null | grep -iE "name|id\("
           echo "DONE"
