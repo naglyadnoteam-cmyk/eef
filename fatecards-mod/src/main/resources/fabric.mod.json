@@ -1,0 +1,28 @@
+{
+	"schemaVersion": 1,
+	"id": "fatecards",
+	"version": "${version}",
+	"name": "Fate Cards: Судьба решает",
+	"description": "Каждые несколько минут игроки выбирают одну из двух случайных карт судьбы — эффект достаётся другу. Больше 90 карт: баффы, дебаффы, мобы, телепорты, изменения мира и легендарный хаос.",
+	"authors": [
+		"naglyadno.team"
+	],
+	"contact": {},
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.naglyadno.fatecards.FateCardsMod"
+		],
+		"client": [
+			"com.naglyadno.fatecards.client.FateCardsClient"
+		]
+	},
+	"mixins": [],
+	"depends": {
+		"fabricloader": ">=0.16.9",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
