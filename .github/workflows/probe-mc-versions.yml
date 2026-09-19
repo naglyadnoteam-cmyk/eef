@@ -7,44 +7,23 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Fabric game versions (stable, matching 26.* or 1.2*)
+      - name: Download version lists
         run: |
-          curl -sS https://meta.fabricmc.net/v2/versions/game | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          for v in data:
-              if v['version'].startswith('26.') or v['version'].startswith('1.2'):
-                  print(v['version'], 'stable=', v['stable'])
-          " | head -100
+          curl -sS https://meta.fabricmc.net/v2/versions/game -o game.json
+          curl -sS https://meta.fabricmc.net/v2/versions/loader -o loader.json
+          curl -sS https://meta.fabricmc.net/v2/versions/yarn -o yarn.json
 
-      - name: Latest 10 Fabric game versions overall
-        run: curl -sS https://meta.fabricmc.net/v2/versions/game | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          for v in data[:15]:
-              print(v['version'], 'stable=', v['stable'])
-          "
+      - name: Game versions matching 26.x or 1.2x
+        run: jq -r '.[] | select(.version | test("^(26\\.|1\\.2)")) | "\(.version) stable=\(.stable)"' game.json | head -100
 
-      - name: Latest Fabric loader versions
-        run: curl -sS https://meta.fabricmc.net/v2/versions/loader | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          for v in data[:5]:
-              print(v['version'], 'stable=', v['stable'])
-          "
+      - name: Latest 15 game versions overall
+        run: jq -r '.[0:15][] | "\(.version) stable=\(.stable)"' game.json
+
+      - name: Latest loader versions
+        run: jq -r '.[0:5][] | "\(.version) stable=\(.stable)"' loader.json
 
       - name: Yarn mappings for candidate versions
-        run: |
-          curl -sS https://meta.fabricmc.net/v2/versions/yarn | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          seen = set()
-          for v in data:
-              gv = v['gameVersion']
-              if (gv.startswith('26.') or gv.startswith('1.2')) and gv not in seen:
-                  seen.add(gv)
-                  print(gv, '->', v['version'])
-          " | head -60
+        run: jq -r '[.[] | select(.gameVersion | test("^(26\\.|1\\.2)"))] | group_by(.gameVersion) | map(.[0]) | .[] | "\(.gameVersion) -> \(.version)"' yarn.json | head -60
 
-      - name: Fabric API maven-metadata (recent versions)
+      - name: Fabric API maven-metadata
         run: curl -sS https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml | tail -c 4000
