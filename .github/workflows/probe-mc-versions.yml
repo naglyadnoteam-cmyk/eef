@@ -31,5 +31,11 @@ jobs:
       - name: Yarn mappings for 26.2 specifically
         run: jq -r '.[] | select(.gameVersion == "26.2") | "\(.gameVersion) -> \(.version)"' yarn.json | head -20
 
+      - name: All distinct yarn gameVersion values starting with 26
+        run: jq -r '[.[].gameVersion] | unique | .[] | select(startswith("26"))' yarn.json
+
+      - name: Raw first 3 yarn entries (sanity check field names)
+        run: jq -c '.[0:3]' yarn.json
+
       - name: Loader maven-metadata (confirm latest)
         run: curl -sS https://maven.fabricmc.net/net/fabricmc/fabric-loader/maven-metadata.xml | grep -A2 latest
