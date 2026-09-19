@@ -11,9 +11,12 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 public class FateCardsClient implements ClientModInitializer {
+
+	private static final KeyBinding.Category CATEGORY = KeyBinding.Category.create(Identifier.of("fatecards", "main"));
 
 	private static KeyBinding openMenuKey;
 	private static KeyBinding chooseCard1Key;
@@ -22,11 +25,11 @@ public class FateCardsClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		openMenuKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-				"key.fatecards.open_menu", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_N, "category.fatecards"));
+				"key.fatecards.open_menu", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_N, CATEGORY));
 		chooseCard1Key = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-				"key.fatecards.choose_card_1", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_COMMA, "category.fatecards"));
+				"key.fatecards.choose_card_1", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_COMMA, CATEGORY));
 		chooseCard2Key = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-				"key.fatecards.choose_card_2", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_PERIOD, "category.fatecards"));
+				"key.fatecards.choose_card_2", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_PERIOD, CATEGORY));
 
 		ClientPlayNetworking.registerGlobalReceiver(FateStatePayload.ID, (payload, context) ->
 				context.client().execute(() -> ClientFateState.update(payload)));
