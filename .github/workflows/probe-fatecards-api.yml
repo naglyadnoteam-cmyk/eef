@@ -28,66 +28,52 @@ jobs:
       - name: javap key classes
         run: |
           set +e
-          MC_DIR=~/.gradle/caches/fabric-loom/1.21.11
-          COMMON="$MC_DIR/minecraft-common.jar"
-          SERVER="$MC_DIR/minecraft-extracted_server.jar"
-          CLIENT="$MC_DIR/minecraft-client.jar"
+          COMMON=$(find ~/.gradle/caches/fabric-loom/minecraftMaven -ipath "*minecraft-common/*" -iname "minecraft-common-*.jar" | grep -v sources | grep -v intermediary | head -1)
+          CLIENTONLY=$(find ~/.gradle/caches/fabric-loom/minecraftMaven -ipath "*minecraft-clientonly/*" -iname "minecraft-clientonly-*.jar" | grep -v sources | grep -v intermediary | head -1)
           AUTHLIB=$(find ~/.gradle/caches/modules-2 -ipath "*authlib*" -iname "*.jar" | grep -v sources | head -1)
-          echo "COMMON=$COMMON SERVER=$SERVER CLIENT=$CLIENT AUTHLIB=$AUTHLIB"
+          echo "COMMON=$COMMON"
+          echo "CLIENTONLY=$CLIENTONLY"
+          echo "AUTHLIB=$AUTHLIB"
 
           mkdir -p /tmp/classes
           cd /tmp/classes
 
-          find_and_extract() {
-            local classpath="$1"
-            for jar in "$COMMON" "$SERVER" "$CLIENT"; do
-              if unzip -l "$jar" 2>/dev/null | grep -q "$classpath\$"; then
-                unzip -oq "$jar" "$classpath"
-                echo "  (found in $jar)"
-                return 0
-              fi
-            done
-            echo "  (NOT FOUND in common/server/client)"
-            return 1
-          }
+          echo "===== ItemEntity path search in COMMON ====="
+          unzip -l "$COMMON" | grep -i "itementity"
 
-          echo "===== Locating classes ====="
-          find_and_extract "net/minecraft/server/network/ServerPlayerEntity.class"
-          find_and_extract "net/minecraft/entity/player/PlayerInventory.class"
-          find_and_extract "net/minecraft/entity/EntityType.class"
-          find_and_extract "net/minecraft/entity/attribute/EntityAttributes.class"
-          find_and_extract "net/minecraft/entity/LivingEntity.class"
-          find_and_extract "net/minecraft/entity/Entity.class"
-          echo "searching for ItemEntity in any of the three jars..."
-          for jar in "$COMMON" "$SERVER" "$CLIENT"; do
-            unzip -l "$jar" 2>/dev/null | grep -i "ItemEntity.class"
-          done
-          find_and_extract "net/minecraft/entity/ItemEntity.class" || find_and_extract "net/minecraft/entity/item/ItemEntity.class"
+          echo "===== extracting from COMMON ====="
+          unzip -oq "$COMMON" "net/minecraft/server/network/ServerPlayerEntity.class" "net/minecraft/entity/player/PlayerInventory.class" "net/minecraft/entity/EntityType.class" "net/minecraft/entity/attribute/EntityAttributes.class" "net/minecraft/entity/LivingEntity.class" "net/minecraft/entity/Entity.class"
+          ITEMENTITY_PATH=$(unzip -l "$COMMON" | grep -i "itementity.class" | awk '{print $NF}' | head -1)
+          echo "ITEMENTITY_PATH=$ITEMENTITY_PATH"
+          if [ -n "$ITEMENTITY_PATH" ]; then unzip -oq "$COMMON" "$ITEMENTITY_PATH"; fi
+
           if [ -n "$AUTHLIB" ]; then
             unzip -oq "$AUTHLIB" "com/mojang/authlib/GameProfile.class" 2>/dev/null
           fi
 
-          echo "===== ServerPlayerEntity: teleport/world/pos/velocity/sound ====="
-          javap -p net/minecraft/server/network/ServerPlayerEntity.class 2>/dev/null | grep -iE "teleport|world|pos\(|velocity|playsound"
+          echo "===== ServerPlayerEntity: ALL public methods with world/pos/teleport/velocity/sound ====="
+          javap -p net/minecraft/server/network/ServerPlayerEntity.class 2>/dev/null | grep -iE "world|pos\(|teleport|velocity|playsound"
 
-          echo "===== Entity: teleport/world/pos/velocity ====="
-          javap -p net/minecraft/entity/Entity.class 2>/dev/null | grep -iE "teleport|getworld|entityworld|pos\(|velocity"
+          echo "===== Entity: ALL methods mentioning World or Pos or velocity ====="
+          javap -p net/minecraft/entity/Entity.class 2>/dev/null | grep -iE "\bworld|\bpos\(|velocity"
 
-          echo "===== LivingEntity: teleport ====="
+          echo "===== LivingEntity: teleport methods ====="
           javap -p net/minecraft/entity/LivingEntity.class 2>/dev/null | grep -iE "teleport"
 
-          echo "===== ItemEntity: pos/world ====="
-          javap -p net/minecraft/entity/ItemEntity.class 2>/dev/null | grep -iE "pos\(|getworld|entityworld"
-          javap -p net/minecraft/entity/item/ItemEntity.class 2>/dev/null | grep -iE "pos\(|getworld|entityworld"
+          if [ -n "$ITEMENTITY_PATH" ]; then
+            CLASSFILE=$(basename "$ITEMENTITY_PATH")
+            echo "===== ItemEntity: world/pos methods ====="
+            javap -p "$CLASSFILE" 2>/dev/null | grep -iE "world|pos\("
+          fi
 
-          echo "===== PlayerInventory: main/getMain/size ====="
+          echo "===== PlayerInventory: main/getMain/size/getStack/setStack ====="
           javap -p net/minecraft/entity/player/PlayerInventory.class 2>/dev/null | grep -iE "main|getmain|size\(|getstack|setstack"
 
           echo "===== EntityType: create( ====="
           javap -p net/minecraft/entity/EntityType.class 2>/dev/null | grep -i "create("
 
-          echo "===== EntityAttributes: GENERIC/SCALE/MAX_HEALTH ====="
-          javap -p net/minecraft/entity/attribute/EntityAttributes.class 2>/dev/null | grep -iE "GENERIC|SCALE|MAX_HEALTH|public static"
+          echo "===== EntityAttributes: all public static fields ====="
+          javap -p net/minecraft/entity/attribute/EntityAttributes.class 2>/dev/null | grep -iE "public static"
 
           echo "===== GameProfile: name/id ====="
           javap -p com/mojang/authlib/GameProfile.class 2>/dev/null | grep -iE "name|id\("
