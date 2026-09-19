@@ -53,8 +53,14 @@ jobs:
           echo "--- loom mappings-related search: check if loom supports officialMojangMappings for 26.2 by checking piston meta for that version ---"
           curl -sS "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json" -o /dev/null -w "piston-meta reachable: %{http_code}\n" || true
 
-      - name: Fabric Loom gradle plugin versions on Gradle Plugin Portal
-        run: curl -sS https://plugins.gradle.org/m2/fabric-loom/fabric-loom.gradle.plugin/maven-metadata.xml | tail -c 2000
+      - name: Fabric Loom gradle plugin versions on Gradle Plugin Portal (with status code)
+        run: curl -sS -w "\nHTTP:%{http_code}\n" https://plugins.gradle.org/m2/fabric-loom/fabric-loom.gradle.plugin/maven-metadata.xml | tail -c 2000
+
+      - name: Fabric Loom plugin page (grep for version)
+        run: curl -sS https://plugins.gradle.org/plugin/fabric-loom | grep -oE '"[0-9]+\.[0-9]+(\.[0-9]+)?"' | sort -Vu | tail -20
+
+      - name: Fabric Loom plugin page raw grep around 'Version'
+        run: curl -sS https://plugins.gradle.org/plugin/fabric-loom | grep -o -i '.\{0,40\}version.\{0,40\}' | head -20
 
       - name: Minecraft version manifest has 26.2 entry?
         run: curl -sS "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json" | jq -r '.versions[] | select(.id=="26.2")'
