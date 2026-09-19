@@ -305,9 +305,9 @@ public class GameManager {
 	}
 
 	private void updateTrackerStacks(ServerPlayerEntity holder, Role tracks, ServerPlayerEntity target) {
-		ServerWorld world = target.getServerWorld();
+		ServerWorld world = target.getEntityWorld();
 		BlockPos pos = target.getBlockPos();
-		for (ItemStack stack : holder.getInventory().main) {
+		for (ItemStack stack : holder.getInventory().getMainStacks()) {
 			if (TrackerCompass.tracksRole(stack, tracks)) {
 				TrackerCompass.pointAt(stack, world, pos);
 			}
@@ -380,11 +380,11 @@ public class GameManager {
 			return;
 		}
 		ServerPlayerEntity speedrunner = speedrunnerId != null ? server.getPlayerManager().getPlayer(speedrunnerId) : null;
-		if (speedrunner == null || player.getServerWorld() != speedrunner.getServerWorld()) {
+		if (speedrunner == null || player.getEntityWorld() != speedrunner.getEntityWorld()) {
 			return;
 		}
-		player.teleport(speedrunner.getServerWorld(), speedrunner.getX(), speedrunner.getY(), speedrunner.getZ(),
-				Set.of(), speedrunner.getYaw(), speedrunner.getPitch());
+		player.teleport(speedrunner.getEntityWorld(), speedrunner.getX(), speedrunner.getY(), speedrunner.getZ(),
+				Set.of(), speedrunner.getYaw(), speedrunner.getPitch(), true);
 	}
 
 	// ------------------------------------------------------------------
