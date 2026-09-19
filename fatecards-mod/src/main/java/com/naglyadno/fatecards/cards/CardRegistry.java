@@ -417,7 +417,7 @@ public final class CardRegistry {
 		add("mob_pig_bomb", "Свинка-сапёр", "Рядом появляется свинья — через несколько секунд она взрывается.",
 				Category.MOBS, 6, ctx -> {
 					ServerWorld world = ctx.world();
-					var pig = EntityType.PIG.create(world, net.minecraft.entity.SpawnReason.EVENT);
+					var pig = EntityType.PIG.create(world);
 					if (pig == null) {
 						return;
 					}

@@ -149,7 +149,7 @@ public final class CardEffects {
 			double x = center.getX() + 0.5 + (random.nextDouble() * 2 - 1) * radius;
 			double z = center.getZ() + 0.5 + (random.nextDouble() * 2 - 1) * radius;
 			int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, (int) x, (int) z);
-			MobEntity mob = type.create(world, SpawnReason.EVENT);
+			MobEntity mob = type.create(world);
 			if (mob == null) {
 				continue;
 			}
@@ -166,7 +166,7 @@ public final class CardEffects {
 		for (int i = 0; i < count; i++) {
 			double x = center.getX() + 0.5 + (random.nextDouble() * 2 - 1) * radius;
 			double z = center.getZ() + 0.5 + (random.nextDouble() * 2 - 1) * radius;
-			MobEntity mob = type.create(world, SpawnReason.EVENT);
+			MobEntity mob = type.create(world);
 			if (mob == null) {
 				continue;
 			}
