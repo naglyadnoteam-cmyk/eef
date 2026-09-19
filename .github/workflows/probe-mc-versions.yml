@@ -27,3 +27,9 @@ jobs:
 
       - name: Fabric API maven-metadata
         run: curl -sS https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml | tail -c 4000
+
+      - name: Yarn mappings for 26.2 specifically
+        run: jq -r '.[] | select(.gameVersion == "26.2") | "\(.gameVersion) -> \(.version)"' yarn.json | head -20
+
+      - name: Loader maven-metadata (confirm latest)
+        run: curl -sS https://maven.fabricmc.net/net/fabricmc/fabric-loader/maven-metadata.xml | grep -A2 latest
