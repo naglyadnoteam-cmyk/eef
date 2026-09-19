@@ -33,29 +33,15 @@ jobs:
 
           mkdir -p /tmp/classes
           cd /tmp/classes
+          unzip -oq "$COMMON" "net/minecraft/entity/player/PlayerEntity.class" "net/minecraft/entity/Entity.class" "net/minecraft/server/network/ServerPlayerEntity.class" "net/minecraft/server/network/ServerPlayNetworking.class" "net/minecraft/server/world/ServerWorld.class"
 
-          echo "===== full listing search for ItemEntity ====="
-          unzip -l "$COMMON" | grep -i "itementity"
+          echo "===== PlayerEntity: sound methods ====="
+          javap -p net/minecraft/entity/player/PlayerEntity.class 2>/dev/null | grep -i "sound"
 
-          unzip -oq "$COMMON" "net/minecraft/entity/Entity.class" "net/minecraft/server/network/ServerPlayerEntity.class"
+          echo "===== Entity: sound methods ====="
+          javap -p net/minecraft/entity/Entity.class 2>/dev/null | grep -i "sound"
 
-          echo "===== Entity: getpos / getPos (loose) ====="
-          javap -p net/minecraft/entity/Entity.class 2>/dev/null | grep -i "getpos"
-          echo "===== Entity: ALL Vec3d-returning no-arg methods ====="
-          javap -p net/minecraft/entity/Entity.class 2>/dev/null | grep -i "Vec3d get"
+          echo "===== ServerWorld: playSound methods ====="
+          javap -p net/minecraft/server/world/ServerWorld.class 2>/dev/null | grep -i "playsound"
 
-          echo "===== ServerPlayerEntity: playsound (loose) ====="
-          javap -p net/minecraft/server/network/ServerPlayerEntity.class 2>/dev/null | grep -i "sound"
-          echo "===== ServerPlayerEntity: getpos (loose) ====="
-          javap -p net/minecraft/server/network/ServerPlayerEntity.class 2>/dev/null | grep -i "getpos"
-
-          ITEMENTITY_PATH=$(unzip -l "$COMMON" | grep -i "itementity.class" | awk '{print $NF}' | head -1)
-          echo "ITEMENTITY_PATH=[$ITEMENTITY_PATH]"
-          if [ -n "$ITEMENTITY_PATH" ]; then
-            unzip -oq "$COMMON" "$ITEMENTITY_PATH"
-            CLASSFILE=$(find . -iname "ItemEntity.class")
-            echo "CLASSFILE=$CLASSFILE"
-            echo "===== ItemEntity: getpos (loose) ====="
-            javap -p "$CLASSFILE" 2>/dev/null | grep -i "getpos"
-          fi
           echo "DONE"
