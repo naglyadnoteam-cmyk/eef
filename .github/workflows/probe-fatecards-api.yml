@@ -25,50 +25,70 @@ jobs:
       - name: Attempt build (expected to fail at compile)
         run: ./gradlew build --no-daemon || true
 
-      - name: Locate mapped Minecraft jar
-        run: |
-          find ~/.gradle/caches/fabric-loom -iname "*.jar" 2>/dev/null | tee /tmp/jars.txt
-
       - name: javap key classes
         run: |
-          JAR=$(grep -iE "1_21_11|1\.21\.11" /tmp/jars.txt | grep -iv sources | grep -iE "named|mapped" | head -1)
-          if [ -z "$JAR" ]; then
-            JAR=$(grep -iv sources /tmp/jars.txt | grep -iE "named" | head -1)
-          fi
-          if [ -z "$JAR" ]; then
-            JAR=$(grep -iv sources /tmp/jars.txt | sort -k1 | tail -1)
-          fi
-          echo "Using jar: $JAR"
-          if [ -z "$JAR" ]; then
-            echo "No mapped jar found, listing loom cache tree"
-            find ~/.gradle/caches -maxdepth 8 -iname "*loom*"
-            exit 0
-          fi
+          set +e
+          MC_DIR=~/.gradle/caches/fabric-loom/1.21.11
+          COMMON="$MC_DIR/minecraft-common.jar"
+          SERVER="$MC_DIR/minecraft-extracted_server.jar"
+          CLIENT="$MC_DIR/minecraft-client.jar"
+          AUTHLIB=$(find ~/.gradle/caches/modules-2 -ipath "*authlib*" -iname "*.jar" | grep -v sources | head -1)
+          echo "COMMON=$COMMON SERVER=$SERVER CLIENT=$CLIENT AUTHLIB=$AUTHLIB"
+
           mkdir -p /tmp/classes
           cd /tmp/classes
-          unzip -oq "$JAR" "net/minecraft/server/network/ServerPlayerEntity.class" || true
-          unzip -oq "$JAR" "net/minecraft/entity/player/PlayerInventory.class" || true
-          unzip -oq "$JAR" "net/minecraft/entity/EntityType.class" || true
-          unzip -oq "$JAR" "net/minecraft/entity/attribute/EntityAttributes.class" || true
-          unzip -oq "$JAR" "net/minecraft/entity/LivingEntity.class" || true
-          unzip -oq "$JAR" "net/minecraft/entity/Entity.class" || true
-          unzip -oq "$JAR" "net/minecraft/item/ItemEntity.class" || true
-          unzip -oq "$JAR" "com/mojang/authlib/GameProfile.class" || true
-          echo "===== ServerPlayerEntity teleport methods ====="
-          javap -p net/minecraft/server/network/ServerPlayerEntity.class 2>/dev/null | grep -i teleport
-          echo "===== LivingEntity teleport methods ====="
-          javap -p net/minecraft/entity/LivingEntity.class 2>/dev/null | grep -i teleport
-          echo "===== Entity teleport/world methods ====="
-          javap -p net/minecraft/entity/Entity.class 2>/dev/null | grep -iE "teleport|getWorld|getServerWorld|velocityModified|getPos\(\)"
-          echo "===== ServerPlayerEntity world/pos/velocityModified methods ====="
-          javap -p net/minecraft/server/network/ServerPlayerEntity.class 2>/dev/null | grep -iE "getWorld|getServerWorld|velocityModified|getPos\(\)|playSound"
-          echo "===== ItemEntity getPos ====="
-          javap -p net/minecraft/item/ItemEntity.class 2>/dev/null | grep -iE "getPos\(\)|getWorld"
-          echo "===== PlayerInventory main field ====="
-          javap -p net/minecraft/entity/player/PlayerInventory.class 2>/dev/null | grep -iE "main|getMain|slots"
-          echo "===== EntityType.create methods ====="
+
+          find_and_extract() {
+            local classpath="$1"
+            for jar in "$COMMON" "$SERVER" "$CLIENT"; do
+              if unzip -l "$jar" 2>/dev/null | grep -q "$classpath\$"; then
+                unzip -oq "$jar" "$classpath"
+                echo "  (found in $jar)"
+                return 0
+              fi
+            done
+            echo "  (NOT FOUND in common/server/client)"
+            return 1
+          }
+
+          echo "===== Locating classes ====="
+          find_and_extract "net/minecraft/server/network/ServerPlayerEntity.class"
+          find_and_extract "net/minecraft/entity/player/PlayerInventory.class"
+          find_and_extract "net/minecraft/entity/EntityType.class"
+          find_and_extract "net/minecraft/entity/attribute/EntityAttributes.class"
+          find_and_extract "net/minecraft/entity/LivingEntity.class"
+          find_and_extract "net/minecraft/entity/Entity.class"
+          echo "searching for ItemEntity in any of the three jars..."
+          for jar in "$COMMON" "$SERVER" "$CLIENT"; do
+            unzip -l "$jar" 2>/dev/null | grep -i "ItemEntity.class"
+          done
+          find_and_extract "net/minecraft/entity/ItemEntity.class" || find_and_extract "net/minecraft/entity/item/ItemEntity.class"
+          if [ -n "$AUTHLIB" ]; then
+            unzip -oq "$AUTHLIB" "com/mojang/authlib/GameProfile.class" 2>/dev/null
+          fi
+
+          echo "===== ServerPlayerEntity: teleport/world/pos/velocity/sound ====="
+          javap -p net/minecraft/server/network/ServerPlayerEntity.class 2>/dev/null | grep -iE "teleport|world|pos\(|velocity|playsound"
+
+          echo "===== Entity: teleport/world/pos/velocity ====="
+          javap -p net/minecraft/entity/Entity.class 2>/dev/null | grep -iE "teleport|getworld|entityworld|pos\(|velocity"
+
+          echo "===== LivingEntity: teleport ====="
+          javap -p net/minecraft/entity/LivingEntity.class 2>/dev/null | grep -iE "teleport"
+
+          echo "===== ItemEntity: pos/world ====="
+          javap -p net/minecraft/entity/ItemEntity.class 2>/dev/null | grep -iE "pos\(|getworld|entityworld"
+          javap -p net/minecraft/entity/item/ItemEntity.class 2>/dev/null | grep -iE "pos\(|getworld|entityworld"
+
+          echo "===== PlayerInventory: main/getMain/size ====="
+          javap -p net/minecraft/entity/player/PlayerInventory.class 2>/dev/null | grep -iE "main|getmain|size\(|getstack|setstack"
+
+          echo "===== EntityType: create( ====="
           javap -p net/minecraft/entity/EntityType.class 2>/dev/null | grep -i "create("
-          echo "===== EntityAttributes GENERIC fields ====="
-          javap -p net/minecraft/entity/attribute/EntityAttributes.class 2>/dev/null | grep -iE "GENERIC|SCALE|MAX_HEALTH"
-          echo "===== GameProfile name methods ====="
-          javap -p com/mojang/authlib/GameProfile.class 2>/dev/null | grep -iE "name|Name"
+
+          echo "===== EntityAttributes: GENERIC/SCALE/MAX_HEALTH ====="
+          javap -p net/minecraft/entity/attribute/EntityAttributes.class 2>/dev/null | grep -iE "GENERIC|SCALE|MAX_HEALTH|public static"
+
+          echo "===== GameProfile: name/id ====="
+          javap -p com/mojang/authlib/GameProfile.class 2>/dev/null | grep -iE "name|id\("
+          echo "DONE"
