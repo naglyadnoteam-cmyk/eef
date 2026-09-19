@@ -1,0 +1,69 @@
+name: Probe Fate Cards API
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fatecards-mod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Attempt build (expected to fail at compile)
+        run: ./gradlew build --no-daemon || true
+
+      - name: Locate mapped Minecraft jar
+        run: |
+          find ~/.gradle/caches -iname "*minecraft*named*.jar" -o -iname "*minecraft*mapped*.jar" 2>/dev/null | tee /tmp/jars.txt
+          find ~/.gradle/caches -iname "*minecraft-merged*.jar" 2>/dev/null | tee -a /tmp/jars.txt
+
+      - name: javap key classes
+        run: |
+          JAR=$(find ~/.gradle/caches -iname "*minecraft*named*.jar" | head -1)
+          echo "Using jar: $JAR"
+          if [ -z "$JAR" ]; then
+            echo "No mapped jar found, listing loom cache tree"
+            find ~/.gradle/caches -maxdepth 6 -iname "*loom*" -type d
+            exit 0
+          fi
+          mkdir -p /tmp/classes
+          cd /tmp/classes
+          unzip -oq "$JAR" "net/minecraft/server/network/ServerPlayerEntity.class" || true
+          unzip -oq "$JAR" "net/minecraft/entity/player/PlayerInventory.class" || true
+          unzip -oq "$JAR" "net/minecraft/entity/EntityType.class" || true
+          unzip -oq "$JAR" "net/minecraft/entity/attribute/EntityAttributes.class" || true
+          unzip -oq "$JAR" "net/minecraft/entity/LivingEntity.class" || true
+          unzip -oq "$JAR" "net/minecraft/entity/Entity.class" || true
+          unzip -oq "$JAR" "net/minecraft/item/ItemEntity.class" || true
+          unzip -oq "$JAR" "com/mojang/authlib/GameProfile.class" || true
+          echo "===== ServerPlayerEntity teleport methods ====="
+          javap -p net/minecraft/server/network/ServerPlayerEntity.class 2>/dev/null | grep -i teleport
+          echo "===== LivingEntity teleport methods ====="
+          javap -p net/minecraft/entity/LivingEntity.class 2>/dev/null | grep -i teleport
+          echo "===== Entity teleport/world methods ====="
+          javap -p net/minecraft/entity/Entity.class 2>/dev/null | grep -iE "teleport|getWorld|getServerWorld|velocityModified|getPos\(\)"
+          echo "===== ServerPlayerEntity world/pos/velocityModified methods ====="
+          javap -p net/minecraft/server/network/ServerPlayerEntity.class 2>/dev/null | grep -iE "getWorld|getServerWorld|velocityModified|getPos\(\)|playSound"
+          echo "===== ItemEntity getPos ====="
+          javap -p net/minecraft/item/ItemEntity.class 2>/dev/null | grep -iE "getPos\(\)|getWorld"
+          echo "===== PlayerInventory main field ====="
+          javap -p net/minecraft/entity/player/PlayerInventory.class 2>/dev/null | grep -iE "main|getMain|slots"
+          echo "===== EntityType.create methods ====="
+          javap -p net/minecraft/entity/EntityType.class 2>/dev/null | grep -i "create("
+          echo "===== EntityAttributes GENERIC fields ====="
+          javap -p net/minecraft/entity/attribute/EntityAttributes.class 2>/dev/null | grep -iE "GENERIC|SCALE|MAX_HEALTH"
+          echo "===== GameProfile name methods ====="
+          javap -p com/mojang/authlib/GameProfile.class 2>/dev/null | grep -iE "name|Name"
