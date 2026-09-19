@@ -34,7 +34,7 @@ public final class CardEffects {
 
 	public static void impulse(ServerPlayerEntity player, double dx, double dy, double dz) {
 		player.setVelocity(player.getVelocity().add(dx, dy, dz));
-		player.velocityModified = true;
+		player.velocityDirty = true;
 		player.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(player));
 	}
 
@@ -48,12 +48,12 @@ public final class CardEffects {
 
 	public static void teleportSafe(ServerPlayerEntity player, ServerWorld world, double x, double z) {
 		int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(x), (int) Math.floor(z));
-		player.teleport(world, x, y + 1, z, Set.of(), player.getYaw(), player.getPitch());
+		player.teleport(world, x, y + 1, z, Set.of(), player.getYaw(), player.getPitch(), true);
 	}
 
 	public static void teleportUp(ServerPlayerEntity player, double amount) {
-		player.teleport(player.getServerWorld(), player.getX(), player.getY() + amount, player.getZ(),
-				Set.of(), player.getYaw(), player.getPitch());
+		player.teleport(player.getEntityWorld(), player.getX(), player.getY() + amount, player.getZ(),
+				Set.of(), player.getYaw(), player.getPitch(), true);
 	}
 
 	public static void clearAirPocket(ServerWorld world, BlockPos center, int radius, int heightUp) {
@@ -149,7 +149,7 @@ public final class CardEffects {
 			double x = center.getX() + 0.5 + (random.nextDouble() * 2 - 1) * radius;
 			double z = center.getZ() + 0.5 + (random.nextDouble() * 2 - 1) * radius;
 			int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, (int) x, (int) z);
-			MobEntity mob = type.create(world);
+			MobEntity mob = type.create(world, SpawnReason.EVENT);
 			if (mob == null) {
 				continue;
 			}
@@ -166,7 +166,7 @@ public final class CardEffects {
 		for (int i = 0; i < count; i++) {
 			double x = center.getX() + 0.5 + (random.nextDouble() * 2 - 1) * radius;
 			double z = center.getZ() + 0.5 + (random.nextDouble() * 2 - 1) * radius;
-			MobEntity mob = type.create(world);
+			MobEntity mob = type.create(world, SpawnReason.EVENT);
 			if (mob == null) {
 				continue;
 			}
@@ -212,8 +212,9 @@ public final class CardEffects {
 
 	public static List<Integer> nonEmptySlots(ServerPlayerEntity player) {
 		List<Integer> slots = new ArrayList<>();
-		for (int i = 0; i < player.getInventory().main.size(); i++) {
-			if (!player.getInventory().main.get(i).isEmpty()) {
+		var main = player.getInventory().getMainStacks();
+		for (int i = 0; i < main.size(); i++) {
+			if (!main.get(i).isEmpty()) {
 				slots.add(i);
 			}
 		}

@@ -114,7 +114,7 @@ public final class CardRegistry {
 		if (world == null) {
 			return;
 		}
-		BlockPos searchOrigin = world == player.getServerWorld() ? player.getBlockPos() : BlockPos.ORIGIN;
+		BlockPos searchOrigin = world == player.getEntityWorld() ? player.getBlockPos() : BlockPos.ORIGIN;
 		com.mojang.datafixers.util.Pair<BlockPos, RegistryEntry<net.minecraft.world.biome.Biome>> result;
 		try {
 			result = world.locateBiome(entry -> entry.matchesKey(biomeKey), searchOrigin, 6400, 32, 64);
@@ -145,7 +145,7 @@ public final class CardRegistry {
 		});
 
 		add("stat_glass_heart", "Стеклянное сердце", "Максимальное здоровье уменьшается вдвое на 45 секунд.",
-				Category.STATS, 10, ctx -> tempAttribute(ctx, EntityAttributes.GENERIC_MAX_HEALTH, -0.5,
+				Category.STATS, 10, ctx -> tempAttribute(ctx, EntityAttributes.MAX_HEALTH, -0.5,
 						EntityAttributeModifier.Operation.ADD_MULTIPLIED_TOTAL, 45 * 20));
 
 		add("stat_adrenaline", "Адреналин", "Скорость передвижения увеличена на 20 секунд.", Category.STATS, 12,
@@ -230,7 +230,7 @@ public final class CardRegistry {
 			ctx.game().scheduleRepeating(5, 60, i -> {
 				for (var item : world.getEntitiesByClass(net.minecraft.entity.ItemEntity.class,
 						player.getBoundingBox().expand(8), e -> true)) {
-					var dir = player.getPos().subtract(item.getPos());
+					var dir = player.getEntityPos().subtract(item.getEntityPos());
 					if (dir.length() > 0.5) {
 						item.setVelocity(dir.normalize().multiply(0.3));
 						item.velocityDirty = true;
@@ -449,7 +449,7 @@ public final class CardRegistry {
 		add("mob_pig_bomb", "Свинка-сапёр", "Рядом появляется свинья — через несколько секунд она взрывается.",
 				Category.MOBS, 6, ctx -> {
 					ServerWorld world = ctx.world();
-					var pig = EntityType.PIG.create(world);
+					var pig = EntityType.PIG.create(world, net.minecraft.entity.SpawnReason.EVENT);
 					if (pig == null) {
 						return;
 					}
@@ -492,7 +492,7 @@ public final class CardRegistry {
 			if (end == null) {
 				return;
 			}
-			player.teleport(end, 100.5, 50, 0.5, java.util.Set.of(), player.getYaw(), player.getPitch());
+			player.teleport(end, 100.5, 50, 0.5, java.util.Set.of(), player.getYaw(), player.getPitch(), true);
 		});
 
 		add("tp_random_spot", "Случайная точка", "Телепортирует в случайное безопасное место поблизости.",
@@ -514,10 +514,10 @@ public final class CardRegistry {
 						return;
 					}
 					double cx = chooser.getX(), cy = chooser.getY(), cz = chooser.getZ();
-					ServerWorld cw = chooser.getServerWorld();
-					chooser.teleport(target.getServerWorld(), target.getX(), target.getY(), target.getZ(),
-							java.util.Set.of(), chooser.getYaw(), chooser.getPitch());
-					target.teleport(cw, cx, cy, cz, java.util.Set.of(), target.getYaw(), target.getPitch());
+					ServerWorld cw = chooser.getEntityWorld();
+					chooser.teleport(target.getEntityWorld(), target.getX(), target.getY(), target.getZ(),
+							java.util.Set.of(), chooser.getYaw(), chooser.getPitch(), true);
+					target.teleport(cw, cx, cy, cz, java.util.Set.of(), target.getYaw(), target.getPitch(), true);
 				});
 
 		add("tp_high_tourism", "Высотный туризм", "Переносит высоко вверх на прочную стеклянную площадку.",
@@ -526,7 +526,7 @@ public final class CardRegistry {
 					BlockPos platform = new BlockPos((int) player.getX(), 200, (int) player.getZ());
 					ctx.world().setBlockState(platform.down(), Blocks.GLASS.getDefaultState(), net.minecraft.block.Block.NOTIFY_ALL);
 					player.teleport(ctx.world(), platform.getX() + 0.5, platform.getY(), platform.getZ() + 0.5,
-							java.util.Set.of(), player.getYaw(), player.getPitch());
+							java.util.Set.of(), player.getYaw(), player.getPitch(), true);
 				});
 
 		add("tp_underground", "Подземелье", "Переносит глубоко под землю в безопасную полость.", Category.TELEPORT, 6,
@@ -535,7 +535,7 @@ public final class CardRegistry {
 					BlockPos deep = new BlockPos((int) player.getX(), -40, (int) player.getZ());
 					CardEffects.clearAirPocket(ctx.world(), deep, 1, 2);
 					player.teleport(ctx.world(), deep.getX() + 0.5, deep.getY(), deep.getZ() + 0.5,
-							java.util.Set.of(), player.getYaw(), player.getPitch());
+							java.util.Set.of(), player.getYaw(), player.getPitch(), true);
 				});
 
 		add("tp_far_away", "Далеко-далеко", "Телепортирует на 500 блоков в случайном направлении.",
@@ -568,7 +568,7 @@ public final class CardRegistry {
 						int y = world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, (int) x, (int) z);
 						BlockPos surface = new BlockPos((int) x, y - 1, (int) z);
 						if (world.getBlockState(surface).isOf(Blocks.WATER)) {
-							player.teleport(world, x, y, z, java.util.Set.of(), player.getYaw(), player.getPitch());
+							player.teleport(world, x, y, z, java.util.Set.of(), player.getYaw(), player.getPitch(), true);
 							return;
 						}
 					}
@@ -656,7 +656,7 @@ public final class CardRegistry {
 						}
 					}
 					player.teleport(world, bestX + 0.5, bestY + 1, bestZ + 0.5, java.util.Set.of(),
-							player.getYaw(), player.getPitch());
+							player.getYaw(), player.getPitch(), true);
 				});
 	}
 
@@ -699,7 +699,7 @@ public final class CardRegistry {
 
 		add("inv_chaos", "Инвентарный хаос", "Порядок предметов в инвентаре перемешивается.", Category.INVENTORY, 8,
 				ctx -> {
-					var inv = ctx.target().getInventory().main;
+					var inv = ctx.target().getInventory().getMainStacks();
 					List<ItemStack> stacks = new ArrayList<>(inv);
 					java.util.Collections.shuffle(stacks, EFFECT_RANDOM);
 					for (int i = 0; i < inv.size(); i++) {
@@ -785,7 +785,7 @@ public final class CardRegistry {
 
 		add("inv_dirt_disaster", "Земляная беда", "Весь инвентарь заполняется землёй. Легендарное наказание!",
 				Category.LEGENDARY, 2, ctx -> {
-					var inv = ctx.target().getInventory().main;
+					var inv = ctx.target().getInventory().getMainStacks();
 					for (int i = 0; i < inv.size(); i++) {
 						inv.set(i, new ItemStack(Items.DIRT, 64));
 					}
@@ -803,15 +803,15 @@ public final class CardRegistry {
 				ctx -> potion(ctx.target(), StatusEffects.NAUSEA, 10 * 20, 0));
 
 		add("weird_huge_world", "Мир огромный", "Игрок уменьшается — мир кажется огромным на 40 секунд.",
-				Category.WEIRD, 7, ctx -> tempAttribute(ctx, EntityAttributes.GENERIC_SCALE, -0.4,
+				Category.WEIRD, 7, ctx -> tempAttribute(ctx, EntityAttributes.SCALE, -0.4,
 						EntityAttributeModifier.Operation.ADD_VALUE, 40 * 20));
 
 		add("weird_tiny_person", "Маленький человек", "Игрок становится крошечным на 60 секунд.", Category.WEIRD, 7,
-				ctx -> tempAttribute(ctx, EntityAttributes.GENERIC_SCALE, -0.6,
+				ctx -> tempAttribute(ctx, EntityAttributes.SCALE, -0.6,
 						EntityAttributeModifier.Operation.ADD_VALUE, 60 * 20));
 
 		add("weird_giant", "Гигант", "Игрок временно становится огромным на 45 секунд.", Category.WEIRD, 7,
-				ctx -> tempAttribute(ctx, EntityAttributes.GENERIC_SCALE, 1.0,
+				ctx -> tempAttribute(ctx, EntityAttributes.SCALE, 1.0,
 						EntityAttributeModifier.Operation.ADD_VALUE, 45 * 20));
 
 		add("weird_whisper", "Шёпот", "Рядом раздаётся один очень громкий, пугающий звук.", Category.WEIRD, 8,
@@ -831,10 +831,10 @@ public final class CardRegistry {
 							return;
 						}
 						var item = pool.get(EFFECT_RANDOM.nextInt(pool.size()));
-						var entity = new net.minecraft.entity.ItemEntity(target.getServerWorld(),
+						var entity = new net.minecraft.entity.ItemEntity(target.getEntityWorld(),
 								target.getX() + EFFECT_RANDOM.nextInt(5) - 2, target.getY() + 8, target.getZ() + EFFECT_RANDOM.nextInt(5) - 2,
 								new ItemStack(item, 1));
-						target.getServerWorld().spawnEntity(entity);
+						target.getEntityWorld().spawnEntity(entity);
 					});
 				});
 

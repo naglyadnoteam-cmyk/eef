@@ -16,6 +16,6 @@ public record CardContext(
 		Random random
 ) {
 	public ServerWorld world() {
-		return target.getServerWorld();
+		return target.getEntityWorld();
 	}
 }

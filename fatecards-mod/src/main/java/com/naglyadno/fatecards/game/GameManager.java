@@ -149,7 +149,7 @@ public class GameManager {
 	private void samplePositions() {
 		for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
 			Deque<PosSample> deque = history.computeIfAbsent(player.getUuid(), k -> new ArrayDeque<>());
-			deque.addLast(new PosSample(tickCounter, player.getServerWorld(), player.getX(), player.getY(), player.getZ()));
+			deque.addLast(new PosSample(tickCounter, player.getEntityWorld(), player.getX(), player.getY(), player.getZ()));
 			while (deque.size() > 40) {
 				deque.removeFirst();
 			}
@@ -172,7 +172,7 @@ public class GameManager {
 		if (best == null) {
 			return null;
 		}
-		player.teleport(best.world(), best.x(), best.y(), best.z(), java.util.Set.of(), player.getYaw(), player.getPitch());
+		player.teleport(best.world(), best.x(), best.y(), best.z(), java.util.Set.of(), player.getYaw(), player.getPitch(), true);
 		return best.world();
 	}
 
@@ -281,7 +281,7 @@ public class GameManager {
 		} catch (Exception e) {
 			com.naglyadno.fatecards.FateCardsMod.LOGGER.error("Ошибка применения карты " + chosen.id(), e);
 		}
-		lastAnnouncement = chooser.getGameProfile().getName() + " наслал(а) на " + target.getGameProfile().getName()
+		lastAnnouncement = chooser.getGameProfile().name() + " наслал(а) на " + target.getGameProfile().name()
 				+ ": " + chosen.name() + "!";
 		broadcastAll(Text.literal(lastAnnouncement).formatted(chosen.category().color()));
 	}
@@ -297,7 +297,7 @@ public class GameManager {
 			FateStatePayload payload;
 			if (offer != null) {
 				ServerPlayerEntity target = server.getPlayerManager().getPlayer(offer.targetId());
-				String targetName = target != null ? target.getGameProfile().getName() : "?";
+				String targetName = target != null ? target.getGameProfile().name() : "?";
 				int left = Math.max(0, (int) ((offer.expireTick() - tickCounter + 19) / 20));
 				payload = new FateStatePayload(
 						state.name(), secondsToNext, true, targetName,
