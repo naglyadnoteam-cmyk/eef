@@ -7,4 +7,15 @@ pluginManagement {
 		mavenCentral()
 		gradlePluginPortal()
 	}
+	resolutionStrategy {
+		eachPlugin {
+			// Resolve the fabric-loom plugin id straight from Fabric's own maven as a
+			// plain module (confirmed to exist there), instead of relying on a Gradle
+			// Plugin Portal marker artifact whose presence we could not verify for this
+			// very new Loom release.
+			if (requested.id.id == "fabric-loom") {
+				useModule("net.fabricmc:fabric-loom:${requested.version}")
+			}
+		}
+	}
 }

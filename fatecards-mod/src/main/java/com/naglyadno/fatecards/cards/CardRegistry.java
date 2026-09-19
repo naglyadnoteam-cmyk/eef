@@ -578,15 +578,15 @@ public final class CardRegistry {
 
 	// ==================================================================
 	// Дополнительно: телепорт в случайные биомы и на пик высоты
-	// (добавлено по отдельной просьбе). "Бледный сад" (Pale Garden) в
-	// Minecraft 1.21.1, под которую собран мод, ещё не существует —
-	// заменён другими яркими биомами, включая Мрачные недра (Deep Dark,
-	// биом Вардена), как и было предложено.
+	// (добавлено по отдельной просьбе).
 	// ==================================================================
 
 	static {
 		add("biome_deep_dark", "Мрачные недра", "Переносит в глубокий, зловещий биом Вардена.", Category.TELEPORT, 6,
 				ctx -> teleportToBiome(ctx, World.OVERWORLD, net.minecraft.world.biome.BiomeKeys.DEEP_DARK, "Мрачные недра"));
+
+		add("biome_pale_garden", "Бледный сад", "Переносит в жуткий туманный Бледный сад.", Category.TELEPORT, 6,
+				ctx -> teleportToBiome(ctx, World.OVERWORLD, net.minecraft.world.biome.BiomeKeys.PALE_GARDEN, "Бледный сад"));
 
 		add("biome_mushroom", "Грибные поля", "Переносит на остров грибных полей.", Category.TELEPORT, 6,
 				ctx -> teleportToBiome(ctx, World.OVERWORLD, net.minecraft.world.biome.BiomeKeys.MUSHROOM_FIELDS, "Грибные поля"));
