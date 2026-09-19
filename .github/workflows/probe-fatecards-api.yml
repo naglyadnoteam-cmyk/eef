@@ -27,16 +27,21 @@ jobs:
 
       - name: Locate mapped Minecraft jar
         run: |
-          find ~/.gradle/caches -iname "*minecraft*named*.jar" -o -iname "*minecraft*mapped*.jar" 2>/dev/null | tee /tmp/jars.txt
-          find ~/.gradle/caches -iname "*minecraft-merged*.jar" 2>/dev/null | tee -a /tmp/jars.txt
+          find ~/.gradle/caches/fabric-loom -iname "*.jar" 2>/dev/null | tee /tmp/jars.txt
 
       - name: javap key classes
         run: |
-          JAR=$(find ~/.gradle/caches -iname "*minecraft*named*.jar" | head -1)
+          JAR=$(grep -iE "1_21_11|1\.21\.11" /tmp/jars.txt | grep -iv sources | grep -iE "named|mapped" | head -1)
+          if [ -z "$JAR" ]; then
+            JAR=$(grep -iv sources /tmp/jars.txt | grep -iE "named" | head -1)
+          fi
+          if [ -z "$JAR" ]; then
+            JAR=$(grep -iv sources /tmp/jars.txt | sort -k1 | tail -1)
+          fi
           echo "Using jar: $JAR"
           if [ -z "$JAR" ]; then
             echo "No mapped jar found, listing loom cache tree"
-            find ~/.gradle/caches -maxdepth 6 -iname "*loom*" -type d
+            find ~/.gradle/caches -maxdepth 8 -iname "*loom*"
             exit 0
           fi
           mkdir -p /tmp/classes
