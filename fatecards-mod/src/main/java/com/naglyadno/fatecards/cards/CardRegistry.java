@@ -102,6 +102,38 @@ public final class CardRegistry {
 		return ctx.target().getBlockPos();
 	}
 
+	/**
+	 * Ищет ближайший биом {@code biomeKey} в измерении {@code dimension} (до 6400 блоков)
+	 * и телепортирует туда игрока; если не нашлось — переносит в случайное далёкое место,
+	 * чтобы карта никогда не "не сработала" впустую.
+	 */
+	private static void teleportToBiome(CardContext ctx, net.minecraft.registry.RegistryKey<World> dimension,
+			net.minecraft.registry.RegistryKey<net.minecraft.world.biome.Biome> biomeKey, String biomeLabel) {
+		ServerPlayerEntity player = ctx.target();
+		ServerWorld world = ctx.server().getWorld(dimension);
+		if (world == null) {
+			return;
+		}
+		BlockPos searchOrigin = world == player.getServerWorld() ? player.getBlockPos() : BlockPos.ORIGIN;
+		com.mojang.datafixers.util.Pair<BlockPos, RegistryEntry<net.minecraft.world.biome.Biome>> result;
+		try {
+			result = world.locateBiome(entry -> entry.matchesKey(biomeKey), searchOrigin, 6400, 32, 64);
+		} catch (Exception e) {
+			result = null;
+		}
+		if (result == null) {
+			player.sendMessage(net.minecraft.text.Text.literal(
+					"Биом \"" + biomeLabel + "\" не нашёлся поблизости — переносим в случайное далёкое место.")
+					.formatted(net.minecraft.util.Formatting.GRAY), false);
+			double angle = EFFECT_RANDOM.nextDouble() * Math.PI * 2;
+			CardEffects.teleportSafe(player, world, searchOrigin.getX() + Math.cos(angle) * 400,
+					searchOrigin.getZ() + Math.sin(angle) * 400);
+			return;
+		}
+		BlockPos pos = result.getFirst();
+		CardEffects.teleportSafe(player, world, pos.getX(), pos.getZ());
+	}
+
 	// ==================================================================
 	// 1-15. Характеристики
 	// ==================================================================
@@ -541,6 +573,90 @@ public final class CardRegistry {
 						}
 					}
 					CardEffects.teleportSafe(player, world, player.getX() + 20, player.getZ() + 20);
+				});
+	}
+
+	// ==================================================================
+	// Дополнительно: телепорт в случайные биомы и на пик высоты
+	// (добавлено по отдельной просьбе). "Бледный сад" (Pale Garden) в
+	// Minecraft 1.21.1, под которую собран мод, ещё не существует —
+	// заменён другими яркими биомами, включая Мрачные недра (Deep Dark,
+	// биом Вардена), как и было предложено.
+	// ==================================================================
+
+	static {
+		add("biome_deep_dark", "Мрачные недра", "Переносит в глубокий, зловещий биом Вардена.", Category.TELEPORT, 6,
+				ctx -> teleportToBiome(ctx, World.OVERWORLD, net.minecraft.world.biome.BiomeKeys.DEEP_DARK, "Мрачные недра"));
+
+		add("biome_mushroom", "Грибные поля", "Переносит на остров грибных полей.", Category.TELEPORT, 6,
+				ctx -> teleportToBiome(ctx, World.OVERWORLD, net.minecraft.world.biome.BiomeKeys.MUSHROOM_FIELDS, "Грибные поля"));
+
+		add("biome_ice_spikes", "Ледяные пики", "Переносит в биом с ледяными шпилями.", Category.TELEPORT, 6,
+				ctx -> teleportToBiome(ctx, World.OVERWORLD, net.minecraft.world.biome.BiomeKeys.ICE_SPIKES, "Ледяные пики"));
+
+		add("biome_badlands", "Бесплодные земли", "Переносит в оранжевый каньон бесплодных земель.", Category.TELEPORT, 6,
+				ctx -> teleportToBiome(ctx, World.OVERWORLD, net.minecraft.world.biome.BiomeKeys.BADLANDS, "Бесплодные земли"));
+
+		add("biome_cherry_grove", "Вишнёвая роща", "Переносит в розовую вишнёвую рощу.", Category.TELEPORT, 6,
+				ctx -> teleportToBiome(ctx, World.OVERWORLD, net.minecraft.world.biome.BiomeKeys.CHERRY_GROVE, "Вишнёвая роща"));
+
+		add("biome_mangrove", "Мангровое болото", "Переносит в мангровое болото.", Category.TELEPORT, 6,
+				ctx -> teleportToBiome(ctx, World.OVERWORLD, net.minecraft.world.biome.BiomeKeys.MANGROVE_SWAMP, "Мангровое болото"));
+
+		add("biome_lush_caves", "Пышные пещеры", "Переносит в пышные пещеры под землёй.", Category.TELEPORT, 6,
+				ctx -> teleportToBiome(ctx, World.OVERWORLD, net.minecraft.world.biome.BiomeKeys.LUSH_CAVES, "Пышные пещеры"));
+
+		add("biome_dripstone", "Пещеры с капельником", "Переносит в пещеры с каменными сосульками.", Category.TELEPORT, 6,
+				ctx -> teleportToBiome(ctx, World.OVERWORLD, net.minecraft.world.biome.BiomeKeys.DRIPSTONE_CAVES, "Пещеры с капельником"));
+
+		add("biome_jungle", "Джунгли", "Переносит в густые джунгли.", Category.TELEPORT, 6,
+				ctx -> teleportToBiome(ctx, World.OVERWORLD, net.minecraft.world.biome.BiomeKeys.JUNGLE, "Джунгли"));
+
+		add("biome_desert", "Пустыня", "Переносит в жаркую пустыню.", Category.TELEPORT, 6,
+				ctx -> teleportToBiome(ctx, World.OVERWORLD, net.minecraft.world.biome.BiomeKeys.DESERT, "Пустыня"));
+
+		add("biome_frozen_ocean", "Ледяной океан", "Переносит в замёрзший океан.", Category.TELEPORT, 5,
+				ctx -> teleportToBiome(ctx, World.OVERWORLD, net.minecraft.world.biome.BiomeKeys.FROZEN_OCEAN, "Ледяной океан"));
+
+		add("biome_crimson_forest", "Багровый лес", "Переносит в багровый лес Нижнего мира.", Category.TELEPORT, 5,
+				ctx -> teleportToBiome(ctx, World.NETHER, net.minecraft.world.biome.BiomeKeys.CRIMSON_FOREST, "Багровый лес"));
+
+		add("biome_warped_forest", "Искажённый лес", "Переносит в искажённый лес Нижнего мира.", Category.TELEPORT, 5,
+				ctx -> teleportToBiome(ctx, World.NETHER, net.minecraft.world.biome.BiomeKeys.WARPED_FOREST, "Искажённый лес"));
+
+		add("biome_soul_sand_valley", "Долина Песка Душ", "Переносит в жуткую долину Песка Душ.", Category.TELEPORT, 5,
+				ctx -> teleportToBiome(ctx, World.NETHER, net.minecraft.world.biome.BiomeKeys.SOUL_SAND_VALLEY, "Долина Песка Душ"));
+
+		add("biome_basalt_deltas", "Базальтовые дельты", "Переносит в чёрно-серые базальтовые дельты.", Category.TELEPORT, 5,
+				ctx -> teleportToBiome(ctx, World.NETHER, net.minecraft.world.biome.BiomeKeys.BASALT_DELTAS, "Базальтовые дельты"));
+
+		add("tp_height_peak", "Пик высоты", "Переносит на самую высокую точку в ближайших чанках.", Category.TELEPORT, 7,
+				ctx -> {
+					ServerPlayerEntity player = ctx.target();
+					ServerWorld world = ctx.world();
+					int radius = 48;
+					int step = 8;
+					int baseX = (int) player.getX();
+					int baseZ = (int) player.getZ();
+					int bestY = Integer.MIN_VALUE;
+					int bestX = baseX;
+					int bestZ = baseZ;
+					for (int dx = -radius; dx <= radius; dx += step) {
+						for (int dz = -radius; dz <= radius; dz += step) {
+							int x = baseX + dx;
+							int z = baseZ + dz;
+							// getTopY сам подгрузит/сгенерирует чанк при необходимости —
+							// поэтому непрогруженные соседние чанки не ломают карту.
+							int y = world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+							if (y > bestY) {
+								bestY = y;
+								bestX = x;
+								bestZ = z;
+							}
+						}
+					}
+					player.teleport(world, bestX + 0.5, bestY + 1, bestZ + 0.5, java.util.Set.of(),
+							player.getYaw(), player.getPitch());
 				});
 	}
 
