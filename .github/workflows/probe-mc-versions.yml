@@ -39,3 +39,16 @@ jobs:
 
       - name: Loader maven-metadata (confirm latest)
         run: curl -sS https://maven.fabricmc.net/net/fabricmc/fabric-loader/maven-metadata.xml | grep -A2 latest
+
+      - name: Fabric Loom gradle plugin versions (latest)
+        run: curl -sS https://maven.fabricmc.net/net/fabricmc/fabric-loom/fabric-loom.gradle.plugin/maven-metadata.xml | tail -c 2000
+
+      - name: Intermediary mappings for 26.2 (confirms MC 26.2 is buildable at all)
+        run: curl -sS https://meta.fabricmc.net/v2/versions/intermediary | jq -r '.[] | select(.version=="26.2")'
+
+      - name: Any yarn-like mapping artifact for 26.x on Fabric maven
+        run: |
+          echo "--- yarn group listing ---"
+          curl -sS https://maven.fabricmc.net/net/fabricmc/yarn/maven-metadata.xml | grep -o '26\.[0-9.]*[^<]*' | sort -u || true
+          echo "--- loom mappings-related search: check if loom supports officialMojangMappings for 26.2 by checking piston meta for that version ---"
+          curl -sS "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json" -o /dev/null -w "piston-meta reachable: %{http_code}\n" || true
