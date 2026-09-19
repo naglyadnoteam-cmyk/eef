@@ -186,8 +186,7 @@ public final class CardRegistry {
 
 		add("stat_super_hearing", "Суперслух", "Рядом громко звучат звуки существ 30 секунд.", Category.STATS, 6,
 				ctx -> ctx.game().scheduleRepeating(20, 6, i ->
-						ctx.target().playSoundToPlayer(net.minecraft.sound.SoundEvents.ENTITY_ZOMBIE_AMBIENT,
-								net.minecraft.sound.SoundCategory.HOSTILE, 3f, 0.7f)));
+						ctx.target().playSound(net.minecraft.sound.SoundEvents.ENTITY_ZOMBIE_AMBIENT, 3f, 0.7f)));
 
 		add("stat_water_person", "Водяной человек", "Дыхание под водой и скорость плавания на 60 секунд.",
 				Category.STATS, 10, ctx -> {
@@ -815,8 +814,7 @@ public final class CardRegistry {
 						EntityAttributeModifier.Operation.ADD_VALUE, 45 * 20));
 
 		add("weird_whisper", "Шёпот", "Рядом раздаётся один очень громкий, пугающий звук.", Category.WEIRD, 8,
-				ctx -> ctx.target().playSoundToPlayer(net.minecraft.sound.SoundEvents.ENTITY_WITHER_SPAWN,
-						net.minecraft.sound.SoundCategory.AMBIENT, 2f, 0.6f));
+				ctx -> ctx.target().playSound(net.minecraft.sound.SoundEvents.ENTITY_WITHER_SPAWN, 2f, 0.6f));
 
 		add("weird_fast_day", "День за секунду", "Время суток резко меняется несколько раз подряд (для всех).",
 				Category.WEIRD, 6, ctx -> ctx.game().scheduleRepeating(6, 5, i ->
