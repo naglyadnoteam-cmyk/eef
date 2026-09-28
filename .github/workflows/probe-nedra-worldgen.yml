@@ -23,17 +23,10 @@ jobs:
 
       - name: Extract vanilla dimension_type and noise_settings jsons
         run: |
+          set +e
           cd /tmp/vanilla
-          mkdir -p extracted
-          cd extracted
-          unzip -oq ../server.jar "data/minecraft/dimension_type/overworld.json" "data/minecraft/dimension_type/overworld_caves.json" "data/minecraft/worldgen/noise_settings/overworld.json"
-          echo "===== dimension_type/overworld.json ====="
-          cat data/minecraft/dimension_type/overworld.json
-          echo ""
-          echo "===== dimension_type/overworld_caves.json ====="
-          cat data/minecraft/dimension_type/overworld_caves.json
-          echo ""
-          echo "===== worldgen/noise_settings/overworld.json (first 100 lines) ====="
-          head -c 4000 data/minecraft/worldgen/noise_settings/overworld.json
-          echo ""
+          echo "===== searching jar listing for overworld/dimension_type/noise_settings ====="
+          unzip -l server.jar | grep -iE "dimension_type|noise_settings/overworld" | head -40
+          echo "===== also check for a separate data/server bundle inside the jar ====="
+          unzip -l server.jar | grep -iE "\.zip$|data\.zip|server_data"
           echo "DONE"
