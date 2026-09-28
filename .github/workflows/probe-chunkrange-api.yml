@@ -22,6 +22,12 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Cache decompiled sources
+        uses: actions/cache@v4
+        with:
+          path: chunkrange-mod/.gradle/loom-cache
+          key: chunkrange-decompile-1.21.11-build6-v1
+
       - name: List gen sources tasks
         run: ./gradlew tasks --all --no-daemon | grep -i sources || true
 
@@ -49,8 +55,12 @@ jobs:
               mkdir -p /tmp/src
               cd /tmp/src
               unzip -oq "$JAR" "net/minecraft/client/option/GameOptions.java"
-              echo "===== GameOptions.java from jar ====="
-              grep -n "viewDistance\|simulationDistance\|SimpleOption.ofInt\|renderDistance" net/minecraft/client/option/GameOptions.java
+              echo "===== full constructor slice lines 1470-1520 ====="
+              sed -n '1470,1520p' net/minecraft/client/option/GameOptions.java
+              echo "===== class-level SliderCallbacks / IntSliderCallbacks defs ====="
+              grep -n "class.*Callbacks\|interface.*Callbacks\|IntSliderCallbacks\|ValidatingIntSliderCallbacks" net/minecraft/client/option/GameOptions.java
+              echo "===== getViewDistance / getClampedViewDistance context lines 1975-1995 ====="
+              sed -n '1975,1995p' net/minecraft/client/option/GameOptions.java
               break
             fi
           done
