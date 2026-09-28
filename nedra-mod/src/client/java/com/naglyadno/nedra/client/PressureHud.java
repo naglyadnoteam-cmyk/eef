@@ -32,7 +32,7 @@ public final class PressureHud {
 		if (tier >= 4) {
 			renderVignette(context, tier);
 		}
-		if (tier >= 3 && client.options.debugEnabled) {
+		if (tier >= 3) {
 			renderDebugStatic(context, tier);
 		}
 	}
