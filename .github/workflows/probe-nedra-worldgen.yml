@@ -53,4 +53,13 @@ jobs:
             cat "$f"
             echo ""
           done
+          echo "===== reference biome JSONs (lush_caves, dripstone_caves, deep_dark) ====="
+          for b in lush_caves dripstone_caves deep_dark; do
+            echo "----- biome/$b.json -----"
+            cat "/tmp/vanilla/datagen/data/minecraft/worldgen/biome/$b.json"
+            echo ""
+          done
+          echo "===== structure/structure_set for village (for reference on how villages are placed) ====="
+          find /tmp/vanilla/datagen/data/minecraft/worldgen/structure -iname "village_*" | sort
+          find /tmp/vanilla/datagen/data/minecraft/worldgen/structure_set -iname "*village*" | sort
           echo "DONE"
