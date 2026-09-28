@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "chunkrange",
+	"version": "${version}",
+	"name": "Chunk Range Unlocker",
+	"description": "Снимает ограничение ползунка прогрузки чанков (Render Distance / Simulation Distance) в настройках — теперь можно выставить вплоть до 256 чанков.",
+	"authors": [
+		"naglyadno.team"
+	],
+	"contact": {},
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"com.naglyadno.chunkrange.ChunkRangeClient"
+		]
+	},
+	"mixins": [
+		"chunkrange.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}

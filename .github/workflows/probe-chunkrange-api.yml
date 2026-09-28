@@ -1,0 +1,44 @@
+name: Probe ChunkRange API
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: chunkrange-mod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: List gen sources tasks
+        run: ./gradlew tasks --all --no-daemon | grep -i sources || true
+
+      - name: Gen sources
+        run: ./gradlew genSources --no-daemon --stacktrace || ./gradlew genSourcesWithVineflower --no-daemon --stacktrace || true
+
+      - name: Find and print GameOptions.java
+        run: |
+          set +e
+          FILE=$(find ~/.gradle/caches/fabric-loom -iname "GameOptions.java" | head -1)
+          echo "FILE=$FILE"
+          if [ -n "$FILE" ]; then
+            echo "===== GameOptions.java (grep viewDistance/simulationDistance context) ====="
+            grep -n "viewDistance\|simulationDistance\|SimpleOption.ofInt\|renderDistance" "$FILE"
+          else
+            echo "not found, searching sources jar"
+            JAR=$(find ~/.gradle/caches/fabric-loom -iname "*sources*.jar" | head -5)
+            echo "$JAR"
+          fi
+          echo "DONE"
