@@ -41,4 +41,16 @@ jobs:
           wc -l "$NOISE"
           echo "===== noise_settings/overworld.json top-level keys ====="
           NOISE="$NOISE" python3 -c "import json,os; d=json.load(open(os.environ['NOISE'])); print(list(d.keys())); print('sea_level=',d.get('sea_level')); print('disable_mob_generation=',d.get('disable_mob_generation')); print('aquifers_enabled=',d.get('aquifers_enabled')); print('ore_veins_enabled=',d.get('ore_veins_enabled')); print('legacy_random_source=',d.get('legacy_random_source')); print('default_block=',d.get('default_block')); print('default_fluid=',d.get('default_fluid')); n=d.get('noise',{}); print('noise section:', json.dumps(n, indent=2)); print('noise_router top-level keys:', list(d.get('noise_router', {}).keys()))"
+          echo "===== grep -rl y_clamped_gradient / -64 / min_y in density_function dir ====="
+          grep -rl "y_clamped_gradient" /tmp/vanilla/datagen/data/minecraft/worldgen/density_function/ | sort
+          echo "===== files under worldgen/density_function/overworld/ ====="
+          find /tmp/vanilla/datagen/data/minecraft/worldgen/density_function/overworld -type f | sort
+          echo "===== grep -rn '\-64' across all density_function files ====="
+          grep -rln -- "-64" /tmp/vanilla/datagen/data/minecraft/worldgen/density_function/ | sort
+          echo "===== dump each density_function file that mentions -64 ====="
+          for f in $(grep -rln -- "-64" /tmp/vanilla/datagen/data/minecraft/worldgen/density_function/ | sort); do
+            echo "----- $f -----"
+            cat "$f"
+            echo ""
+          done
           echo "DONE"
