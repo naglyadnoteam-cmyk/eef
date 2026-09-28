@@ -70,4 +70,33 @@ jobs:
             sed -n '1,70p' "$EQUIPFILE"
           fi
 
+          echo "===== Feature.java: class decl + generate signature + a few static field registrations ====="
+          unzip -oq "$SRC" "net/minecraft/world/gen/feature/Feature.java"
+          grep -n "^public abstract class Feature\|public abstract boolean generate\|public Feature(\|static final Feature<" net/minecraft/world/gen/feature/Feature.java | head -20
+          echo "----- Feature.java full head (first 60 lines) -----"
+          sed -n '1,60p' net/minecraft/world/gen/feature/Feature.java
+
+          echo "===== FeatureContext.java full content ====="
+          unzip -oq "$SRC" "net/minecraft/world/gen/feature/util/FeatureContext.java"
+          cat net/minecraft/world/gen/feature/util/FeatureContext.java
+
+          echo "===== DefaultFeatureConfig.java full content ====="
+          unzip -oq "$SRC" "net/minecraft/world/gen/feature/DefaultFeatureConfig.java"
+          cat net/minecraft/world/gen/feature/DefaultFeatureConfig.java
+
+          echo "===== a simple real Feature subclass for reference: LakeFeature.java or DiskFeature.java ====="
+          LAKEFILE=$(unzip -l "$SRC" | grep -iE "/LakeFeature\.java|/DiskFeature\.java" | awk '{print $NF}' | head -1)
+          echo "LAKEFILE=$LAKEFILE"
+          if [ -n "$LAKEFILE" ]; then
+            unzip -oq "$SRC" "$LAKEFILE"
+            cat "$LAKEFILE"
+          fi
+
+          echo "===== FeatureConfig.java (marker interface) ====="
+          unzip -oq "$SRC" "net/minecraft/world/gen/feature/FeatureConfig.java" 2>/dev/null
+          cat net/minecraft/world/gen/feature/FeatureConfig.java 2>/dev/null || echo "not found directly"
+
+          echo "===== StructureWorldAccess / FeatureContext usage - getWorld/getRandom/getOrigin/getConfig methods ====="
+          grep -n "public " net/minecraft/world/gen/feature/util/FeatureContext.java
+
           echo "DONE"
