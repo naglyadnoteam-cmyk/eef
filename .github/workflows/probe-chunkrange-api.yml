@@ -31,25 +31,27 @@ jobs:
       - name: Find and print GameOptions.java
         run: |
           set +e
-          echo "===== all *sources* under fabric-loom cache ====="
-          find ~/.gradle/caches/fabric-loom -iname "*sources*" 2>/dev/null | head -50
-          FILE=$(find ~/.gradle/caches/fabric-loom -iname "GameOptions.java" 2>/dev/null | head -1)
+          echo "===== whole-home search for GameOptions.java ====="
+          FILE=$(find ~ -iname "GameOptions.java" 2>/dev/null | head -1)
           echo "FILE=$FILE"
           if [ -n "$FILE" ]; then
             echo "===== GameOptions.java (grep viewDistance/simulationDistance context) ====="
             grep -n "viewDistance\|simulationDistance\|SimpleOption.ofInt\|renderDistance" "$FILE"
-          else
-            echo "not found as loose file, searching inside any sources jars"
-            for JAR in $(find ~/.gradle/caches/fabric-loom -iname "*sources*.jar" 2>/dev/null); do
-              echo "checking $JAR"
-              unzip -l "$JAR" 2>/dev/null | grep -i "GameOptions.java" && FOUND_JAR="$JAR"
-            done
-            if [ -n "$FOUND_JAR" ]; then
+            exit 0
+          fi
+          echo "not found as loose file; whole-home search for *sources*.jar"
+          find ~ -iname "*sources*.jar" 2>/dev/null > /tmp/jars.txt
+          wc -l /tmp/jars.txt
+          head -30 /tmp/jars.txt
+          for JAR in $(cat /tmp/jars.txt); do
+            if unzip -l "$JAR" 2>/dev/null | grep -qi "GameOptions.java"; then
+              echo "FOUND in $JAR"
               mkdir -p /tmp/src
               cd /tmp/src
-              unzip -oq "$FOUND_JAR" "net/minecraft/client/option/GameOptions.java"
+              unzip -oq "$JAR" "net/minecraft/client/option/GameOptions.java"
               echo "===== GameOptions.java from jar ====="
               grep -n "viewDistance\|simulationDistance\|SimpleOption.ofInt\|renderDistance" net/minecraft/client/option/GameOptions.java
+              break
             fi
-          fi
+          done
           echo "DONE"
