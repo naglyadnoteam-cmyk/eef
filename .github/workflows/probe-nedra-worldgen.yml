@@ -21,12 +21,25 @@ jobs:
           curl -sSL -o server.jar "$SERVER_URL"
           ls -la
 
-      - name: Extract vanilla dimension_type and noise_settings jsons
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Run vanilla data generator to dump real registry JSONs
         run: |
           set +e
           cd /tmp/vanilla
-          echo "===== searching jar listing for overworld/dimension_type/noise_settings ====="
-          unzip -l server.jar | grep -iE "dimension_type|noise_settings/overworld" | head -40
-          echo "===== also check for a separate data/server bundle inside the jar ====="
-          unzip -l server.jar | grep -iE "\.zip$|data\.zip|server_data"
+          java -DbundlerMainClass=net.minecraft.data.Main -jar server.jar --all --output /tmp/vanilla/datagen 2>&1 | tail -60
+          echo "===== find dimension_type/noise_settings in datagen output ====="
+          find /tmp/vanilla/datagen -iname "overworld.json" -path "*dimension_type*"
+          find /tmp/vanilla/datagen -iname "overworld.json" -path "*noise_settings*"
+          find /tmp/vanilla/datagen -iname "overworld_caves.json"
+          echo "===== dimension_type/overworld.json ====="
+          cat $(find /tmp/vanilla/datagen -iname "overworld.json" -path "*dimension_type*" | head -1)
+          echo ""
+          echo "===== dimension_type/overworld_caves.json ====="
+          cat $(find /tmp/vanilla/datagen -iname "overworld_caves.json" | head -1)
+          echo ""
           echo "DONE"
