@@ -2,8 +2,8 @@
 	"type": "minecraft:crafting_shapeless",
 	"category": "misc",
 	"ingredients": [
-		{ "item": "minecraft:moss_block" },
-		{ "item": "minecraft:glow_berries" }
+		"minecraft:moss_block",
+		"minecraft:glow_berries"
 	],
 	"result": {
 		"id": "nedra:deepmoss_clump",

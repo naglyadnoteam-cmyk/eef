@@ -6,7 +6,7 @@
 		"X X"
 	],
 	"key": {
-		"X": { "item": "nedra:magnetite_ore" }
+		"X": "nedra:magnetite_ore"
 	},
 	"result": {
 		"id": "nedra:helmet_reinforced",

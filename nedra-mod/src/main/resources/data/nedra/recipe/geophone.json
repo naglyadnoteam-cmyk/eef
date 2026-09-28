@@ -7,9 +7,9 @@
 		"ISI"
 	],
 	"key": {
-		"I": { "item": "minecraft:iron_ingot" },
-		"S": { "item": "minecraft:redstone" },
-		"M": { "item": "nedra:magnetite_ore" }
+		"I": "minecraft:iron_ingot",
+		"S": "minecraft:redstone",
+		"M": "nedra:magnetite_ore"
 	},
 	"result": {
 		"id": "nedra:geophone",

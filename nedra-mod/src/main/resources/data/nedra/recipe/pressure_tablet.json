@@ -2,9 +2,9 @@
 	"type": "minecraft:crafting_shapeless",
 	"category": "misc",
 	"ingredients": [
-		{ "item": "nedra:deepmoss_clump" },
-		{ "item": "nedra:deepmoss_clump" },
-		{ "item": "minecraft:sugar" }
+		"nedra:deepmoss_clump",
+		"nedra:deepmoss_clump",
+		"minecraft:sugar"
 	],
 	"result": {
 		"id": "nedra:pressure_tablet",

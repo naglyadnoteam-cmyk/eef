@@ -6,8 +6,8 @@
 		"A A"
 	],
 	"key": {
-		"A": { "item": "nedra:magnetite_ore" },
-		"L": { "item": "nedra:lumenite_ore" }
+		"A": "nedra:magnetite_ore",
+		"L": "nedra:lumenite_ore"
 	},
 	"result": {
 		"id": "nedra:helmet_deepsuit",
