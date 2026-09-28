@@ -31,14 +31,25 @@ jobs:
       - name: Find and print GameOptions.java
         run: |
           set +e
-          FILE=$(find ~/.gradle/caches/fabric-loom -iname "GameOptions.java" | head -1)
+          echo "===== all *sources* under fabric-loom cache ====="
+          find ~/.gradle/caches/fabric-loom -iname "*sources*" 2>/dev/null | head -50
+          FILE=$(find ~/.gradle/caches/fabric-loom -iname "GameOptions.java" 2>/dev/null | head -1)
           echo "FILE=$FILE"
           if [ -n "$FILE" ]; then
             echo "===== GameOptions.java (grep viewDistance/simulationDistance context) ====="
             grep -n "viewDistance\|simulationDistance\|SimpleOption.ofInt\|renderDistance" "$FILE"
           else
-            echo "not found, searching sources jar"
-            JAR=$(find ~/.gradle/caches/fabric-loom -iname "*sources*.jar" | head -5)
-            echo "$JAR"
+            echo "not found as loose file, searching inside any sources jars"
+            for JAR in $(find ~/.gradle/caches/fabric-loom -iname "*sources*.jar" 2>/dev/null); do
+              echo "checking $JAR"
+              unzip -l "$JAR" 2>/dev/null | grep -i "GameOptions.java" && FOUND_JAR="$JAR"
+            done
+            if [ -n "$FOUND_JAR" ]; then
+              mkdir -p /tmp/src
+              cd /tmp/src
+              unzip -oq "$FOUND_JAR" "net/minecraft/client/option/GameOptions.java"
+              echo "===== GameOptions.java from jar ====="
+              grep -n "viewDistance\|simulationDistance\|SimpleOption.ofInt\|renderDistance" net/minecraft/client/option/GameOptions.java
+            fi
           fi
           echo "DONE"
