@@ -1,0 +1,58 @@
+name: Verify Nedra Runtime
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Build mod (to be sure we test the latest jar)
+        working-directory: nedra-mod
+        run: |
+          chmod +x gradlew
+          ./gradlew build --no-daemon
+
+      - name: Set up a throwaway Fabric server
+        run: |
+          set -e
+          mkdir -p /tmp/server/mods
+          cd /tmp/server
+          curl -sSL -o fabric-installer.jar https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.0.1/fabric-installer-1.0.1.jar
+          java -jar fabric-installer.jar server -mcversion 1.21.11 -loader 0.19.5 -downloadMinecraft -dir /tmp/server
+          curl -sSL -o mods/fabric-api.jar "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/0.141.6+1.21.11/fabric-api-0.141.6+1.21.11.jar"
+          cp /home/runner/work/eef/eef/nedra-mod/build/libs/nedra-*.jar mods/ 2>/dev/null || true
+          ls -la mods/
+          echo "eula=true" > eula.txt
+
+      - name: Run server briefly and capture log
+        working-directory: /tmp/server
+        run: |
+          set +e
+          timeout 120 java -Xmx2G -jar fabric-server-launch.jar nogui > /tmp/server/console.log 2>&1
+          echo "server process ended (timeout or crash), exit code $?"
+
+      - name: Print server log
+        if: always()
+        run: |
+          echo "===== full console.log ====="
+          cat /tmp/server/console.log || echo "no log found"
+          echo "===== grep for errors/exceptions/failed ====="
+          grep -iE "error|exception|failed|could not|invalid" /tmp/server/console.log || echo "no obvious error lines found"
+
+      - name: Upload full log as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nedra-server-log
+          path: /tmp/server/console.log
+          if-no-files-found: warn
