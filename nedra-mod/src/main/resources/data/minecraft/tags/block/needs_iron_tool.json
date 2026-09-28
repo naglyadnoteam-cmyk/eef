@@ -1,0 +1,8 @@
+{
+	"replace": false,
+	"values": [
+		"nedra:lumenite_ore",
+		"nedra:magnetite_ore",
+		"nedra:echo_ore"
+	]
+}

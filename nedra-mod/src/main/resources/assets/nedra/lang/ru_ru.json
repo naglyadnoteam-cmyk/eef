@@ -1,0 +1,25 @@
+{
+	"itemGroup.nedra": "Недра",
+
+	"block.nedra.lumenite_ore": "Люменитовая руда",
+	"block.nedra.magnetite_ore": "Магнетитовая руда",
+	"block.nedra.echo_ore": "Эхо-руда",
+	"block.nedra.unstable_stone": "Нестабильный камень",
+	"block.nedra.current_vent": "Воздушный разлом",
+	"block.nedra.deepmoss": "Глубинный мох",
+
+	"item.nedra.lumenite_ore": "Люменитовая руда",
+	"item.nedra.magnetite_ore": "Магнетитовая руда",
+	"item.nedra.echo_ore": "Эхо-руда",
+	"item.nedra.unstable_stone": "Нестабильный камень",
+	"item.nedra.current_vent": "Воздушный разлом",
+	"item.nedra.deepmoss": "Глубинный мох",
+	"item.nedra.deepmoss_clump": "Ком глубинного мха",
+	"item.nedra.pressure_tablet": "Таблетка от давления",
+	"item.nedra.geophone": "Геофон",
+	"item.nedra.helmet_light": "Лёгкий шахтёрский шлем",
+	"item.nedra.helmet_reinforced": "Усиленный шлем",
+	"item.nedra.helmet_deepsuit": "Шлем глубинного скафандра",
+
+	"effect.nedra.pressure_resistance": "Сопротивление давлению"
+}

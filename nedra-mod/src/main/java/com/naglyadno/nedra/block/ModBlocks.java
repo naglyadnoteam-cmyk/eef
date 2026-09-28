@@ -4,7 +4,6 @@ import com.naglyadno.nedra.NedraMod;
 import com.naglyadno.nedra.block.entity.EchoOreBlockEntity;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.MapColor;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.item.BlockItem;
@@ -30,9 +29,8 @@ public final class ModBlocks {
 			AbstractBlock.Settings.create().mapColor(MapColor.IRON_GRAY).strength(4.5f, 6.0f).requiresTool()
 					.sounds(net.minecraft.sound.BlockSoundGroup.DEEPSLATE));
 
-	public static final Block ECHO_ORE = registerWithItemAndEntity("echo_ore",
-			settings -> new EchoOreBlock(settings), AbstractBlock.Settings.create()
-					.mapColor(MapColor.BLACK).strength(4.5f, 6.5f).requiresTool()
+	public static final Block ECHO_ORE = registerWithItem("echo_ore", EchoOreBlock::new,
+			AbstractBlock.Settings.create().mapColor(MapColor.BLACK).strength(4.5f, 6.5f).requiresTool()
 					.sounds(net.minecraft.sound.BlockSoundGroup.DEEPSLATE));
 
 	public static final Block UNSTABLE_STONE = registerWithItem("unstable_stone", Block::new,
@@ -44,8 +42,8 @@ public final class ModBlocks {
 					.sounds(net.minecraft.sound.BlockSoundGroup.BASALT).nonOpaque());
 
 	public static final Block DEEPMOSS = registerWithItem("deepmoss", DeepmossBlock::new,
-			AbstractBlock.Settings.create().mapColor(MapColor.DARK_GREEN).noCollision().breakInstantly()
-					.sounds(net.minecraft.sound.BlockSoundGroup.MOSS_CARPET));
+			AbstractBlock.Settings.create().mapColor(MapColor.DARK_GREEN).strength(0.3f)
+					.sounds(net.minecraft.sound.BlockSoundGroup.MOSS_BLOCK));
 
 	public static BlockEntityType<EchoOreBlockEntity> ECHO_ORE_ENTITY;
 
@@ -55,12 +53,6 @@ public final class ModBlocks {
 		Block block = factory.apply(settings.registryKey(key));
 		Registry.register(Registries.BLOCK, key, block);
 		registerBlockItem(path, block);
-		return block;
-	}
-
-	private static Block registerWithItemAndEntity(String path, Function<AbstractBlock.Settings, Block> factory,
-			AbstractBlock.Settings settings) {
-		Block block = registerWithItem(path, factory, settings);
 		return block;
 	}
 

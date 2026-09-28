@@ -1,0 +1,25 @@
+{
+	"itemGroup.nedra": "Nedra",
+
+	"block.nedra.lumenite_ore": "Lumenite Ore",
+	"block.nedra.magnetite_ore": "Magnetite Ore",
+	"block.nedra.echo_ore": "Echo Ore",
+	"block.nedra.unstable_stone": "Unstable Stone",
+	"block.nedra.current_vent": "Current Vent",
+	"block.nedra.deepmoss": "Deepmoss",
+
+	"item.nedra.lumenite_ore": "Lumenite Ore",
+	"item.nedra.magnetite_ore": "Magnetite Ore",
+	"item.nedra.echo_ore": "Echo Ore",
+	"item.nedra.unstable_stone": "Unstable Stone",
+	"item.nedra.current_vent": "Current Vent",
+	"item.nedra.deepmoss": "Deepmoss",
+	"item.nedra.deepmoss_clump": "Deepmoss Clump",
+	"item.nedra.pressure_tablet": "Pressure Tablet",
+	"item.nedra.geophone": "Geophone",
+	"item.nedra.helmet_light": "Light Miner's Helmet",
+	"item.nedra.helmet_reinforced": "Reinforced Helmet",
+	"item.nedra.helmet_deepsuit": "Deep-Suit Helmet",
+
+	"effect.nedra.pressure_resistance": "Pressure Resistance"
+}

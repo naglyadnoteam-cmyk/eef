@@ -1,9 +1,9 @@
 package com.naglyadno.nedra.block;
 
 import com.naglyadno.nedra.block.entity.EchoOreBlockEntity;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockEntityProvider;
+import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
+import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
@@ -14,7 +14,12 @@ import net.minecraft.world.World;
  * Руда, которую почти не видно на глаз - её выдаёт только периодический звуковой "пинг" рядом.
  * Логика тика (проигрывание звука) вынесена в {@link EchoOreBlockEntity}.
  */
-public class EchoOreBlock extends Block implements BlockEntityProvider {
+public class EchoOreBlock extends BlockWithEntity {
+
+	@Override
+	protected BlockRenderType getRenderType(BlockState state) {
+		return BlockRenderType.MODEL;
+	}
 
 	public EchoOreBlock(Settings settings) {
 		super(settings);
