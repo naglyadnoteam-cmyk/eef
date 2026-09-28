@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "nedra",
+	"version": "${version}",
+	"name": "Недра",
+	"description": "Живой подземный мир: давление с глубиной, опасные обвалы, подземные течения, руды на слух, новые биомы, реки и пещеры-гиганты.",
+	"authors": [
+		"naglyadno.team"
+	],
+	"contact": {},
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.naglyadno.nedra.NedraMod"
+		],
+		"client": [
+			"com.naglyadno.nedra.client.NedraClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}

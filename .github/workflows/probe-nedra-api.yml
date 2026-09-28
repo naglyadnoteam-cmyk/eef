@@ -1,0 +1,58 @@
+name: Probe Nedra API
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nedra-mod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Cache decompiled sources
+        uses: actions/cache@v4
+        with:
+          path: nedra-mod/.gradle/loom-cache
+          key: nedra-decompile-1.21.11-build6-v1
+
+      - name: Gen sources
+        run: ./gradlew genSources --no-daemon --stacktrace
+
+      - name: Probe several APIs
+        run: |
+          set +e
+          SRC=$(find .gradle/loom-cache/minecraftMaven -ipath "*minecraft-merged*" -iname "*-sources.jar" | head -1)
+          echo "SRC=$SRC"
+          mkdir -p /tmp/src
+          cd /tmp/src
+          unzip -oq "$SRC" "net/minecraft/item/Items.java" "net/minecraft/item/ArmorItem.java" "net/minecraft/item/equipment/ArmorMaterials.java" "net/minecraft/entity/effect/StatusEffect.java" "net/minecraft/entity/effect/StatusEffects.java" "net/minecraft/component/type/EquippableComponent.java" "net/minecraft/component/type/ConsumableComponent.java" "net/minecraft/component/type/FoodComponent.java" 2>&1 | head -40
+
+          echo "===== find actual paths if the above missed ====="
+          unzip -l "$SRC" | grep -iE "ArmorMaterials.java|StatusEffect.java$|StatusEffects.java|EquippableComponent.java|ConsumableComponent.java|FoodComponent.java|/ArmorItem.java"
+
+          echo "===== Items.java: IRON_HELMET / GOLDEN_APPLE / registration helper ====="
+          find . -iname "Items.java" -exec grep -n "IRON_HELMET\|GOLDEN_APPLE\|GOLDEN_CARROT\|register(" {} \; | head -30
+
+          echo "===== ArmorItem.java (if found) full head ====="
+          find . -iname "ArmorItem.java" -exec sed -n '1,60p' {} \;
+
+          echo "===== StatusEffect.java (if found) constructor/class head ====="
+          find . -iname "StatusEffect.java" -exec sed -n '1,50p' {} \;
+
+          echo "===== a sample custom-ish status effect registration in StatusEffects.java ====="
+          find . -iname "StatusEffects.java" -exec sed -n '1,60p' {} \;
+
+          echo "DONE"
