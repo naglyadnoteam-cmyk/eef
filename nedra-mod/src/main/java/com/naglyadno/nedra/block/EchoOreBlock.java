@@ -1,5 +1,6 @@
 package com.naglyadno.nedra.block;
 
+import com.mojang.serialization.MapCodec;
 import com.naglyadno.nedra.block.entity.EchoOreBlockEntity;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
@@ -16,13 +17,20 @@ import net.minecraft.world.World;
  */
 public class EchoOreBlock extends BlockWithEntity {
 
-	@Override
-	protected BlockRenderType getRenderType(BlockState state) {
-		return BlockRenderType.MODEL;
-	}
+	public static final MapCodec<EchoOreBlock> CODEC = createCodec(EchoOreBlock::new);
 
 	public EchoOreBlock(Settings settings) {
 		super(settings);
+	}
+
+	@Override
+	protected MapCodec<EchoOreBlock> getCodec() {
+		return CODEC;
+	}
+
+	@Override
+	protected BlockRenderType getRenderType(BlockState state) {
+		return BlockRenderType.MODEL;
 	}
 
 	@Override
@@ -32,7 +40,7 @@ public class EchoOreBlock extends BlockWithEntity {
 
 	@Override
 	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
-		if (world.isClient) {
+		if (world.isClient()) {
 			return null;
 		}
 		return validateTicker(type, ModBlocks.ECHO_ORE_ENTITY, EchoOreBlockEntity::serverTick);

@@ -13,7 +13,6 @@ import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
-import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -29,10 +28,9 @@ public class GeophoneItem extends Item {
 	}
 
 	@Override
-	public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
-		ItemStack stack = user.getStackInHand(hand);
-		if (world.isClient || !(world instanceof ServerWorld serverWorld)) {
-			return TypedActionResult.success(stack, true);
+	public ActionResult use(World world, PlayerEntity user, Hand hand) {
+		if (world.isClient() || !(world instanceof ServerWorld serverWorld)) {
+			return ActionResult.SUCCESS;
 		}
 		world.playSound(null, user.getBlockPos(), SoundEvents.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.PLAYERS, 0.8f, 1.4f);
 
@@ -64,7 +62,7 @@ public class GeophoneItem extends Item {
 					.formatted(Formatting.AQUA), true);
 		}
 
-		return TypedActionResult.success(stack, false);
+		return ActionResult.SUCCESS;
 	}
 
 	private static String arrowFor(float relativeYaw) {

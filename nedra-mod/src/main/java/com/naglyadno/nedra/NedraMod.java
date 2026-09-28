@@ -73,7 +73,7 @@ public class NedraMod implements ModInitializer {
 		});
 
 		PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
-			if (!world.isClient && rockfallManager != null && player instanceof ServerPlayerEntity serverPlayer) {
+			if (!world.isClient() && rockfallManager != null && player instanceof ServerPlayerEntity serverPlayer) {
 				rockfallManager.onBlockBroken(serverPlayer, pos);
 			}
 		});

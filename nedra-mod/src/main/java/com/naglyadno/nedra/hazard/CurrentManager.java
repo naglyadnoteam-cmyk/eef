@@ -48,7 +48,7 @@ public class CurrentManager {
 			if (!world.getBlockState(pos).isOf(ModBlocks.CURRENT_VENT)) {
 				continue;
 			}
-			double dist = Math.sqrt(pos.getSquaredDistance(player.getPos()));
+			double dist = Math.sqrt(pos.getSquaredDistance(player.getEntityPos()));
 			if (dist > r || dist < 0.01) {
 				continue;
 			}

@@ -48,8 +48,7 @@ public final class ModItems {
 	 * EQUIPPABLE (какой слот, звук/модель экипировки) и ATTRIBUTE_MODIFIERS (защита/прочность,
 	 * которые берутся из существующего ArmorMaterial, чтобы не изобретать свой материал с нуля).
 	 */
-	private static Item registerHelmet(String path, RegistryEntry<ArmorMaterial> materialEntry) {
-		ArmorMaterial material = materialEntry.value();
+	private static Item registerHelmet(String path, ArmorMaterial material) {
 		RegistryKey<Item> key = itemKey(path);
 
 		EquippableComponent equippable = new EquippableComponent(

@@ -73,6 +73,7 @@ public final class ModBlocks {
 	public static void init() {
 		ECHO_ORE_ENTITY = Registry.register(Registries.BLOCK_ENTITY_TYPE,
 				Identifier.of(NedraMod.MOD_ID, "echo_ore"),
-				net.minecraft.block.entity.BlockEntityType.Builder.create(EchoOreBlockEntity::new, ECHO_ORE).build());
+				net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder
+						.create(EchoOreBlockEntity::new, ECHO_ORE).build());
 	}
 }
