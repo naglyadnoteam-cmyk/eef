@@ -36,7 +36,7 @@ jobs:
           set +e
           echo "===== listing all sources jars under loom-cache ====="
           find .gradle/loom-cache -iname "*-sources.jar" 2>/dev/null
-          SRC=$(find .gradle/loom-cache/minecraftMaven -ipath "*minecraft-common-*" -iname "*-sources.jar" | head -1)
+          SRC=$(realpath "$(find .gradle/loom-cache/minecraftMaven -ipath "*minecraft-common-*" -iname "*-sources.jar" | head -1)")
           echo "SRC=$SRC"
           mkdir -p /tmp/src
           cd /tmp/src
