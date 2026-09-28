@@ -40,21 +40,34 @@ jobs:
           echo "SRC=$SRC"
           mkdir -p /tmp/src
           cd /tmp/src
-          unzip -oq "$SRC" "net/minecraft/item/Items.java" "net/minecraft/item/ArmorItem.java" "net/minecraft/item/equipment/ArmorMaterials.java" "net/minecraft/entity/effect/StatusEffect.java" "net/minecraft/entity/effect/StatusEffects.java" "net/minecraft/component/type/EquippableComponent.java" "net/minecraft/component/type/ConsumableComponent.java" "net/minecraft/component/type/FoodComponent.java" 2>&1 | head -40
+          echo "===== find any Armor*.java / Equip*.java files in the jar ====="
+          unzip -l "$SRC" | grep -iE "/Armor[A-Za-z]*\.java|/Equip[A-Za-z]*\.java|EquippableComponent"
 
-          echo "===== find actual paths if the above missed ====="
-          unzip -l "$SRC" | grep -iE "ArmorMaterials.java|StatusEffect.java$|StatusEffects.java|EquippableComponent.java|ConsumableComponent.java|FoodComponent.java|/ArmorItem.java"
+          unzip -oq "$SRC" "net/minecraft/item/Items.java"
 
-          echo "===== Items.java: IRON_HELMET / GOLDEN_APPLE / registration helper ====="
-          find . -iname "Items.java" -exec grep -n "IRON_HELMET\|GOLDEN_APPLE\|GOLDEN_CARROT\|register(" {} \; | head -30
+          echo "===== Items.java: IRON_HELMET registration line exactly ====="
+          grep -n "IRON_HELMET" net/minecraft/item/Items.java
 
-          echo "===== ArmorItem.java (if found) full head ====="
-          find . -iname "ArmorItem.java" -exec sed -n '1,60p' {} \;
+          echo "===== Items.java: NETHERITE_HELMET registration line exactly ====="
+          grep -n "NETHERITE_HELMET" net/minecraft/item/Items.java
 
-          echo "===== StatusEffect.java (if found) constructor/class head ====="
-          find . -iname "StatusEffect.java" -exec sed -n '1,50p' {} \;
+          echo "===== Items.java: static register helper signature(s) ====="
+          grep -n "private static Item register\|static Item register(" net/minecraft/item/Items.java | head -10
 
-          echo "===== a sample custom-ish status effect registration in StatusEffects.java ====="
-          find . -iname "StatusEffects.java" -exec sed -n '1,60p' {} \;
+          ARMORFILE=$(unzip -l "$SRC" | grep -iE "/Armor[A-Za-z]*\.java" | awk '{print $NF}' | grep -i "ArmorItem\|ArmorMaterial" | head -1)
+          echo "ARMORFILE=$ARMORFILE"
+          if [ -n "$ARMORFILE" ]; then
+            unzip -oq "$SRC" "$ARMORFILE"
+            echo "===== $ARMORFILE head ====="
+            sed -n '1,70p' "$ARMORFILE"
+          fi
+
+          EQUIPFILE=$(unzip -l "$SRC" | grep -iE "EquippableComponent.java" | awk '{print $NF}' | head -1)
+          echo "EQUIPFILE=$EQUIPFILE"
+          if [ -n "$EQUIPFILE" ]; then
+            unzip -oq "$SRC" "$EQUIPFILE"
+            echo "===== $EQUIPFILE head ====="
+            sed -n '1,70p' "$EQUIPFILE"
+          fi
 
           echo "DONE"
