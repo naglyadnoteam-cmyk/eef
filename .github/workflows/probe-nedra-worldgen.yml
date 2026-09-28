@@ -1,0 +1,39 @@
+name: Probe Nedra Worldgen Data
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download vanilla 1.21.11 server jar
+        run: |
+          set -e
+          mkdir -p /tmp/vanilla
+          cd /tmp/vanilla
+          MANIFEST=$(curl -sSL https://piston-meta.mojang.com/mc/game/version_manifest_v2.json)
+          VERSION_URL=$(echo "$MANIFEST" | python3 -c "import json,sys; d=json.load(sys.stdin); print([v['url'] for v in d['versions'] if v['id']=='1.21.11'][0])")
+          echo "VERSION_URL=$VERSION_URL"
+          VERSION_JSON=$(curl -sSL "$VERSION_URL")
+          SERVER_URL=$(echo "$VERSION_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['downloads']['server']['url'])")
+          echo "SERVER_URL=$SERVER_URL"
+          curl -sSL -o server.jar "$SERVER_URL"
+          ls -la
+
+      - name: Extract vanilla dimension_type and noise_settings jsons
+        run: |
+          cd /tmp/vanilla
+          mkdir -p extracted
+          cd extracted
+          unzip -oq ../server.jar "data/minecraft/dimension_type/overworld.json" "data/minecraft/dimension_type/overworld_caves.json" "data/minecraft/worldgen/noise_settings/overworld.json"
+          echo "===== dimension_type/overworld.json ====="
+          cat data/minecraft/dimension_type/overworld.json
+          echo ""
+          echo "===== dimension_type/overworld_caves.json ====="
+          cat data/minecraft/dimension_type/overworld_caves.json
+          echo ""
+          echo "===== worldgen/noise_settings/overworld.json (first 100 lines) ====="
+          head -c 4000 data/minecraft/worldgen/noise_settings/overworld.json
+          echo ""
+          echo "DONE"
