@@ -99,4 +99,31 @@ jobs:
           echo "===== StructureWorldAccess / FeatureContext usage - getWorld/getRandom/getOrigin/getConfig methods ====="
           grep -n "public " net/minecraft/world/gen/feature/util/FeatureContext.java
 
+          echo "===== FillBiomeCommand.java (how vanilla /fillbiome actually sets biome) ====="
+          FILLBIOME=$(unzip -l "$SRC" | grep -iE "/FillBiomeCommand\.java" | awk '{print $NF}' | head -1)
+          echo "FILLBIOME=$FILLBIOME"
+          if [ -n "$FILLBIOME" ]; then
+            unzip -oq "$SRC" "$FILLBIOME"
+            cat "$FILLBIOME"
+          fi
+
+          echo "===== ServerWorld.java: setBiome method signature(s) ====="
+          unzip -oq "$SRC" "net/minecraft/server/world/ServerWorld.java"
+          grep -n "setBiome\|class ServerWorld" net/minecraft/server/world/ServerWorld.java | head -10
+
+          echo "===== StructureWorldAccess.java: full interface (small file, check for setBiome/toServerWorld) ====="
+          unzip -oq "$SRC" "net/minecraft/world/StructureWorldAccess.java"
+          cat net/minecraft/world/StructureWorldAccess.java
+
+          echo "===== WorldChunk.java: setBiome signature if present ====="
+          unzip -oq "$SRC" "net/minecraft/world/chunk/WorldChunk.java" 2>/dev/null
+          grep -n "setBiome" net/minecraft/world/chunk/WorldChunk.java 2>/dev/null || echo "no WorldChunk setBiome match"
+
+          echo "===== Chunk.java (interface): setBiome signature if present ====="
+          unzip -oq "$SRC" "net/minecraft/world/chunk/Chunk.java" 2>/dev/null
+          grep -n "setBiome\|BiomeAccess\|getBiomeForNoiseGen" net/minecraft/world/chunk/Chunk.java 2>/dev/null || echo "no Chunk setBiome match"
+
+          echo "===== any Feature subclass calling setBiome (vanilla precedent search) ====="
+          grep -rln "setBiome" net/minecraft/world/gen/feature/ 2>/dev/null || echo "no vanilla Feature calls setBiome"
+
           echo "DONE"
