@@ -59,8 +59,7 @@ public final class BiomePainter {
 
 	private static boolean paint(ServerWorld world, Job job) {
 		BlockBox box = job.box();
-		Biome biome = world.getRegistryManager().getOrThrow(RegistryKeys.BIOME).getOrThrow(job.biome());
-		RegistryEntry<Biome> biomeEntry = RegistryEntry.of(biome);
+		RegistryEntry<Biome> biomeEntry = world.getRegistryManager().getOrThrow(RegistryKeys.BIOME).getOrThrow(job.biome());
 
 		List<Chunk> chunks = new ArrayList<>();
 		int minChunkX = ChunkSectionPos.getSectionCoord(box.getMinX());
