@@ -52,6 +52,10 @@ public class NedraConfig {
 	public double echoOreHearRadius = 16.0;
 	public double geophoneHearRadius = 40.0;
 
+	// --- Магнетитовая интерференция ---
+	/** Радиус вокруг магнетитовой руды, в котором у игрока "сходит с ума" компас. */
+	public double magnetiteInterferenceRadius = 10.0;
+
 	public static NedraConfig load(Path path) {
 		if (Files.exists(path)) {
 			try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {

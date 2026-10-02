@@ -4,6 +4,7 @@ import com.naglyadno.nedra.block.ModBlocks;
 import com.naglyadno.nedra.config.NedraConfig;
 import com.naglyadno.nedra.effect.ModEffects;
 import com.naglyadno.nedra.hazard.CurrentManager;
+import com.naglyadno.nedra.hazard.MagnetiteInterferenceManager;
 import com.naglyadno.nedra.hazard.RockfallManager;
 import com.naglyadno.nedra.item.ModItems;
 import com.naglyadno.nedra.network.PressurePayload;
@@ -32,6 +33,7 @@ public class NedraMod implements ModInitializer {
 	private static PressureManager pressureManager;
 	private static RockfallManager rockfallManager;
 	private static CurrentManager currentManager;
+	private static MagnetiteInterferenceManager magnetiteInterferenceManager;
 	private static final Set<UUID> GUIDE_GIVEN = new HashSet<>();
 
 	@Override
@@ -51,6 +53,7 @@ public class NedraMod implements ModInitializer {
 			pressureManager = new PressureManager(server, config, configPath);
 			rockfallManager = new RockfallManager(config);
 			currentManager = new CurrentManager(config);
+			magnetiteInterferenceManager = new MagnetiteInterferenceManager(config);
 			LOGGER.info("Недра готовы: подземный мир пробуждается.");
 		});
 
@@ -58,6 +61,7 @@ public class NedraMod implements ModInitializer {
 			pressureManager = null;
 			rockfallManager = null;
 			currentManager = null;
+			magnetiteInterferenceManager = null;
 			GUIDE_GIVEN.clear();
 		});
 
@@ -70,6 +74,9 @@ public class NedraMod implements ModInitializer {
 			}
 			if (rockfallManager != null) {
 				rockfallManager.tick();
+			}
+			if (magnetiteInterferenceManager != null) {
+				magnetiteInterferenceManager.tick(server);
 			}
 			com.naglyadno.nedra.worldgen.BiomePainter.tick(server.getOverworld());
 		});
