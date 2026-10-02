@@ -126,14 +126,18 @@ jobs:
           echo "===== any Feature subclass calling setBiome (vanilla precedent search) ====="
           grep -rln "setBiome" net/minecraft/world/gen/feature/ 2>/dev/null || echo "no vanilla Feature calls setBiome"
 
-          echo "===== search Fabric API jars (already resolved by Gradle) for OverworldBiomes / biome v1 API ====="
-          cd /home/runner/work/eef/eef/nedra-mod
-          FABRIC_JAR=$(find / -ipath "*fabric-api-0.141*" -iname "*.jar" 2>/dev/null | grep -v sources | grep -v "\-dev" | head -1)
-          echo "FABRIC_JAR=$FABRIC_JAR"
-          if [ -n "$FABRIC_JAR" ]; then
-            unzip -l "$FABRIC_JAR" | grep -iE "OverworldBiomes|biome/v1/[A-Za-z]*\.class" | head -60
+          echo "===== fabric-biome-api-v1 jar: list classes, then javap the public API ====="
+          BIOMEAPI_JAR=$(find /home/runner/.gradle/caches/modules-2 -ipath "*fabric-biome-api-v1*" -iname "*.jar" 2>/dev/null | grep -v sources | head -1)
+          echo "BIOMEAPI_JAR=$BIOMEAPI_JAR"
+          if [ -n "$BIOMEAPI_JAR" ]; then
+            echo "----- classes in jar -----"
+            unzip -l "$BIOMEAPI_JAR" | grep "\.class$"
+            echo "----- javap OverworldBiomes -----"
+            javap -p -classpath "$BIOMEAPI_JAR" net.fabricmc.fabric.api.biome.v1.OverworldBiomes 2>&1
+            echo "----- javap NetherBiomes (for comparison, has simpler single-param API) -----"
+            javap -p -classpath "$BIOMEAPI_JAR" net.fabricmc.fabric.api.biome.v1.NetherBiomes 2>&1
+            echo "----- javap TheEndBiomes -----"
+            javap -p -classpath "$BIOMEAPI_JAR" net.fabricmc.fabric.api.biome.v1.TheEndBiomes 2>&1
           fi
-          echo "===== also list any fabric-biome-api-v1 submodule jar specifically ====="
-          find / -ipath "*fabric-biome-api*" -iname "*.jar" 2>/dev/null | head -10
 
           echo "DONE"
