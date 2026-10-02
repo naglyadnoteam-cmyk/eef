@@ -88,6 +88,7 @@ public class NedraMod implements ModInitializer {
 			currentManager = null;
 			magnetiteManager = null;
 			ServerScheduler.clear();
+			BiomePainter.clear();
 		});
 
 		ServerTickEvents.END_SERVER_TICK.register(server -> {

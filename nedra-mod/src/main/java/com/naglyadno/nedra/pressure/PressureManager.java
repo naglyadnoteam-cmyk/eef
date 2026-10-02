@@ -81,8 +81,9 @@ public class PressureManager {
 		if (!exempt && reading.active()) {
 			applyDamage(player, reading.tier());
 		}
+		// в творческом режиме и наблюдателю давление не грозит - HUD прячется, как ванильные полоски здоровья
 		ServerPlayNetworking.send(player, new PressurePayload((float) reading.effective(), (float) reading.raw(),
-				reading.protection(), reading.tier().level, reading.active()));
+				reading.protection(), reading.tier().level, reading.active() && !exempt));
 	}
 
 	private void applyMiningSlowdown(ServerPlayerEntity player, PressureTier tier) {

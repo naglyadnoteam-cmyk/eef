@@ -1,0 +1,111 @@
+package com.naglyadno.nedra.gametest;
+
+import com.naglyadno.nedra.guide.GuideBook;
+import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
+import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
+import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
+import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import net.minecraft.client.gui.screen.ingame.BookScreen;
+import net.minecraft.client.gui.screen.ingame.InventoryScreen;
+import net.minecraft.client.option.Perspective;
+
+/**
+ * Визуальная проверка мода в настоящем клиенте: строит "выставочный зал" из блоков мода на разной
+ * глубине и снимает скриншоты HUD давления, текстур, брони, инвентаря и справочника.
+ */
+public class NedraClientGameTest implements FabricClientGameTest {
+
+	@Override
+	public void runTest(ClientGameTestContext context) {
+		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
+			TestServerContext server = singleplayer.getServer();
+			singleplayer.getClientWorld().waitForChunksRender();
+
+			server.runCommand("difficulty peaceful");
+			server.runCommand("gamemode survival @a");
+			server.runCommand("time set noon");
+			server.runCommand("effect give @a minecraft:resistance infinite 255 true");
+			server.runCommand("effect give @a minecraft:saturation infinite 255 true");
+
+			// ---- зал на глубине -190: стена с рудами и блоками мода, светильники в своде
+			room(server, -192);
+			String[] wall = {"nedra:lumenite_ore", "nedra:magnetite_ore", "nedra:echo_ore", "nedra:unstable_stone",
+					"nedra:deepmoss", "nedra:lumenite_lamp", "nedra:current_vent"};
+			for (int i = 0; i < wall.length; i++) {
+				server.runCommand("setblock " + (i - 3) + " -189 -6 " + wall[i]);
+				server.runCommand("setblock " + (i - 3) + " -190 -6 " + wall[i]);
+			}
+			server.runCommand("setblock 0 -192 -2 nedra:current_vent");
+			server.runCommand("setblock -3 -192 -3 nedra:deepmoss");
+			server.runCommand("setblock 3 -192 -3 nedra:deepmoss");
+			server.runCommand("item replace entity @a armor.head with nedra:helmet_light");
+			server.runCommand("tp @a 0.5 -191 3.5 180 12");
+			context.waitTicks(80);
+			singleplayer.getClientWorld().waitForChunksRender();
+			context.takeScreenshot("nedra_01_showroom_hud");
+
+			// ---- три шлема на стойках
+			server.runCommand("summon minecraft:armor_stand -1.5 -191 -1.5 {Rotation:[0f,0f],equipment:{head:{id:\"nedra:helmet_light\",count:1}}}");
+			server.runCommand("summon minecraft:armor_stand 0.5 -191 -1.5 {Rotation:[0f,0f],equipment:{head:{id:\"nedra:helmet_reinforced\",count:1}}}");
+			server.runCommand("summon minecraft:armor_stand 2.5 -191 -1.5 {Rotation:[0f,0f],equipment:{head:{id:\"nedra:helmet_deepsuit\",count:1}}}");
+			server.runCommand("tp @a 0.5 -190 1.8 180 25");
+			context.waitTicks(30);
+			context.takeScreenshot("nedra_02_helmets");
+			server.runCommand("kill @e[type=minecraft:armor_stand]");
+
+			// ---- инвентарь со всеми предметами
+			String[] items = {"nedra:geophone", "nedra:pressure_tablet 16", "nedra:lumenite_crystal 24", "nedra:raw_magnetite 12",
+					"nedra:magnetite_ingot 9", "nedra:resonant_shard 3", "nedra:deepmoss_clump 20", "nedra:helmet_reinforced",
+					"nedra:helmet_deepsuit", "nedra:lumenite_lamp 8", "nedra:lumenite_ore", "nedra:magnetite_ore",
+					"nedra:echo_ore", "nedra:unstable_stone", "nedra:current_vent", "nedra:deepmoss", "minecraft:compass"};
+			for (String item : items) {
+				server.runCommand("give @a " + item);
+			}
+			context.waitTicks(10);
+			context.runOnClient(client -> client.setScreen(new InventoryScreen(client.player)));
+			context.waitTicks(10);
+			context.takeScreenshot("nedra_03_inventory");
+
+			// ---- справочник: титул и страница ярусов давления
+			context.runOnClient(client -> {
+				BookScreen.Contents contents = BookScreen.Contents.create(GuideBook.create());
+				client.setScreen(new BookScreen(contents));
+			});
+			context.waitTicks(10);
+			context.takeScreenshot("nedra_04_guide_title");
+			context.runOnClient(client -> {
+				if (client.currentScreen instanceof BookScreen book) {
+					book.setPage(3);
+				}
+			});
+			context.waitTicks(5);
+			context.takeScreenshot("nedra_05_guide_tiers");
+			context.runOnClient(client -> client.setScreen(null));
+
+			// ---- самое дно без защиты: критическое давление, виньетка
+			room(server, -346);
+			server.runCommand("item replace entity @a armor.head with minecraft:air");
+			server.runCommand("tp @a 0.5 -345 2.5 180 5");
+			context.waitTicks(100);
+			singleplayer.getClientWorld().waitForChunksRender();
+			context.takeScreenshot("nedra_06_critical_depth");
+
+			// ---- то же место в шлеме скафандра, вид от третьего лица
+			server.runCommand("item replace entity @a armor.head with nedra:helmet_deepsuit");
+			context.runOnClient(client -> client.options.setPerspective(Perspective.THIRD_PERSON_FRONT));
+			context.waitTicks(80);
+			context.takeScreenshot("nedra_07_deepsuit_third_person");
+			context.runOnClient(client -> client.options.setPerspective(Perspective.FIRST_PERSON));
+		}
+	}
+
+	/** Полая коробка из глубинного сланца 13x9x13 с полом на высоте floorY и светильниками в своде. */
+	private static void room(TestServerContext server, int floorY) {
+		int top = floorY + 8;
+		server.runCommand("fill -6 " + floorY + " -6 6 " + top + " 6 minecraft:deepslate_tiles hollow");
+		server.runCommand("fill -6 " + floorY + " -6 6 " + floorY + " 6 minecraft:polished_deepslate");
+		server.runCommand("setblock 0 " + top + " 0 nedra:lumenite_lamp");
+		server.runCommand("setblock -4 " + top + " -3 nedra:lumenite_lamp");
+		server.runCommand("setblock 4 " + top + " -3 nedra:lumenite_lamp");
+	}
+}

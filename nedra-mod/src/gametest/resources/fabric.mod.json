@@ -1,0 +1,15 @@
+{
+	"schemaVersion": 1,
+	"id": "nedra-gametest",
+	"version": "1.0.0",
+	"name": "Nedra client gametest",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"com.naglyadno.nedra.gametest.NedraClientGameTest"
+		]
+	},
+	"depends": {
+		"nedra": "*"
+	}
+}

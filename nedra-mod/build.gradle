@@ -24,6 +24,20 @@ loom {
 	}
 }
 
+// Клиентские игровые тесты со скриншотами (./gradlew runClientGameTest -PnedraClientTest).
+// Подключаются только по флагу, чтобы обычная сборка мода от них не зависела.
+if (project.hasProperty("nedraClientTest")) {
+	fabricApi {
+		configureTests {
+			createSourceSet = true
+			modId = "nedra-gametest"
+			enableGameTests = false
+			enableClientGameTests = true
+			eula = true
+		}
+	}
+}
+
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"

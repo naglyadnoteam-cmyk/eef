@@ -21,9 +21,11 @@ import net.minecraft.world.chunk.WorldChunk;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -60,6 +62,8 @@ public final class BiomePainter extends PersistentState {
 
 	/** Заявки от фич с рабочих потоков генерации. */
 	private static final ConcurrentLinkedQueue<Job> INCOMING = new ConcurrentLinkedQueue<>();
+	/** Чанки со свежими заявками, которые стоит проверить в ближайших тиках (только серверный поток). */
+	private static final Set<Long> FRESH = new LinkedHashSet<>();
 
 	private final Map<Long, List<Job>> pending = new HashMap<>();
 
@@ -99,31 +103,45 @@ public final class BiomePainter extends PersistentState {
 		return world.getPersistentStateManager().getOrCreate(TYPE);
 	}
 
-	/** Серверный тик: принять новые заявки и докрасить чанки, которые уже загружены. */
+	/**
+	 * Серверный тик: принять новые заявки и сразу докрасить те, чьи чанки уже загружены.
+	 * Заявки для незагруженных чанков ждут в сохранении и применяются в onChunkLoad, поэтому
+	 * каждый тик просматриваются только свежие заявки, а не весь накопленный список.
+	 */
 	public static void tick(ServerWorld world) {
+		if (INCOMING.isEmpty() && FRESH.isEmpty()) {
+			return;
+		}
 		BiomePainter state = get(world);
 		Job job;
 		while ((job = INCOMING.poll()) != null) {
 			state.pending.computeIfAbsent(job.chunk(), k -> new ArrayList<>()).add(job);
+			FRESH.add(job.chunk());
 			state.markDirty();
 		}
-		if (state.pending.isEmpty()) {
-			return;
-		}
-		int budget = 4;
-		Iterator<Map.Entry<Long, List<Job>>> it = state.pending.entrySet().iterator();
+		int budget = 8;
+		Iterator<Long> it = FRESH.iterator();
 		while (it.hasNext() && budget > 0) {
-			Map.Entry<Long, List<Job>> entry = it.next();
-			int cx = ChunkPos.getPackedX(entry.getKey());
-			int cz = ChunkPos.getPackedZ(entry.getKey());
+			long key = it.next();
+			it.remove();
+			int cx = ChunkPos.getPackedX(key);
+			int cz = ChunkPos.getPackedZ(key);
 			if (!world.getChunkManager().isChunkLoaded(cx, cz)) {
 				continue;
 			}
-			paint(world, world.getChunk(cx, cz), entry.getValue());
-			it.remove();
-			state.markDirty();
-			budget--;
+			List<Job> jobs = state.pending.remove(key);
+			if (jobs != null) {
+				paint(world, world.getChunk(cx, cz), jobs);
+				state.markDirty();
+				budget--;
+			}
 		}
+	}
+
+	/** Мир выгружен (выход в меню в одиночной игре) - заявки старого мира не должны попасть в новый. */
+	public static void clear() {
+		INCOMING.clear();
+		FRESH.clear();
 	}
 
 	/** Чанк только что загрузился (или сгенерировался) - докрашиваем его сразу. */
