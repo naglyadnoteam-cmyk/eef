@@ -1,0 +1,32 @@
+{
+	"parent": "nedra:root",
+	"criteria": {
+		"magnetite": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:raw_magnetite"
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "nedra:raw_magnetite"
+		},
+		"title": {
+			"translate": "advancements.nedra.magnetite.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.magnetite.description"
+		}
+	},
+	"requirements": [
+		[
+			"magnetite"
+		]
+	]
+}

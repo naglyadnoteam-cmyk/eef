@@ -1,5 +1,7 @@
 {
 	"variants": {
-		"": { "model": "nedra:block/echo_ore" }
+		"": {
+			"model": "nedra:block/echo_ore"
+		}
 	}
 }

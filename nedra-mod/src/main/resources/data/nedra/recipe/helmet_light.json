@@ -1,15 +1,16 @@
 {
 	"type": "minecraft:crafting_shaped",
 	"category": "equipment",
-	"pattern": [
-		"XXX",
-		"X X"
-	],
 	"key": {
-		"X": "nedra:lumenite_ore"
+		"I": "minecraft:iron_ingot",
+		"C": "nedra:lumenite_crystal"
 	},
+	"pattern": [
+		"ICI",
+		"I I"
+	],
 	"result": {
-		"id": "nedra:helmet_light",
-		"count": 1
+		"count": 1,
+		"id": "nedra:helmet_light"
 	}
 }

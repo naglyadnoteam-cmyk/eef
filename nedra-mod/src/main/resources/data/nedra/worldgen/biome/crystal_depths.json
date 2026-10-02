@@ -1,5 +1,17 @@
 {
   "attributes": {
+    "minecraft:audio/ambient_sounds": {
+      "additions": {
+        "sound": "minecraft:block.amethyst_block.chime",
+        "tick_chance": 0.006
+      },
+      "mood": {
+        "block_search_extent": 8,
+        "offset": 2.0,
+        "sound": "minecraft:ambient.cave",
+        "tick_delay": 6000
+      }
+    },
     "minecraft:audio/background_music": {
       "default": {
         "max_delay": 24000,
@@ -7,6 +19,15 @@
         "sound": "minecraft:music.overworld.dripstone_caves"
       }
     },
+    "minecraft:visual/ambient_particles": [
+      {
+        "particle": {
+          "type": "minecraft:glow"
+        },
+        "probability": 0.0035
+      }
+    ],
+    "minecraft:visual/fog_color": "#3b4f7a",
     "minecraft:visual/sky_color": "#78a7ff"
   },
   "carvers": [

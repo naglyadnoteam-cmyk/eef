@@ -1,5 +1,17 @@
 {
   "attributes": {
+    "minecraft:audio/ambient_sounds": {
+      "additions": {
+        "sound": "nedra:item.compass.magnetized",
+        "tick_chance": 0.003
+      },
+      "mood": {
+        "block_search_extent": 8,
+        "offset": 2.0,
+        "sound": "minecraft:ambient.cave",
+        "tick_delay": 6000
+      }
+    },
     "minecraft:audio/background_music": {
       "default": {
         "max_delay": 24000,
@@ -7,6 +19,15 @@
         "sound": "minecraft:music.overworld.dripstone_caves"
       }
     },
+    "minecraft:visual/ambient_particles": [
+      {
+        "particle": {
+          "type": "minecraft:electric_spark"
+        },
+        "probability": 0.0025
+      }
+    ],
+    "minecraft:visual/fog_color": "#4a4046",
     "minecraft:visual/sky_color": "#78a7ff"
   },
   "carvers": [

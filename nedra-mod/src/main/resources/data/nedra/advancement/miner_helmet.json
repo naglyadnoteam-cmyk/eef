@@ -1,0 +1,32 @@
+{
+	"parent": "nedra:lumenite",
+	"criteria": {
+		"helmet": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:helmet_light"
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "nedra:helmet_light"
+		},
+		"title": {
+			"translate": "advancements.nedra.miner_helmet.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.miner_helmet.description"
+		}
+	},
+	"requirements": [
+		[
+			"helmet"
+		]
+	]
+}

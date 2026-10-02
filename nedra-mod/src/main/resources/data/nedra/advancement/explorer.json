@@ -1,0 +1,80 @@
+{
+	"parent": "nedra:root",
+	"criteria": {
+		"crystal_depths": {
+			"trigger": "minecraft:location",
+			"conditions": {
+				"player": [
+					{
+						"condition": "minecraft:entity_properties",
+						"entity": "this",
+						"predicate": {
+							"location": {
+								"biomes": "nedra:crystal_depths"
+							}
+						}
+					}
+				]
+			}
+		},
+		"magnetic_caverns": {
+			"trigger": "minecraft:location",
+			"conditions": {
+				"player": [
+					{
+						"condition": "minecraft:entity_properties",
+						"entity": "this",
+						"predicate": {
+							"location": {
+								"biomes": "nedra:magnetic_caverns"
+							}
+						}
+					}
+				]
+			}
+		},
+		"echo_hollows": {
+			"trigger": "minecraft:location",
+			"conditions": {
+				"player": [
+					{
+						"condition": "minecraft:entity_properties",
+						"entity": "this",
+						"predicate": {
+							"location": {
+								"biomes": "nedra:echo_hollows"
+							}
+						}
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "minecraft:recovery_compass"
+		},
+		"title": {
+			"translate": "advancements.nedra.explorer.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.explorer.description"
+		},
+		"frame": "challenge"
+	},
+	"requirements": [
+		[
+			"crystal_depths"
+		],
+		[
+			"magnetic_caverns"
+		],
+		[
+			"echo_hollows"
+		]
+	],
+	"rewards": {
+		"experience": 150
+	}
+}

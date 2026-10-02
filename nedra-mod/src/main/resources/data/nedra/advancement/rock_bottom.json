@@ -1,0 +1,47 @@
+{
+	"parent": "nedra:under_pressure",
+	"criteria": {
+		"bottom": {
+			"trigger": "minecraft:location",
+			"conditions": {
+				"player": [
+					{
+						"condition": "minecraft:entity_properties",
+						"entity": "this",
+						"predicate": {
+							"location": {
+								"dimension": "minecraft:overworld",
+								"position": {
+									"y": {
+										"max": -330.0
+									}
+								}
+							}
+						}
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "minecraft:bedrock"
+		},
+		"title": {
+			"translate": "advancements.nedra.rock_bottom.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.rock_bottom.description"
+		},
+		"frame": "goal"
+	},
+	"requirements": [
+		[
+			"bottom"
+		]
+	],
+	"rewards": {
+		"experience": 50
+	}
+}

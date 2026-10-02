@@ -1,0 +1,36 @@
+{
+	"parent": "nedra:reinforced_helmet",
+	"criteria": {
+		"helmet": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:helmet_deepsuit"
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "nedra:helmet_deepsuit"
+		},
+		"title": {
+			"translate": "advancements.nedra.deepsuit.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.deepsuit.description"
+		},
+		"frame": "goal"
+	},
+	"requirements": [
+		[
+			"helmet"
+		]
+	],
+	"rewards": {
+		"experience": 100
+	}
+}

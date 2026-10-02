@@ -1,0 +1,32 @@
+{
+	"parent": "nedra:resonant_shard",
+	"criteria": {
+		"geophone": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:geophone"
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "nedra:geophone"
+		},
+		"title": {
+			"translate": "advancements.nedra.geophone.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.geophone.description"
+		}
+	},
+	"requirements": [
+		[
+			"geophone"
+		]
+	]
+}

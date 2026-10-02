@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "building",
+	"key": {
+		"C": "nedra:lumenite_crystal",
+		"G": "minecraft:glass"
+	},
+	"pattern": [
+		" C ",
+		"CGC",
+		" C "
+	],
+	"result": {
+		"count": 1,
+		"id": "nedra:lumenite_lamp"
+	}
+}

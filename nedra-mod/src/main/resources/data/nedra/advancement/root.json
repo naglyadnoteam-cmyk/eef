@@ -1,0 +1,45 @@
+{
+	"criteria": {
+		"below_zero": {
+			"trigger": "minecraft:location",
+			"conditions": {
+				"player": [
+					{
+						"condition": "minecraft:entity_properties",
+						"entity": "this",
+						"predicate": {
+							"location": {
+								"dimension": "minecraft:overworld",
+								"position": {
+									"y": {
+										"max": 0.0
+									}
+								}
+							}
+						}
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "nedra:lumenite_ore"
+		},
+		"title": {
+			"translate": "advancements.nedra.root.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.root.description"
+		},
+		"background": "nedra:gui/advancements/backgrounds/nedra",
+		"announce_to_chat": false,
+		"show_toast": false
+	},
+	"requirements": [
+		[
+			"below_zero"
+		]
+	]
+}

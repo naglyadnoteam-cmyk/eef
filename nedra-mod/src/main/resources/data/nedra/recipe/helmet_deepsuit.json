@@ -1,16 +1,19 @@
 {
 	"type": "minecraft:crafting_shaped",
 	"category": "equipment",
-	"pattern": [
-		"ALA",
-		"A A"
-	],
 	"key": {
-		"A": "nedra:magnetite_ore",
-		"L": "nedra:lumenite_ore"
+		"M": "nedra:magnetite_ingot",
+		"G": "minecraft:glass",
+		"R": "nedra:resonant_shard",
+		"H": "nedra:helmet_reinforced"
 	},
+	"pattern": [
+		"MGM",
+		"RHR",
+		"MMM"
+	],
 	"result": {
-		"id": "nedra:helmet_deepsuit",
-		"count": 1
+		"count": 1,
+		"id": "nedra:helmet_deepsuit"
 	}
 }

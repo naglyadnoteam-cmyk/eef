@@ -1,16 +1,42 @@
 {
 	"feature": "nedra:current_vent",
 	"placement": [
-		{ "type": "minecraft:count", "count": 3 },
-		{ "type": "minecraft:in_square" },
+		{
+			"type": "minecraft:count",
+			"count": 6
+		},
+		{
+			"type": "minecraft:in_square"
+		},
 		{
 			"type": "minecraft:height_range",
 			"height": {
 				"type": "minecraft:uniform",
-				"min_inclusive": { "absolute": -352 },
-				"max_inclusive": { "absolute": -48 }
+				"min_inclusive": {
+					"absolute": -340
+				},
+				"max_inclusive": {
+					"absolute": -40
+				}
 			}
 		},
-		{ "type": "minecraft:biome" }
+		{
+			"type": "minecraft:environment_scan",
+			"allowed_search_condition": {
+				"type": "minecraft:matching_blocks",
+				"blocks": [
+					"minecraft:air",
+					"minecraft:cave_air"
+				]
+			},
+			"direction_of_search": "down",
+			"max_steps": 16,
+			"target_condition": {
+				"type": "minecraft:solid"
+			}
+		},
+		{
+			"type": "minecraft:biome"
+		}
 	]
 }

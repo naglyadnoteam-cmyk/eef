@@ -1,0 +1,30 @@
+{
+	"parent": "nedra:under_pressure",
+	"criteria": {
+		"tablet": {
+			"trigger": "minecraft:consume_item",
+			"conditions": {
+				"item": {
+					"items": "nedra:pressure_tablet"
+				}
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "nedra:pressure_tablet"
+		},
+		"title": {
+			"translate": "advancements.nedra.deep_breath.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.deep_breath.description"
+		}
+	},
+	"requirements": [
+		[
+			"tablet"
+		]
+	]
+}

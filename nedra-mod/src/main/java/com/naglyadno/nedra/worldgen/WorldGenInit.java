@@ -22,6 +22,7 @@ public final class WorldGenInit {
 		add("unstable_stone_patch_placed", GenerationStep.Feature.UNDERGROUND_ORES);
 
 		add("giant_cavern_placed", GenerationStep.Feature.LOCAL_MODIFICATIONS);
+		add("magnetic_cavern_placed", GenerationStep.Feature.LOCAL_MODIFICATIONS);
 		add("rare_underground_ocean_placed", GenerationStep.Feature.LOCAL_MODIFICATIONS);
 		add("underground_lake_placed", GenerationStep.Feature.LAKES);
 		add("underground_river_placed", GenerationStep.Feature.LAKES);

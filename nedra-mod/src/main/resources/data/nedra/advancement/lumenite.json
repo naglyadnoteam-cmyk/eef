@@ -1,0 +1,32 @@
+{
+	"parent": "nedra:root",
+	"criteria": {
+		"crystal": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:lumenite_crystal"
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "nedra:lumenite_crystal"
+		},
+		"title": {
+			"translate": "advancements.nedra.lumenite.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.lumenite.description"
+		}
+	},
+	"requirements": [
+		[
+			"crystal"
+		]
+	]
+}

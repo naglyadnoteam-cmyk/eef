@@ -1,5 +1,17 @@
 {
   "attributes": {
+    "minecraft:audio/ambient_sounds": {
+      "additions": {
+        "sound": "nedra:ambient.pressure.groan",
+        "tick_chance": 0.002
+      },
+      "mood": {
+        "block_search_extent": 8,
+        "offset": 2.0,
+        "sound": "minecraft:ambient.cave",
+        "tick_delay": 6000
+      }
+    },
     "minecraft:audio/background_music": {
       "default": {
         "max_delay": 28000,
@@ -7,6 +19,15 @@
         "sound": "minecraft:music.overworld.deep_dark"
       }
     },
+    "minecraft:visual/ambient_particles": [
+      {
+        "particle": {
+          "type": "minecraft:ash"
+        },
+        "probability": 0.006
+      }
+    ],
+    "minecraft:visual/fog_color": "#1a2229",
     "minecraft:visual/sky_color": "#78a7ff"
   },
   "carvers": [

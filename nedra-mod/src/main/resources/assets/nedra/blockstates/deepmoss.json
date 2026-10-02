@@ -1,5 +1,7 @@
 {
 	"variants": {
-		"": { "model": "nedra:block/deepmoss" }
+		"": {
+			"model": "nedra:block/deepmoss"
+		}
 	}
 }

@@ -1,0 +1,32 @@
+{
+	"parent": "minecraft:recipes/root",
+	"criteria": {
+		"has_the_recipe": {
+			"trigger": "minecraft:recipe_unlocked",
+			"conditions": {
+				"recipe": "nedra:pressure_tablet"
+			}
+		},
+		"has_deepmoss_clump": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:deepmoss_clump"
+					}
+				]
+			}
+		}
+	},
+	"requirements": [
+		[
+			"has_the_recipe",
+			"has_deepmoss_clump"
+		]
+	],
+	"rewards": {
+		"recipes": [
+			"nedra:pressure_tablet"
+		]
+	}
+}

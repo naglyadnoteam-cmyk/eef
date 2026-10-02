@@ -4,7 +4,8 @@
 		"min_radius": 6,
 		"max_radius": 11,
 		"ocean": false,
-		"crystal_chance": 0.12,
-		"biome": "nedra:crystal_depths"
+		"crystal_chance": 0.14,
+		"biome": "nedra:crystal_depths",
+		"style": "crystal"
 	}
 }

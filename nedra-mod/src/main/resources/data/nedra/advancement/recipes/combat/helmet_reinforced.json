@@ -1,0 +1,43 @@
+{
+	"parent": "minecraft:recipes/root",
+	"criteria": {
+		"has_the_recipe": {
+			"trigger": "minecraft:recipe_unlocked",
+			"conditions": {
+				"recipe": "nedra:helmet_reinforced"
+			}
+		},
+		"has_helmet_light": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:helmet_light"
+					}
+				]
+			}
+		},
+		"has_magnetite_ingot": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:magnetite_ingot"
+					}
+				]
+			}
+		}
+	},
+	"requirements": [
+		[
+			"has_the_recipe",
+			"has_helmet_light",
+			"has_magnetite_ingot"
+		]
+	],
+	"rewards": {
+		"recipes": [
+			"nedra:helmet_reinforced"
+		]
+	}
+}

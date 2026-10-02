@@ -1,15 +1,16 @@
 {
 	"type": "minecraft:crafting_shaped",
 	"category": "equipment",
-	"pattern": [
-		"XXX",
-		"X X"
-	],
 	"key": {
-		"X": "nedra:magnetite_ore"
+		"M": "nedra:magnetite_ingot",
+		"H": "nedra:helmet_light"
 	},
+	"pattern": [
+		"MMM",
+		"MHM"
+	],
 	"result": {
-		"id": "nedra:helmet_reinforced",
-		"count": 1
+		"count": 1,
+		"id": "nedra:helmet_reinforced"
 	}
 }

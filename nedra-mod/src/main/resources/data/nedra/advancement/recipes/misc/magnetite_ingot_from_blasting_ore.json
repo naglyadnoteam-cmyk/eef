@@ -1,0 +1,32 @@
+{
+	"parent": "minecraft:recipes/root",
+	"criteria": {
+		"has_the_recipe": {
+			"trigger": "minecraft:recipe_unlocked",
+			"conditions": {
+				"recipe": "nedra:magnetite_ingot_from_blasting_ore"
+			}
+		},
+		"has_magnetite_ore": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:magnetite_ore"
+					}
+				]
+			}
+		}
+	},
+	"requirements": [
+		[
+			"has_the_recipe",
+			"has_magnetite_ore"
+		]
+	],
+	"rewards": {
+		"recipes": [
+			"nedra:magnetite_ingot_from_blasting_ore"
+		]
+	}
+}

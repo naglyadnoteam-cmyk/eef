@@ -79,7 +79,8 @@ public class RockfallManager {
 				break;
 			}
 		}
-		if (!nearUnstable && random.nextInt(4) != 0) {
+		// без нестабильного камня рядом своды держатся крепче: случайные обвалы - только глубже нуля
+		if (!nearUnstable && (pos.getY() > 0 || random.nextInt(4) != 0)) {
 			return;
 		}
 		for (ScheduledCollapse c : scheduled) {

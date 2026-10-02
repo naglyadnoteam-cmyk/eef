@@ -1,0 +1,100 @@
+{
+	"item.geophone.ping": {
+		"subtitle": "subtitles.nedra.geophone.ping",
+		"sounds": [
+			{
+				"name": "nedra:geophone/ping"
+			}
+		]
+	},
+	"item.geophone.return": {
+		"subtitle": "subtitles.nedra.geophone.return",
+		"sounds": [
+			{
+				"name": "nedra:geophone/return"
+			}
+		]
+	},
+	"block.echo_ore.chime": {
+		"subtitle": "subtitles.nedra.echo_ore.chime",
+		"sounds": [
+			{
+				"name": "nedra:echo_ore/chime1",
+				"attenuation_distance": 14
+			},
+			{
+				"name": "nedra:echo_ore/chime2",
+				"attenuation_distance": 14
+			},
+			{
+				"name": "nedra:echo_ore/chime3",
+				"attenuation_distance": 14
+			}
+		]
+	},
+	"ambient.pressure.groan": {
+		"subtitle": "subtitles.nedra.pressure.groan",
+		"sounds": [
+			{
+				"name": "nedra:pressure/groan1"
+			},
+			{
+				"name": "nedra:pressure/groan2"
+			},
+			{
+				"name": "nedra:pressure/groan3"
+			}
+		]
+	},
+	"event.rockfall.warning": {
+		"subtitle": "subtitles.nedra.rockfall.warning",
+		"sounds": [
+			{
+				"name": "nedra:pressure/groan1",
+				"pitch": 1.3
+			},
+			{
+				"name": "nedra:pressure/groan3",
+				"pitch": 1.2
+			}
+		]
+	},
+	"event.rockfall.collapse": {
+		"subtitle": "subtitles.nedra.rockfall.collapse",
+		"sounds": [
+			{
+				"name": "nedra:rockfall/collapse1"
+			},
+			{
+				"name": "nedra:rockfall/collapse2"
+			},
+			{
+				"name": "nedra:rockfall/collapse3"
+			}
+		]
+	},
+	"block.current_vent.gust": {
+		"subtitle": "subtitles.nedra.current_vent.gust",
+		"sounds": [
+			{
+				"name": "nedra:vent/gust"
+			}
+		]
+	},
+	"item.compass.magnetized": {
+		"subtitle": "subtitles.nedra.compass.magnetized",
+		"sounds": [
+			{
+				"name": "nedra:magnetite/buzz"
+			}
+		]
+	},
+	"item.pressure_tablet.swallow": {
+		"subtitle": "subtitles.nedra.pressure_tablet.swallow",
+		"sounds": [
+			{
+				"name": "nedra:tablet/swallow"
+			}
+		]
+	}
+}

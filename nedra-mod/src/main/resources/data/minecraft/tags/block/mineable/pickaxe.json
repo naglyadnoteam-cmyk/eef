@@ -5,6 +5,7 @@
 		"nedra:magnetite_ore",
 		"nedra:echo_ore",
 		"nedra:unstable_stone",
-		"nedra:current_vent"
+		"nedra:current_vent",
+		"nedra:lumenite_lamp"
 	]
 }

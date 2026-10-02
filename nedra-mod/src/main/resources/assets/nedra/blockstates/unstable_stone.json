@@ -1,5 +1,7 @@
 {
 	"variants": {
-		"": { "model": "nedra:block/unstable_stone" }
+		"": {
+			"model": "nedra:block/unstable_stone"
+		}
 	}
 }

@@ -1,0 +1,32 @@
+{
+	"parent": "nedra:root",
+	"criteria": {
+		"shard": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:resonant_shard"
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "nedra:resonant_shard"
+		},
+		"title": {
+			"translate": "advancements.nedra.resonant_shard.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.resonant_shard.description"
+		}
+	},
+	"requirements": [
+		[
+			"shard"
+		]
+	]
+}

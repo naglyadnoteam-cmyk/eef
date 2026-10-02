@@ -1,0 +1,43 @@
+{
+	"parent": "minecraft:recipes/root",
+	"criteria": {
+		"has_the_recipe": {
+			"trigger": "minecraft:recipe_unlocked",
+			"conditions": {
+				"recipe": "nedra:helmet_deepsuit"
+			}
+		},
+		"has_helmet_reinforced": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:helmet_reinforced"
+					}
+				]
+			}
+		},
+		"has_resonant_shard": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:resonant_shard"
+					}
+				]
+			}
+		}
+	},
+	"requirements": [
+		[
+			"has_the_recipe",
+			"has_helmet_reinforced",
+			"has_resonant_shard"
+		]
+	],
+	"rewards": {
+		"recipes": [
+			"nedra:helmet_deepsuit"
+		]
+	}
+}

@@ -1,0 +1,11 @@
+{
+	"type": "minecraft:blasting",
+	"category": "misc",
+	"cookingtime": 100,
+	"experience": 0.7,
+	"ingredient": "nedra:raw_magnetite",
+	"result": {
+		"id": "nedra:magnetite_ingot"
+	},
+	"group": "magnetite_ingot"
+}

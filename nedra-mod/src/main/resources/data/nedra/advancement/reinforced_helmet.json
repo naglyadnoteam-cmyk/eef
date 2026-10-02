@@ -1,0 +1,32 @@
+{
+	"parent": "nedra:miner_helmet",
+	"criteria": {
+		"helmet": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:helmet_reinforced"
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "nedra:helmet_reinforced"
+		},
+		"title": {
+			"translate": "advancements.nedra.reinforced_helmet.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.reinforced_helmet.description"
+		}
+	},
+	"requirements": [
+		[
+			"helmet"
+		]
+	]
+}

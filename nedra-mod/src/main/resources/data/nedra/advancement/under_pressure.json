@@ -1,0 +1,43 @@
+{
+	"parent": "nedra:root",
+	"criteria": {
+		"deep": {
+			"trigger": "minecraft:location",
+			"conditions": {
+				"player": [
+					{
+						"condition": "minecraft:entity_properties",
+						"entity": "this",
+						"predicate": {
+							"location": {
+								"dimension": "minecraft:overworld",
+								"position": {
+									"y": {
+										"max": -150.0
+									}
+								}
+							}
+						}
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "nedra:pressure_tablet"
+		},
+		"title": {
+			"translate": "advancements.nedra.under_pressure.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.under_pressure.description"
+		}
+	},
+	"requirements": [
+		[
+			"deep"
+		]
+	]
+}

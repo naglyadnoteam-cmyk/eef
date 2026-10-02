@@ -1,5 +1,7 @@
 {
 	"variants": {
-		"": { "model": "nedra:block/current_vent" }
+		"": {
+			"model": "nedra:block/current_vent"
+		}
 	}
 }

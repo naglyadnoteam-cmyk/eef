@@ -1,0 +1,32 @@
+{
+	"parent": "minecraft:recipes/root",
+	"criteria": {
+		"has_the_recipe": {
+			"trigger": "minecraft:recipe_unlocked",
+			"conditions": {
+				"recipe": "nedra:magnetite_ingot_from_smelting"
+			}
+		},
+		"has_raw_magnetite": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:raw_magnetite"
+					}
+				]
+			}
+		}
+	},
+	"requirements": [
+		[
+			"has_the_recipe",
+			"has_raw_magnetite"
+		]
+	],
+	"rewards": {
+		"recipes": [
+			"nedra:magnetite_ingot_from_smelting"
+		]
+	}
+}

@@ -2,6 +2,7 @@ package com.naglyadno.nedra.worldgen.feature;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.naglyadno.nedra.block.ModBlocks;
 import com.naglyadno.nedra.worldgen.BiomePainter;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -68,7 +69,7 @@ public class GiantCavernFeature extends Feature<GiantCavernFeature.Config> {
 						continue;
 					}
 					if (!config.ocean() && dist > 0.80 && random.nextFloat() < config.crystalChance()) {
-						world.setBlockState(pos, pickCrystalState(random), Block.NOTIFY_LISTENERS);
+						world.setBlockState(pos, pickShellState(config.style(), random), Block.NOTIFY_LISTENERS);
 					} else {
 						world.setBlockState(pos, fill, Block.NOTIFY_LISTENERS);
 					}
@@ -87,25 +88,37 @@ public class GiantCavernFeature extends Feature<GiantCavernFeature.Config> {
 		return true;
 	}
 
-	private BlockState pickCrystalState(Random random) {
+	/**
+	 * Блоки "оболочки" каверны. Только полные блоки: друзы, поставленные внутрь стены, висели бы в воздухе,
+	 * а почкующийся аметист сам вырастит их на открытых гранях.
+	 */
+	private static BlockState pickShellState(String style, Random random) {
 		float f = random.nextFloat();
-		if (f < 0.1f) {
+		if ("magnetic".equals(style)) {
+			if (f < 0.4f) {
+				return ModBlocks.MAGNETITE_ORE.getDefaultState();
+			}
+			return f < 0.75f ? Blocks.SMOOTH_BASALT.getDefaultState() : Blocks.TUFF.getDefaultState();
+		}
+		if (f < 0.12f) {
 			return Blocks.BUDDING_AMETHYST.getDefaultState();
 		}
-		if (f < 0.4f) {
-			return Blocks.AMETHYST_BLOCK.getDefaultState();
+		if (f < 0.32f) {
+			return ModBlocks.LUMENITE_ORE.getDefaultState();
 		}
-		return Blocks.AMETHYST_CLUSTER.getDefaultState();
+		return Blocks.AMETHYST_BLOCK.getDefaultState();
 	}
 
+	/** style: "crystal" - аметист и люменит в стенах, "magnetic" - магнетит, базальт и туф. */
 	public record Config(int minRadius, int maxRadius, boolean ocean, float crystalChance,
-			Optional<Identifier> biomeId) implements FeatureConfig {
+			Optional<Identifier> biomeId, String style) implements FeatureConfig {
 		public static final Codec<Config> CODEC = RecordCodecBuilder.create(instance -> instance.group(
 				Codec.INT.fieldOf("min_radius").forGetter(Config::minRadius),
 				Codec.INT.fieldOf("max_radius").forGetter(Config::maxRadius),
 				Codec.BOOL.fieldOf("ocean").forGetter(Config::ocean),
 				Codec.FLOAT.fieldOf("crystal_chance").forGetter(Config::crystalChance),
-				Identifier.CODEC.optionalFieldOf("biome").forGetter(Config::biomeId)
+				Identifier.CODEC.optionalFieldOf("biome").forGetter(Config::biomeId),
+				Codec.STRING.optionalFieldOf("style", "crystal").forGetter(Config::style)
 		).apply(instance, Config::new));
 	}
 }

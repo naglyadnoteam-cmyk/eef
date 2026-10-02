@@ -1,0 +1,32 @@
+{
+	"parent": "minecraft:recipes/root",
+	"criteria": {
+		"has_the_recipe": {
+			"trigger": "minecraft:recipe_unlocked",
+			"conditions": {
+				"recipe": "nedra:lumenite_lamp"
+			}
+		},
+		"has_lumenite_crystal": {
+			"trigger": "minecraft:inventory_changed",
+			"conditions": {
+				"items": [
+					{
+						"items": "nedra:lumenite_crystal"
+					}
+				]
+			}
+		}
+	},
+	"requirements": [
+		[
+			"has_the_recipe",
+			"has_lumenite_crystal"
+		]
+	],
+	"rewards": {
+		"recipes": [
+			"nedra:lumenite_lamp"
+		]
+	}
+}
