@@ -40,6 +40,7 @@ public class NedraMod implements ModInitializer {
 		ModBlocks.init();
 		ModItems.init();
 		com.naglyadno.nedra.item.ModItemGroup.init();
+		com.naglyadno.nedra.worldgen.feature.ModFeatures.init();
 		com.naglyadno.nedra.worldgen.WorldGenInit.init();
 
 		PayloadTypeRegistry.playS2C().register(PressurePayload.ID, PressurePayload.CODEC);
@@ -70,6 +71,7 @@ public class NedraMod implements ModInitializer {
 			if (rockfallManager != null) {
 				rockfallManager.tick();
 			}
+			com.naglyadno.nedra.worldgen.BiomePainter.tick(server.getOverworld());
 		});
 
 		PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {

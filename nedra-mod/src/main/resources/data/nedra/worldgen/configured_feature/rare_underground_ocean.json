@@ -1,0 +1,10 @@
+{
+	"type": "nedra:giant_cavern",
+	"config": {
+		"min_radius": 14,
+		"max_radius": 22,
+		"ocean": true,
+		"crystal_chance": 0.0,
+		"biome": "nedra:magnetic_caverns"
+	}
+}

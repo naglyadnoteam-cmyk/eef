@@ -21,10 +21,19 @@ public final class WorldGenInit {
 		addOre("echo_ore_placed");
 		addOre("unstable_stone_patch_placed");
 		addOre("current_vent_placed");
+
+		addFeature("giant_cavern_placed", GenerationStep.Feature.LOCAL_MODIFICATIONS);
+		addFeature("rare_underground_ocean_placed", GenerationStep.Feature.LOCAL_MODIFICATIONS);
+		addFeature("underground_river_placed", GenerationStep.Feature.LAKES);
+		addFeature("underground_village_placed", GenerationStep.Feature.UNDERGROUND_STRUCTURES);
 	}
 
 	private static void addOre(String path) {
+		addFeature(path, GenerationStep.Feature.UNDERGROUND_ORES);
+	}
+
+	private static void addFeature(String path, GenerationStep.Feature step) {
 		RegistryKey<PlacedFeature> key = RegistryKey.of(RegistryKeys.PLACED_FEATURE, Identifier.of(NedraMod.MOD_ID, path));
-		BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(), GenerationStep.Feature.UNDERGROUND_ORES, key);
+		BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(), step, key);
 	}
 }
