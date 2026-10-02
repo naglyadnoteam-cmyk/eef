@@ -3,12 +3,13 @@
 	"id": "nedra",
 	"version": "${version}",
 	"name": "Недра",
-	"description": "Живой подземный мир: давление с глубиной, опасные обвалы, подземные течения, руды на слух, новые биомы, реки и пещеры-гиганты.",
+	"description": "Живой подземный мир: мир на 288 блоков глубже, давление с глубиной, шлемы и таблетки, обвалы, воздушные течения, руды, которые слышно сквозь камень, гигантские кристальные каверны, подземные реки, озёра и океаны, заброшенные поселения и три новых биома.",
 	"authors": [
 		"naglyadno.team"
 	],
 	"contact": {},
 	"license": "MIT",
+	"icon": "assets/nedra/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
@@ -18,6 +19,12 @@
 			"com.naglyadno.nedra.client.NedraClient"
 		]
 	},
+	"mixins": [
+		{
+			"config": "nedra.client.mixins.json",
+			"environment": "client"
+		}
+	],
 	"depends": {
 		"fabricloader": ">=0.19.5",
 		"minecraft": "~1.21.11",

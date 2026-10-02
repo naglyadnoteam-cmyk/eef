@@ -6,8 +6,11 @@ import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.util.Identifier;
 
-/** Сервер шлёт клиенту его текущее давление (0..100) и ярус (0..5) для отрисовки HUD. */
-public record PressurePayload(double pressure, int tier) implements CustomPayload {
+/**
+ * Текущее давление игрока для HUD: эффективное (с учётом защиты) и "сырое" (без защиты),
+ * суммарная защита в процентах, ярус 0..5 и признак "давление действует" (только в Overworld).
+ */
+public record PressurePayload(float effective, float raw, int protection, int tier, boolean active) implements CustomPayload {
 
 	public static final CustomPayload.Id<PressurePayload> ID =
 			new CustomPayload.Id<>(Identifier.of(NedraMod.MOD_ID, "pressure_state"));
@@ -16,12 +19,15 @@ public record PressurePayload(double pressure, int tier) implements CustomPayloa
 			PacketCodec.of(PressurePayload::write, PressurePayload::read);
 
 	private static void write(PressurePayload p, RegistryByteBuf buf) {
-		buf.writeDouble(p.pressure);
-		buf.writeInt(p.tier);
+		buf.writeFloat(p.effective);
+		buf.writeFloat(p.raw);
+		buf.writeByte(p.protection);
+		buf.writeByte(p.tier);
+		buf.writeBoolean(p.active);
 	}
 
 	private static PressurePayload read(RegistryByteBuf buf) {
-		return new PressurePayload(buf.readDouble(), buf.readInt());
+		return new PressurePayload(buf.readFloat(), buf.readFloat(), buf.readByte(), buf.readByte(), buf.readBoolean());
 	}
 
 	@Override

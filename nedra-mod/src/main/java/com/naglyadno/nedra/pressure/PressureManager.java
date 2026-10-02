@@ -7,26 +7,38 @@ import com.naglyadno.nedra.item.ModItems;
 import com.naglyadno.nedra.network.PressurePayload;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.entity.attribute.EntityAttributeInstance;
+import net.minecraft.entity.attribute.EntityAttributeModifier;
+import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.item.Item;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.Identifier;
+import net.minecraft.world.World;
 
-import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
-/** Раз в config.pressureUpdateIntervalTicks считает давление каждого игрока по глубине и рассылает клиентам. */
+/**
+ * Давление растёт с глубиной (только в обычном мире). Шлем и таблетка снижают его. Последствия:
+ * замедление добычи (модификатор атрибута, а не статус-эффект) и, на экстремальной глубине
+ * без защиты, периодический урон, который никогда не убивает. Звуки и визуальные эффекты
+ * давления проигрывает клиент - их слышит только сам игрок.
+ */
 public class PressureManager {
+
+	private static final Identifier MINING_MODIFIER_ID = Identifier.of(NedraMod.MOD_ID, "pressure_mining_slowdown");
 
 	private final MinecraftServer server;
 	private final NedraConfig config;
-	private final Path configPath;
+	private final Map<UUID, Long> lastDamageTick = new HashMap<>();
 	private long tickCounter;
 
-	public PressureManager(MinecraftServer server, NedraConfig config, Path configPath) {
+	public PressureManager(MinecraftServer server, NedraConfig config) {
 		this.server = server;
 		this.config = config;
-		this.configPath = configPath;
 	}
 
 	public NedraConfig config() {
@@ -43,22 +55,75 @@ public class PressureManager {
 		}
 	}
 
-	private void updatePlayer(ServerPlayerEntity player) {
-		int y = player.getBlockY();
+	public void onDisconnect(ServerPlayerEntity player) {
+		lastDamageTick.remove(player.getUuid());
+	}
+
+	/** Снимок давления для игрока - используется и тиком, и командой /nedra info. */
+	public Reading read(ServerPlayerEntity player) {
+		boolean active = player.getEntityWorld().getRegistryKey() == World.OVERWORLD;
+		if (!active) {
+			return new Reading(0, 0, 0, PressureTier.NONE, false);
+		}
 		double span = Math.max(1, config.surfaceY - config.deepY);
-		double depthFraction = clamp((config.surfaceY - y) / span, 0.0, 1.0);
+		double depthFraction = clamp((config.surfaceY - player.getY()) / span, 0.0, 1.0);
 		double raw = depthFraction * 100.0;
+		int protection = Math.min(95, helmetReductionPercent(player.getEquippedStack(EquipmentSlot.HEAD).getItem())
+				+ (player.hasStatusEffect(ModEffects.PRESSURE_RESISTANCE) ? config.tabletReductionPercent : 0));
+		double effective = clamp(raw * (1.0 - protection / 100.0), 0.0, 100.0);
+		return new Reading(effective, raw, protection, PressureTier.fromValue(effective), true);
+	}
 
-		int helmetReduction = helmetReductionPercent(player.getEquippedStack(EquipmentSlot.HEAD).getItem());
-		int tabletReduction = player.hasStatusEffect(ModEffects.PRESSURE_RESISTANCE) ? config.tabletReductionPercent : 0;
-		int totalReduction = Math.min(95, helmetReduction + tabletReduction);
+	private void updatePlayer(ServerPlayerEntity player) {
+		Reading reading = read(player);
+		boolean exempt = player.isCreative() || player.isSpectator();
+		applyMiningSlowdown(player, exempt ? PressureTier.NONE : reading.tier());
+		if (!exempt && reading.active()) {
+			applyDamage(player, reading.tier());
+		}
+		ServerPlayNetworking.send(player, new PressurePayload((float) reading.effective(), (float) reading.raw(),
+				reading.protection(), reading.tier().level, reading.active()));
+	}
 
-		double effective = clamp(raw * (1.0 - totalReduction / 100.0), 0.0, 100.0);
-		PressureTier tier = PressureTier.fromValue(effective);
+	private void applyMiningSlowdown(ServerPlayerEntity player, PressureTier tier) {
+		EntityAttributeInstance attribute = player.getAttributeInstance(EntityAttributes.BLOCK_BREAK_SPEED);
+		if (attribute == null) {
+			return;
+		}
+		int steps = tier.level - config.miningSlowdownStartTier + 1;
+		if (steps <= 0) {
+			if (attribute.hasModifier(MINING_MODIFIER_ID)) {
+				attribute.removeModifier(MINING_MODIFIER_ID);
+			}
+			return;
+		}
+		double value = -Math.min(0.9, steps * config.miningSlowdownPerTier);
+		for (EntityAttributeModifier existing : attribute.getModifiers()) {
+			if (existing.idMatches(MINING_MODIFIER_ID) && existing.value() == value) {
+				return;
+			}
+		}
+		attribute.removeModifier(MINING_MODIFIER_ID);
+		attribute.addTemporaryModifier(new EntityAttributeModifier(MINING_MODIFIER_ID, value,
+				EntityAttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+	}
 
-		applyGameplayEffects(player, tier);
-
-		ServerPlayNetworking.send(player, new PressurePayload(effective, tier.level));
+	private void applyDamage(ServerPlayerEntity player, PressureTier tier) {
+		if (tier.level < config.damageStartTier) {
+			return;
+		}
+		long now = server.getTicks();
+		Long last = lastDamageTick.get(player.getUuid());
+		if (last != null && now - last < config.damageIntervalTicks) {
+			return;
+		}
+		float amount = Math.min(config.damageAmount, player.getHealth() - 1.0f);
+		if (amount <= 0.05f) {
+			return;
+		}
+		lastDamageTick.put(player.getUuid(), now);
+		ServerWorld world = player.getEntityWorld();
+		player.damage(world, ModDamageTypes.pressure(world), amount);
 	}
 
 	private int helmetReductionPercent(Item helmet) {
@@ -74,22 +139,10 @@ public class PressureManager {
 		return 0;
 	}
 
-	private void applyGameplayEffects(ServerPlayerEntity player, PressureTier tier) {
-		if (tier.level >= config.miningFatigueStartTier) {
-			int amplifier = Math.min(3, tier.level - config.miningFatigueStartTier);
-			player.addStatusEffect(new StatusEffectInstance(StatusEffects.MINING_FATIGUE,
-					config.pressureUpdateIntervalTicks * 2 + 5, amplifier, true, false));
-		}
-		if (tier.level >= config.damageStartTier && tickCounter % config.damageIntervalTicks == 0) {
-			float newHealth = Math.max(1.0f, player.getHealth() - config.damageAmount);
-			player.setHealth(newHealth);
-			player.getEntityWorld().playSound(null, player.getBlockPos(),
-					net.minecraft.sound.SoundEvents.ENTITY_WARDEN_HEARTBEAT, net.minecraft.sound.SoundCategory.HOSTILE,
-					1.0f, 0.6f);
-		}
-	}
-
 	private static double clamp(double value, double min, double max) {
 		return Math.max(min, Math.min(max, value));
+	}
+
+	public record Reading(double effective, double raw, int protection, PressureTier tier, boolean active) {
 	}
 }

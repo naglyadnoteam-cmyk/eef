@@ -1,73 +1,77 @@
 package com.naglyadno.nedra.hazard;
 
+import com.naglyadno.nedra.block.CurrentVentBlock;
 import com.naglyadno.nedra.block.ModBlocks;
 import com.naglyadno.nedra.config.NedraConfig;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 /**
- * Блок "current_vent" раз в тик слегка толкает игроков в радиусе вдоль своей грани (направление
- * потока = сторона света, в которую он "смотрит" своей текстурой - для простоты берём Direction.UP
- * как базовый поток и добавляем горизонтальный снос по хешу позиции, чтобы потоки не были одинаковыми).
+ * Подземные течения. Открытый сверху воздушный разлом бьёт вверх столбом воздуха: игрока над ним
+ * подхватывает и поднимает (а падение в такой столб гасит урон от падения). Проверяется только
+ * маленькая колонна прямо под игроком - это дёшево, и поток действует только там, где его видно.
  */
 public class CurrentManager {
 
 	private final NedraConfig config;
-	private long tickCounter;
 
 	public CurrentManager(NedraConfig config) {
 		this.config = config;
 	}
 
 	public void tick(MinecraftServer server) {
-		tickCounter++;
-		if (tickCounter % 5 != 0) {
+		ServerWorld world = server.getOverworld();
+		for (ServerPlayerEntity player : world.getPlayers()) {
+			if (player.isSpectator() || player.getAbilities().flying) {
+				continue;
+			}
+			applyLift(world, player);
+		}
+	}
+
+	private void applyLift(ServerWorld world, ServerPlayerEntity player) {
+		BlockPos feet = player.getBlockPos();
+		int height = config.currentColumnHeight;
+		double bestStrength = 0.0;
+		for (int dy = 0; dy <= height; dy++) {
+			for (int dx = -1; dx <= 1; dx++) {
+				for (int dz = -1; dz <= 1; dz++) {
+					BlockPos pos = feet.add(dx, -dy - 1, dz);
+					if (!world.getBlockState(pos).isOf(ModBlocks.CURRENT_VENT) || !CurrentVentBlock.isActive(world, pos)) {
+						continue;
+					}
+					double horizontal = Math.hypot(player.getX() - (pos.getX() + 0.5), player.getZ() - (pos.getZ() + 0.5));
+					if (horizontal > 1.2) {
+						continue;
+					}
+					if (!isOpenColumn(world, pos, dy)) {
+						continue;
+					}
+					double strength = config.currentLiftStrength * (1.0 - (double) dy / (height + 1));
+					bestStrength = Math.max(bestStrength, strength);
+				}
+			}
+		}
+		if (bestStrength <= 0.0) {
 			return;
 		}
-		for (ServerWorld world : server.getWorlds()) {
-			if (world.getRegistryKey() != World.OVERWORLD) {
-				continue;
-			}
-			for (ServerPlayerEntity player : world.getPlayers()) {
-				applyNearbyCurrents(world, player);
-			}
-		}
+		Vec3d velocity = player.getVelocity();
+		double targetUp = Math.min(0.55, velocity.y + bestStrength);
+		player.setVelocity(velocity.x, targetUp, velocity.z);
+		player.velocityModified = true;
+		player.onLanding();
 	}
 
-	private void applyNearbyCurrents(ServerWorld world, ServerPlayerEntity player) {
-		BlockPos base = player.getBlockPos();
-		int r = config.currentRadius;
-		for (BlockPos pos : BlockPos.iterate(base.add(-r, -r, -r), base.add(r, r, r))) {
-			if (!world.getBlockState(pos).isOf(ModBlocks.CURRENT_VENT)) {
-				continue;
-			}
-			double dist = Math.sqrt(pos.getSquaredDistance(player.getEntityPos()));
-			if (dist > r || dist < 0.01) {
-				continue;
-			}
-			Direction flow = flowDirection(pos);
-			double falloff = 1.0 - dist / r;
-			Vec3d push = new Vec3d(flow.getOffsetX(), flow.getOffsetY(), flow.getOffsetZ())
-					.multiply(config.currentPushStrength * falloff);
-			player.setVelocity(player.getVelocity().add(push));
-			player.velocityDirty = true;
-			if (world.getRandom().nextInt(4) == 0) {
-				world.spawnParticles(ParticleTypes.CLOUD, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-						2, 0.3, 0.3, 0.3, 0.01);
+	private static boolean isOpenColumn(World world, BlockPos vent, int height) {
+		for (int i = 1; i <= height; i++) {
+			if (world.getBlockState(vent.up(i)).isSolidBlock(world, vent.up(i))) {
+				return false;
 			}
 		}
-	}
-
-	private Direction flowDirection(BlockPos pos) {
-		Direction[] horizontal = {Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
-		int idx = Math.floorMod(pos.hashCode(), horizontal.length);
-		return horizontal[idx];
+		return true;
 	}
 }

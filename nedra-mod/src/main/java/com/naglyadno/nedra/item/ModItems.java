@@ -1,22 +1,20 @@
 package com.naglyadno.nedra.item;
 
 import com.naglyadno.nedra.NedraMod;
+import com.naglyadno.nedra.sound.ModSounds;
 import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.EquippableComponent;
-import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.component.type.ConsumableComponent;
+import net.minecraft.component.type.ConsumableComponents;
 import net.minecraft.item.Item;
 import net.minecraft.item.equipment.ArmorMaterial;
-import net.minecraft.item.equipment.ArmorMaterials;
 import net.minecraft.item.equipment.EquipmentType;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.Rarity;
 
-import java.util.Optional;
 import java.util.function.Function;
 
 public final class ModItems {
@@ -24,65 +22,47 @@ public final class ModItems {
 	private ModItems() {
 	}
 
+	// --- сырьё ---
+	public static final Item LUMENITE_CRYSTAL = register("lumenite_crystal", Item::new, new Item.Settings());
+	public static final Item RAW_MAGNETITE = register("raw_magnetite", Item::new, new Item.Settings());
+	public static final Item MAGNETITE_INGOT = register("magnetite_ingot", Item::new, new Item.Settings());
+	public static final Item RESONANT_SHARD = register("resonant_shard", Item::new,
+			new Item.Settings().rarity(Rarity.UNCOMMON));
 	public static final Item DEEPMOSS_CLUMP = register("deepmoss_clump", Item::new, new Item.Settings());
 
+	// --- снаряжение ---
+	private static final ConsumableComponent TABLET_CONSUMABLE = ConsumableComponents.food()
+			.consumeSeconds(0.8f)
+			.consumeParticles(false)
+			.finishSound(ModSounds.TABLET_SWALLOW)
+			.build();
+
 	public static final Item PRESSURE_TABLET = register("pressure_tablet", PressureTabletItem::new,
-			new Item.Settings().maxCount(16));
+			new Item.Settings().maxCount(16).component(DataComponentTypes.CONSUMABLE, TABLET_CONSUMABLE));
 
 	public static final Item GEOPHONE = register("geophone", GeophoneItem::new,
-			new Item.Settings().maxCount(1).maxDamage(64));
+			new Item.Settings().maxCount(1).maxDamage(128).enchantable(10));
 
-	public static final Item HELMET_LIGHT = registerHelmet("helmet_light", ArmorMaterials.IRON);
-	public static final Item HELMET_REINFORCED = registerHelmet("helmet_reinforced", ArmorMaterials.DIAMOND);
-	public static final Item HELMET_DEEPSUIT = registerHelmet("helmet_deepsuit", ArmorMaterials.NETHERITE);
+	public static final Item HELMET_LIGHT = registerHelmet("helmet_light", ModArmorMaterials.MINER, Rarity.COMMON);
+	public static final Item HELMET_REINFORCED = registerHelmet("helmet_reinforced", ModArmorMaterials.REINFORCED, Rarity.UNCOMMON);
+	public static final Item HELMET_DEEPSUIT = registerHelmet("helmet_deepsuit", ModArmorMaterials.DEEPSUIT, Rarity.RARE);
 
 	private static Item register(String path, Function<Item.Settings, Item> factory, Item.Settings settings) {
-		RegistryKey<Item> key = itemKey(path);
+		RegistryKey<Item> key = RegistryKey.of(RegistryKeys.ITEM, Identifier.of(NedraMod.MOD_ID, path));
 		Item item = factory.apply(settings.registryKey(key));
 		Registry.register(Registries.ITEM, key, item);
 		return item;
 	}
 
 	/**
-	 * С 1.21.2 отдельного класса ArmorItem больше нет - броня это обычный Item с компонентами
-	 * EQUIPPABLE (какой слот, звук/модель экипировки) и ATTRIBUTE_MODIFIERS (защита/прочность,
-	 * которые берутся из существующего ArmorMaterial, чтобы не изобретать свой материал с нуля).
+	 * Ванильный Item.Settings#armor сам выставляет правильную прочность (база материала x11 для
+	 * шлема), атрибуты защиты, зачаровываемость, слот экипировки с моделью и ремонт в наковальне.
 	 */
-	private static Item registerHelmet(String path, ArmorMaterial material) {
-		RegistryKey<Item> key = itemKey(path);
-
-		EquippableComponent equippable = new EquippableComponent(
-				EquipmentSlot.HEAD,
-				material.equipSound(),
-				Optional.of(material.assetId()),
-				Optional.empty(),
-				Optional.empty(),
-				true,
-				true,
-				true,
-				false,
-				false,
-				RegistryEntry.of(SoundEvents.ITEM_SHEARS_SNIP)
-		);
-
-		Item.Settings settings = new Item.Settings()
-				.registryKey(key)
-				.maxCount(1)
-				.maxDamage(material.durability())
-				.component(DataComponentTypes.EQUIPPABLE, equippable)
-				.component(DataComponentTypes.ATTRIBUTE_MODIFIERS, material.createAttributeModifiers(EquipmentType.HELMET));
-
-		Item item = new Item(settings);
-		Registry.register(Registries.ITEM, key, item);
-		return item;
-	}
-
-	private static RegistryKey<Item> itemKey(String path) {
-		return RegistryKey.of(RegistryKeys.ITEM, Identifier.of(NedraMod.MOD_ID, path));
+	private static Item registerHelmet(String path, ArmorMaterial material, Rarity rarity) {
+		return register(path, Item::new, new Item.Settings().armor(material, EquipmentType.HELMET).rarity(rarity));
 	}
 
 	public static void init() {
-		// сама регистрация происходит в статических полях выше; метод нужен, чтобы класс точно
-		// загрузился (и поля инициализировались) в момент вызова из NedraMod.onInitialize().
+		// регистрация выполняется в статических полях
 	}
 }

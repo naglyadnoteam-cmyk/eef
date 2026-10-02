@@ -30,7 +30,10 @@ jobs:
           curl -sSL -o fabric-installer.jar https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.0.1/fabric-installer-1.0.1.jar
           java -jar fabric-installer.jar server -mcversion 1.21.11 -loader 0.19.5 -downloadMinecraft -dir /tmp/server
           curl -sSL -o mods/fabric-api.jar "https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/0.141.6+1.21.11/fabric-api-0.141.6+1.21.11.jar"
-          cp /home/runner/work/eef/eef/nedra-mod/build/libs/nedra-*.jar mods/ 2>/dev/null || true
+          # Only the runnable jar - the -sources.jar also contains a fabric.mod.json
+          # (with an unexpanded ${version}) and would load as a duplicate "nedra" mod.
+          JAR=$(ls /home/runner/work/eef/eef/nedra-mod/build/libs/nedra-*.jar | grep -v -- '-sources.jar' | head -1)
+          cp "$JAR" mods/
           ls -la mods/
           echo "eula=true" > eula.txt
 

@@ -1,59 +1,84 @@
 package com.naglyadno.nedra;
 
 import com.naglyadno.nedra.block.ModBlocks;
+import com.naglyadno.nedra.command.NedraCommands;
+import com.naglyadno.nedra.component.ModComponents;
 import com.naglyadno.nedra.config.NedraConfig;
 import com.naglyadno.nedra.effect.ModEffects;
+import com.naglyadno.nedra.guide.GuideBook;
 import com.naglyadno.nedra.hazard.CurrentManager;
 import com.naglyadno.nedra.hazard.MagnetiteInterferenceManager;
 import com.naglyadno.nedra.hazard.RockfallManager;
+import com.naglyadno.nedra.item.ModItemGroup;
 import com.naglyadno.nedra.item.ModItems;
+import com.naglyadno.nedra.network.ConfigSyncPayload;
 import com.naglyadno.nedra.network.PressurePayload;
 import com.naglyadno.nedra.pressure.PressureManager;
+import com.naglyadno.nedra.sound.ModSounds;
+import com.naglyadno.nedra.util.ServerScheduler;
+import com.naglyadno.nedra.worldgen.BiomePainter;
+import com.naglyadno.nedra.worldgen.WorldGenInit;
+import com.naglyadno.nedra.worldgen.feature.ModFeatures;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.registry.CompostingChanceRegistry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.item.ItemStack;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.world.World;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
 
 public class NedraMod implements ModInitializer {
 
 	public static final String MOD_ID = "nedra";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
+	/** Тег игрока: справочник уже выдан. Хранится в данных игрока, поэтому переживает рестарты. */
+	private static final String GUIDE_TAG = "nedra.guide_received";
+
+	private static final NedraConfig CONFIG = new NedraConfig();
 	private static PressureManager pressureManager;
 	private static RockfallManager rockfallManager;
 	private static CurrentManager currentManager;
-	private static MagnetiteInterferenceManager magnetiteInterferenceManager;
-	private static final Set<UUID> GUIDE_GIVEN = new HashSet<>();
+	private static MagnetiteInterferenceManager magnetiteManager;
 
 	@Override
 	public void onInitialize() {
+		ModSounds.init();
+		ModComponents.init();
 		ModEffects.init();
 		ModBlocks.init();
 		ModItems.init();
-		com.naglyadno.nedra.item.ModItemGroup.init();
-		com.naglyadno.nedra.worldgen.feature.ModFeatures.init();
-		com.naglyadno.nedra.worldgen.WorldGenInit.init();
+		ModItemGroup.init();
+		ModFeatures.init();
+		WorldGenInit.init();
+
+		CompostingChanceRegistry.INSTANCE.add(ModItems.DEEPMOSS_CLUMP, 0.5f);
+		CompostingChanceRegistry.INSTANCE.add(ModBlocks.DEEPMOSS, 0.65f);
 
 		PayloadTypeRegistry.playS2C().register(PressurePayload.ID, PressurePayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(ConfigSyncPayload.ID, ConfigSyncPayload.CODEC);
+
+		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+				NedraCommands.register(dispatcher));
 
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-			Path configPath = FabricLoader.getInstance().getConfigDir().resolve("nedra.json");
-			NedraConfig config = NedraConfig.load(configPath);
-			pressureManager = new PressureManager(server, config, configPath);
-			rockfallManager = new RockfallManager(config);
-			currentManager = new CurrentManager(config);
-			magnetiteInterferenceManager = new MagnetiteInterferenceManager(config);
+			CONFIG.copyFrom(NedraConfig.load(configPath()));
+			pressureManager = new PressureManager(server, CONFIG);
+			rockfallManager = new RockfallManager(CONFIG);
+			currentManager = new CurrentManager(CONFIG);
+			magnetiteManager = new MagnetiteInterferenceManager(CONFIG);
 			LOGGER.info("Недра готовы: подземный мир пробуждается.");
 		});
 
@@ -61,45 +86,66 @@ public class NedraMod implements ModInitializer {
 			pressureManager = null;
 			rockfallManager = null;
 			currentManager = null;
-			magnetiteInterferenceManager = null;
-			GUIDE_GIVEN.clear();
+			magnetiteManager = null;
+			ServerScheduler.clear();
 		});
 
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
+			ServerScheduler.tick();
 			if (pressureManager != null) {
 				pressureManager.tick();
-			}
-			if (currentManager != null) {
 				currentManager.tick(server);
-			}
-			if (rockfallManager != null) {
 				rockfallManager.tick();
+				magnetiteManager.tick(server);
 			}
-			if (magnetiteInterferenceManager != null) {
-				magnetiteInterferenceManager.tick(server);
+			BiomePainter.tick(server.getOverworld());
+		});
+
+		ServerChunkEvents.CHUNK_LOAD.register((world, chunk) -> {
+			if (world.getRegistryKey() == World.OVERWORLD) {
+				BiomePainter.onChunkLoad(world, chunk);
 			}
-			com.naglyadno.nedra.worldgen.BiomePainter.tick(server.getOverworld());
 		});
 
 		PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
-			if (!world.isClient() && rockfallManager != null && player instanceof ServerPlayerEntity serverPlayer) {
+			if (rockfallManager != null && player instanceof ServerPlayerEntity serverPlayer) {
 				rockfallManager.onBlockBroken(serverPlayer, pos);
 			}
 		});
 
-		net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
-				maybeGiveGuideBook(handler.getPlayer()));
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+			ServerPlayerEntity player = handler.getPlayer();
+			ServerPlayNetworking.send(player, ConfigSyncPayload.of(CONFIG));
+			giveGuideOnce(player);
+		});
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			if (pressureManager != null) {
+				pressureManager.onDisconnect(handler.getPlayer());
+			}
+		});
 
 		LOGGER.info("Недра загружены.");
 	}
 
-	private void maybeGiveGuideBook(ServerPlayerEntity player) {
-		if (!GUIDE_GIVEN.add(player.getUuid())) {
+	private static void giveGuideOnce(ServerPlayerEntity player) {
+		if (player.getCommandTags().contains(GUIDE_TAG)) {
 			return;
 		}
-		ItemStack book = com.naglyadno.nedra.guide.GuideBook.create();
+		player.addCommandTag(GUIDE_TAG);
+		ItemStack book = GuideBook.create();
 		if (!player.getInventory().insertStack(book)) {
 			player.dropItem(book, false);
+		}
+	}
+
+	private static Path configPath() {
+		return FabricLoader.getInstance().getConfigDir().resolve("nedra.json");
+	}
+
+	public static void reloadConfig(MinecraftServer server) {
+		CONFIG.copyFrom(NedraConfig.load(configPath()));
+		for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+			ServerPlayNetworking.send(player, ConfigSyncPayload.of(CONFIG));
 		}
 	}
 
@@ -107,11 +153,7 @@ public class NedraMod implements ModInitializer {
 		return pressureManager;
 	}
 
-	public static RockfallManager rockfallManager() {
-		return rockfallManager;
-	}
-
 	public static NedraConfig config() {
-		return pressureManager != null ? pressureManager.config() : new NedraConfig();
+		return CONFIG;
 	}
 }

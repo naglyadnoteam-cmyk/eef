@@ -3,10 +3,16 @@ package com.naglyadno.nedra.worldgen.feature;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.naglyadno.nedra.NedraMod;
+import com.naglyadno.nedra.block.ModBlocks;
 import com.naglyadno.nedra.worldgen.BiomePainter;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.block.ChestBlock;
+import net.minecraft.block.FurnaceBlock;
+import net.minecraft.block.WallTorchBlock;
+import net.minecraft.block.entity.LootableContainerBlockEntity;
+import net.minecraft.loot.LootTable;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.util.Identifier;
@@ -28,6 +34,8 @@ public class UndergroundVillageFeature extends Feature<UndergroundVillageFeature
 
 	private static final Direction[] HORIZONTALS = {Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
 	private static final BlockState FLOOR = Blocks.POLISHED_DEEPSLATE.getDefaultState();
+	private static final RegistryKey<LootTable> LOOT_TABLE =
+			RegistryKey.of(RegistryKeys.LOOT_TABLE, Identifier.of(NedraMod.MOD_ID, "chests/abandoned_settlement"));
 
 	public UndergroundVillageFeature(Codec<Config> codec) {
 		super(codec);
@@ -118,13 +126,41 @@ public class UndergroundVillageFeature extends Feature<UndergroundVillageFeature
 	}
 
 	private void decorateRoom(StructureWorldAccess world, Random random, BlockPos center) {
-		placeIfOpen(world, center.up(1), Blocks.CRAFTING_TABLE.getDefaultState());
-		placeIfOpen(world, center.add(2, 1, 0), Blocks.FURNACE.getDefaultState());
-		placeIfOpen(world, center.add(-2, 1, 0), Blocks.CHEST.getDefaultState());
-		for (Direction direction : HORIZONTALS) {
-			if (random.nextFloat() < 0.6f) {
-				BlockPos pos = center.offset(direction, 3).up(2);
-				placeIfOpen(world, pos, Blocks.TORCH.getDefaultState());
+		// мебель вдоль одной из стен, чтобы проход через центр зала оставался свободным
+		Direction wall = HORIZONTALS[random.nextInt(HORIZONTALS.length)];
+		Direction along = wall.rotateYClockwise();
+		BlockPos base = center.offset(wall, 2).up();
+		placeIfOpen(world, base.offset(along, -1), Blocks.CRAFTING_TABLE.getDefaultState());
+		placeIfOpen(world, base, Blocks.FURNACE.getDefaultState().with(FurnaceBlock.FACING, wall.getOpposite()));
+		BlockPos chestPos = base.offset(along, 1);
+		if (placeIfOpen(world, chestPos, Blocks.CHEST.getDefaultState().with(ChestBlock.FACING, wall.getOpposite()))) {
+			LootableContainerBlockEntity.setLootTable(world, random, chestPos, LOOT_TABLE);
+		}
+		if (random.nextFloat() < 0.4f) {
+			BlockPos barrel = center.offset(wall.getOpposite(), 2).offset(along, 2).up();
+			if (placeIfOpen(world, barrel, Blocks.BARREL.getDefaultState())) {
+				LootableContainerBlockEntity.setLootTable(world, random, barrel, LOOT_TABLE);
+			}
+		}
+
+		// свет: люменитовый светильник в своде или настенный факел
+		BlockPos ceiling = center.up(3);
+		if (random.nextFloat() < 0.6f && !world.getBlockState(ceiling).isAir()) {
+			world.setBlockState(ceiling, ModBlocks.LUMENITE_LAMP.getDefaultState(), Block.NOTIFY_LISTENERS);
+		} else {
+			Direction torchWall = wall.getOpposite();
+			BlockPos torchPos = center.offset(torchWall, 2).up(2);
+			if (world.getBlockState(torchPos.offset(torchWall)).isSolidBlock(world, torchPos.offset(torchWall))) {
+				placeIfOpen(world, torchPos, Blocks.WALL_TORCH.getDefaultState().with(WallTorchBlock.FACING, wall));
+			}
+		}
+
+		// заброшенность: паутина под сводом по углам
+		for (int i = 0; i < 2; i++) {
+			if (random.nextFloat() < 0.5f) {
+				int sx = random.nextBoolean() ? 2 : -2;
+				int sz = random.nextBoolean() ? 2 : -2;
+				placeIfOpen(world, center.add(sx, 2, sz), Blocks.COBWEB.getDefaultState());
 			}
 		}
 	}
@@ -135,11 +171,13 @@ public class UndergroundVillageFeature extends Feature<UndergroundVillageFeature
 		}
 	}
 
-	private void placeIfOpen(StructureWorldAccess world, BlockPos pos, BlockState state) {
+	private boolean placeIfOpen(StructureWorldAccess world, BlockPos pos, BlockState state) {
 		BlockState current = world.getBlockState(pos);
-		if (current.isAir() || current.isOf(Blocks.CAVE_AIR)) {
+		if (current.isAir()) {
 			world.setBlockState(pos, state, Block.NOTIFY_LISTENERS);
+			return true;
 		}
+		return false;
 	}
 
 	public record Config(int rooms) implements FeatureConfig {

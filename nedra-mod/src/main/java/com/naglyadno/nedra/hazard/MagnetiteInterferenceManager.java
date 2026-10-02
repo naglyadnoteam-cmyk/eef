@@ -1,31 +1,32 @@
 package com.naglyadno.nedra.hazard;
 
 import com.naglyadno.nedra.block.ModBlocks;
+import com.naglyadno.nedra.component.ModComponents;
 import com.naglyadno.nedra.config.NedraConfig;
+import com.naglyadno.nedra.sound.ModSounds;
+import com.naglyadno.nedra.util.BlockScanner;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LodestoneTrackerComponent;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.GlobalPos;
-import net.minecraft.world.World;
+import net.minecraft.sound.SoundCategory;
 
 import java.util.Optional;
 
 /**
- * Магнетитовая руда сбивает обычный (не привязанный к маяку) компас: стрелка
- * начинает "сходить с ума", как у ванильного компаса с потерянным лодстоуном.
- * Мы просто подсовываем компасу фиктивную цель-лодстоун в заведомо несуществующей
- * точке - ванильная отрисовка сама превращает это в хаотичное дрожание стрелки.
+ * Магнетит сбивает обычный компас в руке: компасу выдаётся "отслеживаемый" трекер лодстоуна
+ * без цели - ровно то состояние, в котором ванильная стрелка хаотично вращается. Подменённые
+ * компасы помечаются компонентом nedra:magnetized; как только игрок отходит от магнетита или
+ * убирает компас из руки, подмена снимается со всех помеченных компасов в его инвентаре.
+ * Настоящие лодстоун-компасы (без метки) не трогаются никогда.
  */
 public class MagnetiteInterferenceManager {
 
-	/** Опознавательная "фальшивая" точка - компасы, привязанные сюда, созданы этим менеджером. */
-	private static final BlockPos FAKE_TARGET_POS = new BlockPos(0, -2031, 0);
+	private static final LodestoneTrackerComponent SPINNING = new LodestoneTrackerComponent(Optional.empty(), true);
 
 	private final NedraConfig config;
 	private long tickCounter;
@@ -39,51 +40,40 @@ public class MagnetiteInterferenceManager {
 		if (tickCounter % 10 != 0) {
 			return;
 		}
-		for (ServerWorld world : server.getWorlds()) {
-			if (world.getRegistryKey() != World.OVERWORLD) {
-				continue;
-			}
-			for (ServerPlayerEntity player : world.getPlayers()) {
-				boolean nearMagnetite = isNearMagnetite(world, player);
-				updateHand(player, Hand.MAIN_HAND, nearMagnetite, world);
-				updateHand(player, Hand.OFF_HAND, nearMagnetite, world);
-			}
+		ServerWorld overworld = server.getOverworld();
+		for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+			boolean inOverworld = player.getEntityWorld() == overworld;
+			boolean holdsCompass = player.getMainHandStack().isOf(Items.COMPASS) || player.getOffHandStack().isOf(Items.COMPASS);
+			boolean near = inOverworld && holdsCompass && BlockScanner.findNearest(overworld, player.getBlockPos(),
+					config.magnetiteInterferenceRadius, ModBlocks.MAGNETITE_ORE) != null;
+			update(player, near);
 		}
 	}
 
-	private boolean isNearMagnetite(ServerWorld world, ServerPlayerEntity player) {
-		BlockPos base = player.getBlockPos();
-		int r = (int) Math.ceil(config.magnetiteInterferenceRadius);
-		for (BlockPos pos : BlockPos.iterate(base.add(-r, -r, -r), base.add(r, r, r))) {
-			if (!world.getBlockState(pos).isOf(ModBlocks.MAGNETITE_ORE)) {
+	private void update(ServerPlayerEntity player, boolean near) {
+		PlayerInventory inventory = player.getInventory();
+		boolean magnetizedNow = false;
+		for (int i = 0; i < inventory.size(); i++) {
+			ItemStack stack = inventory.getStack(i);
+			if (!stack.isOf(Items.COMPASS)) {
 				continue;
 			}
-			double dist = Math.sqrt(pos.getSquaredDistance(player.getEntityPos()));
-			if (dist <= config.magnetiteInterferenceRadius) {
-				return true;
+			boolean held = stack == player.getMainHandStack() || stack == player.getOffHandStack();
+			boolean ours = Boolean.TRUE.equals(stack.get(ModComponents.MAGNETIZED));
+			if (near && held) {
+				if (!ours && stack.get(DataComponentTypes.LODESTONE_TRACKER) == null) {
+					stack.set(DataComponentTypes.LODESTONE_TRACKER, SPINNING);
+					stack.set(ModComponents.MAGNETIZED, true);
+					magnetizedNow = true;
+				}
+			} else if (ours) {
+				stack.remove(DataComponentTypes.LODESTONE_TRACKER);
+				stack.remove(ModComponents.MAGNETIZED);
 			}
 		}
-		return false;
-	}
-
-	private void updateHand(ServerPlayerEntity player, Hand hand, boolean nearMagnetite, ServerWorld world) {
-		ItemStack stack = player.getStackInHand(hand);
-		if (!stack.isOf(Items.COMPASS)) {
-			return;
-		}
-		LodestoneTrackerComponent current = stack.get(DataComponentTypes.LODESTONE_TRACKER);
-		boolean isOurFake = current != null && current.target()
-				.map(pos -> pos.pos().equals(FAKE_TARGET_POS))
-				.orElse(false);
-
-		if (nearMagnetite) {
-			if (current == null) {
-				GlobalPos fakeTarget = GlobalPos.create(world.getRegistryKey(), FAKE_TARGET_POS);
-				stack.set(DataComponentTypes.LODESTONE_TRACKER,
-						new LodestoneTrackerComponent(Optional.of(fakeTarget), true));
-			}
-		} else if (isOurFake) {
-			stack.remove(DataComponentTypes.LODESTONE_TRACKER);
+		if (magnetizedNow) {
+			player.getEntityWorld().playSound(null, player.getBlockPos(), ModSounds.MAGNETITE_BUZZ,
+					SoundCategory.PLAYERS, 0.6f, 1.0f);
 		}
 	}
 }

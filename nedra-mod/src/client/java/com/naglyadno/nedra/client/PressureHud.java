@@ -1,111 +1,217 @@
 package com.naglyadno.nedra.client;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.random.Random;
 
-import java.util.Random;
-
-/** Правая вертикальная шкала давления + красная виньетка/пульс на высоких ярусах + "шум" поверх F3. */
+/**
+ * HUD давления: вертикальный манометр справа, красная виньетка с пульсом на высоких ярусах
+ * и помехи поверх экрана отладки (F3). Всё рисуется примитивами - чётко при любом масштабе GUI.
+ */
 public final class PressureHud {
 
-	private static final int BAR_WIDTH = 10;
-	private static final int BAR_HEIGHT = 90;
-	private static final int MARGIN = 10;
-	private static final Random GLITCH_RANDOM = new Random();
+	private static final int BAR_W = 6;
+	private static final int BAR_H = 84;
+	private static final int EDGE = 10;
+	private static final float[] THRESHOLDS = {10, 30, 55, 75, 92};
+	private static final int[] TIER_COLORS = {0x8FD18F, 0x8FD18F, 0xE8D25A, 0xF0A04B, 0xF0603C, 0xFF3B3B};
+
+	/** Опорные цвета шкалы по значению давления 0..100. */
+	private static final float[] STOPS = {0, 30, 55, 75, 92, 100};
+	private static final int[] STOP_COLORS = {0x3FAE5A, 0xB5D53B, 0xF2C230, 0xF08A33, 0xE5452F, 0xB3141B};
 
 	private PressureHud() {
 	}
 
-	public static void render(DrawContext context) {
+	// ------------------------------------------------------------------ gauge
+
+	public static void renderGauge(DrawContext context) {
 		MinecraftClient client = MinecraftClient.getInstance();
 		if (client.player == null || client.options.hudHidden) {
 			return;
 		}
-
-		double pressure = ClientPressureState.pressure();
+		ClientPressureState.animate();
+		float alpha = ClientPressureState.visibility();
+		if (alpha <= 0.01f) {
+			return;
+		}
+		TextRenderer font = client.textRenderer;
+		float effective = ClientPressureState.effective();
+		float raw = ClientPressureState.raw();
 		int tier = ClientPressureState.tier();
+		float pulse = ClientAmbience.pulse();
 
-		renderGauge(context, client, pressure, tier);
+		int width = context.getScaledWindowWidth();
+		int height = context.getScaledWindowHeight();
+		int x1 = width - EDGE - BAR_W;
+		int x2 = x1 + BAR_W;
+		int y1 = height / 2 - BAR_H / 2 - 6;
+		int y2 = y1 + BAR_H;
 
-		if (tier >= 4) {
-			renderVignette(context, tier);
+		// корпус манометра: тёмная подложка, контур и блик
+		context.fill(x1 - 3, y1 - 3, x2 + 3, y2 + 3, argb(0x05070A, 0.55f * alpha));
+		context.fill(x1 - 2, y1 - 2, x2 + 2, y2 + 2, argb(0x2A2E36, 0.95f * alpha));
+		context.fill(x1 - 1, y1 - 1, x2 + 1, y2 + 1, argb(0x0B0D11, 0.95f * alpha));
+		context.fill(x1 - 2, y1 - 2, x2 + 2, y1 - 1, argb(0x5A606C, 0.9f * alpha));
+
+		// "сырое" давление без защиты - штриховка: эту часть сейчас забирает на себя защита
+		int rawTop = y2 - Math.round(BAR_H * MathHelper.clamp(raw, 0, 100) / 100f);
+		int effTop = y2 - Math.round(BAR_H * MathHelper.clamp(effective, 0, 100) / 100f);
+		for (int y = rawTop; y < effTop; y++) {
+			if (((y + (int) (System.currentTimeMillis() / 120)) & 1) == 0) {
+				context.fill(x1, y, x2, y + 1, argb(0x9FB6D8, 0.28f * alpha));
+			}
 		}
-		if (tier >= 3) {
-			renderDebugStatic(context, tier);
+		if (raw - effective > 1.5f) {
+			context.fill(x1 - 1, rawTop, x2 + 1, rawTop + 1, argb(0xD6E4FF, 0.75f * alpha));
+		}
+
+		// заполнение: градиент от цвета текущего значения к более спокойному снизу
+		if (effTop < y2) {
+			int top = colorAt(effective);
+			int bottom = colorAt(Math.max(0, effective - 40));
+			float boost = 0.75f + 0.25f * pulse;
+			context.fillGradient(x1, effTop, x2, y2, argb(brighten(top, pulse * 0.35f), boost * alpha),
+					argb(bottom, 0.85f * alpha));
+			context.fill(x1, effTop, x1 + 1, y2, argb(0xFFFFFF, 0.18f * alpha));
+			context.fill(x1, effTop, x2, effTop + 1, argb(0xFFFFFF, 0.55f * alpha));
+		}
+
+		// риски порогов ярусов
+		for (float threshold : THRESHOLDS) {
+			int ty = y2 - Math.round(BAR_H * threshold / 100f);
+			context.fill(x1 - 5, ty, x1 - 2, ty + 1, argb(0xC8CCD4, 0.55f * alpha));
+		}
+
+		// подписи слева от шкалы
+		int tierColor = TIER_COLORS[MathHelper.clamp(tier, 0, 5)];
+		Text value = Text.literal(Math.round(effective) + "%");
+		int valueX = x1 - 8 - font.getWidth(value);
+		context.drawText(font, value, valueX, y1 - 1, argb(brighten(tierColor, pulse * 0.4f), alpha), true);
+
+		Text tierName = Text.translatable("hud.nedra.tier." + MathHelper.clamp(tier, 0, 5));
+		drawSmall(context, font, tierName, x1 - 8, y1 + 9, argb(0xB8BDC6, alpha), true);
+
+		int footerY = y2 + 6;
+		Text depth = Text.translatable("hud.nedra.depth", client.player.getBlockY());
+		drawSmall(context, font, depth, x2 + 1, footerY, argb(0x9AA0AA, alpha), true);
+		int protection = ClientPressureState.protection();
+		if (protection > 0) {
+			Text shield = Text.translatable("hud.nedra.protection", protection);
+			drawSmall(context, font, shield, x2 + 1, footerY + 8, argb(0x8FB7FF, alpha), true);
 		}
 	}
 
-	private static void renderGauge(DrawContext context, MinecraftClient client, double pressure, int tier) {
-		int screenWidth = context.getScaledWindowWidth();
-		int screenHeight = context.getScaledWindowHeight();
-		int x1 = screenWidth - MARGIN - BAR_WIDTH;
-		int y1 = screenHeight / 2 - BAR_HEIGHT / 2;
-		int x2 = x1 + BAR_WIDTH;
-		int y2 = y1 + BAR_HEIGHT;
-
-		context.fill(x1 - 1, y1 - 1, x2 + 1, y2 + 1, 0x90000000);
-
-		int filled = (int) Math.round(BAR_HEIGHT * (pressure / 100.0));
-		int fillTop = y2 - filled;
-		int color = colorFor(pressure);
-		context.fill(x1, fillTop, x2, y2, color);
-
-		Text label = Text.literal((int) Math.round(pressure) + "%").formatted(tierFormatting(tier));
-		int labelWidth = client.textRenderer.getWidth(label);
-		context.drawText(client.textRenderer, label, x1 - labelWidth - 4, y1 - 2, 0xFFFFFF, true);
-
-		Text icon = Text.literal("Давление").formatted(Formatting.GRAY);
-		context.drawText(client.textRenderer, icon, x1 - client.textRenderer.getWidth(icon), y2 + 4, 0xFFFFFF, true);
+	/** Мелкий текст (75%), выровненный по правому краю rightX. */
+	private static void drawSmall(DrawContext context, TextRenderer font, Text text, int rightX, int y, int color, boolean right) {
+		float scale = 0.75f;
+		int w = font.getWidth(text);
+		context.getMatrices().pushMatrix();
+		context.getMatrices().translate(right ? rightX - w * scale : rightX, y);
+		context.getMatrices().scale(scale, scale);
+		context.drawText(font, text, 0, 0, color, true);
+		context.getMatrices().popMatrix();
 	}
 
-	private static int colorFor(double pressure) {
-		if (pressure < 30) return 0xFF3FA34D;
-		if (pressure < 55) return 0xFFC9A227;
-		if (pressure < 75) return 0xFFD9732A;
-		if (pressure < 92) return 0xFFC0392B;
-		return 0xFFFF1E1E;
-	}
+	// ------------------------------------------------------------------ vignette
 
-	private static Formatting tierFormatting(int tier) {
-		return switch (tier) {
-			case 0, 1 -> Formatting.GREEN;
-			case 2 -> Formatting.YELLOW;
-			case 3 -> Formatting.GOLD;
-			case 4 -> Formatting.RED;
-			default -> Formatting.DARK_RED;
-		};
-	}
-
-	private static void renderVignette(DrawContext context, int tier) {
-		int screenWidth = context.getScaledWindowWidth();
-		int screenHeight = context.getScaledWindowHeight();
-		long time = System.currentTimeMillis();
-		double pulse = 0.5 + 0.5 * Math.sin(time / (tier >= 5 ? 220.0 : 380.0));
-		int alpha = (int) (((tier - 3) * 25) + pulse * 30);
-		alpha = Math.max(0, Math.min(140, alpha));
-		int color = (alpha << 24) | 0x660000;
-		int thickness = screenHeight / 6;
-
-		context.fillGradient(0, 0, screenWidth, thickness, color, 0x00660000);
-		context.fillGradient(0, screenHeight - thickness, screenWidth, screenHeight, 0x00660000, color);
-		context.fillGradient(0, 0, thickness, screenHeight, color, 0x00660000);
-		context.fillGradient(screenWidth - thickness, 0, screenWidth, screenHeight, 0x00660000, color);
-	}
-
-	private static void renderDebugStatic(DrawContext context, int tier) {
-		int blocksCount = 6 + tier * 2;
-		int baseAlpha = 40 + tier * 15;
-		for (int i = 0; i < blocksCount; i++) {
-			int w = 20 + GLITCH_RANDOM.nextInt(80);
-			int h = 6 + GLITCH_RANDOM.nextInt(6);
-			int x = GLITCH_RANDOM.nextInt(180);
-			int y = GLITCH_RANDOM.nextInt(160);
-			int alpha = Math.min(200, baseAlpha + GLITCH_RANDOM.nextInt(60));
-			int gray = 180 + GLITCH_RANDOM.nextInt(60);
-			int color = (alpha << 24) | (gray << 16) | (gray << 8) | gray;
-			context.fill(x, y, x + w, y + h, color);
+	public static void renderVignette(DrawContext context) {
+		MinecraftClient client = MinecraftClient.getInstance();
+		if (client.player == null || client.options.hudHidden) {
+			return;
 		}
+		int tier = ClientPressureState.tier();
+		if (tier < 4) {
+			return;
+		}
+		float pulse = ClientAmbience.pulse();
+		float strength = (tier >= 5 ? 0.55f : 0.32f) + pulse * (tier >= 5 ? 0.3f : 0.18f);
+		int width = context.getScaledWindowWidth();
+		int height = context.getScaledWindowHeight();
+		int thickness = (int) (Math.min(width, height) * 0.3f);
+		int steps = 16;
+		int band = Math.max(1, thickness / steps);
+		for (int i = 0; i < steps; i++) {
+			float falloff = 1f - (float) i / steps;
+			int color = argb(0x5A0606, strength * falloff * falloff * 0.35f);
+			int o = i * band;
+			context.fill(o, o, width - o, o + band, color);
+			context.fill(o, height - o - band, width - o, height - o, color);
+			context.fill(o, o + band, o + band, height - o - band, color);
+			context.fill(width - o - band, o + band, width - o, height - o - band, color);
+		}
+		if (tier >= 5) {
+			context.fill(0, 0, width, height, argb(0x2A0000, 0.05f + pulse * 0.07f));
+		}
+	}
+
+	// ------------------------------------------------------------------ F3 interference
+
+	/** Вызывается миксином после отрисовки экрана отладки: высокое давление "сбивает" приборы. */
+	public static void renderDebugInterference(DrawContext context) {
+		MinecraftClient client = MinecraftClient.getInstance();
+		int tier = ClientPressureState.tier();
+		if (client.player == null || tier < 3 || !client.getDebugHud().shouldShowDebugHud()) {
+			return;
+		}
+		int width = context.getScaledWindowWidth();
+		int height = context.getScaledWindowHeight();
+		// картинка помех меняется ~11 раз в секунду, а не каждый кадр - иначе это мельтешение
+		Random random = Random.create(System.currentTimeMillis() / 90);
+		int lines = (tier - 2) * 7;
+		for (int i = 0; i < lines; i++) {
+			boolean leftColumn = random.nextBoolean();
+			int w = 40 + random.nextInt(width / 3);
+			int x = leftColumn ? random.nextInt(40) : width - w - random.nextInt(40);
+			int y = random.nextInt(height);
+			int h = 1 + random.nextInt(tier >= 5 ? 4 : 2);
+			if (random.nextInt(3) == 0) {
+				context.fill(x, y, x + w, y + h, argb(0x000000, 0.55f + random.nextFloat() * 0.3f));
+			} else {
+				int gray = 150 + random.nextInt(90);
+				context.fill(x, y, x + w, y + h, argb(gray << 16 | gray << 8 | gray, 0.2f + random.nextFloat() * 0.35f));
+			}
+		}
+		if (tier >= 5 && random.nextInt(4) == 0) {
+			int y = random.nextInt(height);
+			context.fill(0, y, width, y + 6 + random.nextInt(10), argb(0x000000, 0.65f));
+		}
+	}
+
+	// ------------------------------------------------------------------ colour helpers
+
+	private static int colorAt(float value) {
+		for (int i = 0; i < STOPS.length - 1; i++) {
+			if (value <= STOPS[i + 1]) {
+				float t = (value - STOPS[i]) / (STOPS[i + 1] - STOPS[i]);
+				return lerpColor(STOP_COLORS[i], STOP_COLORS[i + 1], MathHelper.clamp(t, 0, 1));
+			}
+		}
+		return STOP_COLORS[STOP_COLORS.length - 1];
+	}
+
+	private static int lerpColor(int a, int b, float t) {
+		int r = (int) MathHelper.lerp(t, (a >> 16) & 0xFF, (b >> 16) & 0xFF);
+		int g = (int) MathHelper.lerp(t, (a >> 8) & 0xFF, (b >> 8) & 0xFF);
+		int bl = (int) MathHelper.lerp(t, a & 0xFF, b & 0xFF);
+		return r << 16 | g << 8 | bl;
+	}
+
+	private static int brighten(int rgb, float amount) {
+		int r = (rgb >> 16) & 0xFF;
+		int g = (rgb >> 8) & 0xFF;
+		int b = rgb & 0xFF;
+		r += (int) ((255 - r) * amount);
+		g += (int) ((255 - g) * amount);
+		b += (int) ((255 - b) * amount);
+		return r << 16 | g << 8 | b;
+	}
+
+	private static int argb(int rgb, float alpha) {
+		int a = MathHelper.clamp((int) (alpha * 255f), 0, 255);
+		return a << 24 | (rgb & 0xFFFFFF);
 	}
 }
