@@ -24,6 +24,7 @@ public final class WorldGenInit {
 
 		addFeature("giant_cavern_placed", GenerationStep.Feature.LOCAL_MODIFICATIONS);
 		addFeature("rare_underground_ocean_placed", GenerationStep.Feature.LOCAL_MODIFICATIONS);
+		addFeature("underground_lake_placed", GenerationStep.Feature.LAKES);
 		addFeature("underground_river_placed", GenerationStep.Feature.LAKES);
 		addFeature("underground_village_placed", GenerationStep.Feature.UNDERGROUND_STRUCTURES);
 	}

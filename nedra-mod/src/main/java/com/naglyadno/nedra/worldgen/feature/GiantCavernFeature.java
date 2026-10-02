@@ -18,6 +18,8 @@ import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.FeatureConfig;
 import net.minecraft.world.gen.feature.util.FeatureContext;
 
+import java.util.Optional;
+
 /**
  * Высекает крупную эллипсоидную каверну с кристаллическими вкраплениями по краям,
  * либо (в режиме "ocean") затапливает такую же полость - редкий подземный океан.
@@ -74,11 +76,13 @@ public class GiantCavernFeature extends Feature<GiantCavernFeature.Config> {
 			}
 		}
 
-		RegistryKey<Biome> biomeKey = RegistryKey.of(RegistryKeys.BIOME, config.biomeId());
-		BlockBox box = BlockBox.create(
-				origin.add(-radiusXZ, -radiusY, -radiusXZ),
-				origin.add(radiusXZ, radiusY, radiusXZ));
-		BiomePainter.queue(box, biomeKey);
+		if (config.biomeId().isPresent()) {
+			RegistryKey<Biome> biomeKey = RegistryKey.of(RegistryKeys.BIOME, config.biomeId().get());
+			BlockBox box = BlockBox.create(
+					origin.add(-radiusXZ, -radiusY, -radiusXZ),
+					origin.add(radiusXZ, radiusY, radiusXZ));
+			BiomePainter.queue(box, biomeKey);
+		}
 
 		return true;
 	}
@@ -95,13 +99,13 @@ public class GiantCavernFeature extends Feature<GiantCavernFeature.Config> {
 	}
 
 	public record Config(int minRadius, int maxRadius, boolean ocean, float crystalChance,
-			Identifier biomeId) implements FeatureConfig {
+			Optional<Identifier> biomeId) implements FeatureConfig {
 		public static final Codec<Config> CODEC = RecordCodecBuilder.create(instance -> instance.group(
 				Codec.INT.fieldOf("min_radius").forGetter(Config::minRadius),
 				Codec.INT.fieldOf("max_radius").forGetter(Config::maxRadius),
 				Codec.BOOL.fieldOf("ocean").forGetter(Config::ocean),
 				Codec.FLOAT.fieldOf("crystal_chance").forGetter(Config::crystalChance),
-				Identifier.CODEC.fieldOf("biome").forGetter(Config::biomeId)
+				Identifier.CODEC.optionalFieldOf("biome").forGetter(Config::biomeId)
 		).apply(instance, Config::new));
 	}
 }
