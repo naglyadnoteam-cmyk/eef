@@ -1,0 +1,205 @@
+name: Probe Nedra Polish APIs
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nedra-mod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Cache decompiled sources
+        uses: actions/cache@v4
+        with:
+          path: nedra-mod/.gradle/loom-cache
+          key: nedra-decompile-1.21.11-build6-v1
+
+      - name: Gen sources
+        run: ./gradlew genSources --no-daemon --quiet
+
+      - name: Unpack sources
+        run: |
+          set +e
+          COMMON=$(realpath "$(find .gradle/loom-cache/minecraftMaven -ipath "*minecraft-common-*" -iname "*-sources.jar" | head -1)")
+          CLIENT=$(realpath "$(find .gradle/loom-cache/minecraftMaven -ipath "*minecraft-clientOnly-*" -iname "*-sources.jar" | head -1)")
+          echo "COMMON=$COMMON"
+          echo "CLIENT=$CLIENT"
+          mkdir -p /tmp/src
+          cd /tmp/src
+          unzip -oq "$COMMON"
+          unzip -oq "$CLIENT"
+          find /tmp/src -name "*.java" | wc -l
+
+      - name: Java API probe
+        working-directory: /tmp/src
+        run: |
+          set +e
+          sec() { echo ""; echo "######## $1"; }
+          g() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- $f :: $2"; [ -n "$f" ] && grep -n -E "$2" "$f" | head -${3:-25}; }
+          full() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- FULL $f"; [ -n "$f" ] && sed -n "1,${2:-200}p" "$f"; }
+          ctx() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- CTX $f :: $2"; [ -n "$f" ] && grep -n -A ${3:-8} -E "$2" "$f" | head -${4:-60}; }
+
+          sec ITEMS; g net/minecraft/item/Items.java "IRON_HELMET|TURTLE_HELMET|DIAMOND_HELMET|NETHERITE_HELMET|AMETHYST_SHARD =|RAW_IRON =" 12
+          sec ITEM_SETTINGS; g net/minecraft/item/Item.java "public Item.Settings [a-zA-Z]+\(|public Settings [a-zA-Z]+\(" 80
+          ctx net/minecraft/item/Item.java "public Item.Settings armor\(|public Settings armor\(" 12 30
+          ctx net/minecraft/item/Item.java "public void appendTooltip" 3 10
+          g net/minecraft/item/Item.java "class TooltipContext|interface TooltipContext" 5
+          sec ARMOR_MATERIAL; full net/minecraft/item/equipment/ArmorMaterial.java 80
+          sec EQUIP_ASSET_KEYS; full net/minecraft/item/equipment/EquipmentAssetKeys.java 60
+          sec ARMOR_MATERIALS; full net/minecraft/item/equipment/ArmorMaterials.java 60
+          sec XP_BLOCK; full net/minecraft/block/ExperienceDroppingBlock.java 60
+          g net/minecraft/block/Blocks.java "DEEPSLATE_DIAMOND_ORE =|AMETHYST_BLOCK =" 4
+          ctx net/minecraft/block/Blocks.java "DEEPSLATE_DIAMOND_ORE = register" 6 12
+          sec DISPLAY_TICK; g net/minecraft/block/Block.java "randomDisplayTick" 5
+          g net/minecraft/block/AbstractBlock.java "randomDisplayTick|scheduledTick|onStateReplaced|onBlockAdded" 10
+          g net/minecraft/block/CampfireBlock.java "playSound" 6
+          g net/minecraft/world/World.java "public void playSound|public void playSoundClient|public void playSoundAtBlockCenter" 20
+          sec DRAWCONTEXT; g net/minecraft/client/gui/DrawContext.java "public (void|int) (drawText|drawTextWithShadow|drawCenteredTextWithShadow|fill|fillGradient|drawGuiTexture|drawTexture|drawBorder|drawStrokedRectangle|drawHorizontalLine|drawVerticalLine|getScaledWindowWidth|drawItem)\(" 60
+          g net/minecraft/client/gui/DrawContext.java "getMatrices" 4
+          ctx net/minecraft/client/gui/DrawContext.java "public void drawText\(TextRenderer textRenderer, Text text, int x, int y, int color, boolean shadow\)" 12 20
+          sec TEXTRENDERER; g net/minecraft/client/font/TextRenderer.java "public int getWidth|fontHeight" 8
+          sec DEBUGHUD; g net/minecraft/client/gui/hud/DebugHud.java "public boolean|public void render|class DebugHud" 20
+          g net/minecraft/client/MinecraftClient.java "getDebugHud|debugHudEntryList|DebugHudEntries" 10
+          g net/minecraft/client/gui/hud/InGameHud.java "getDebugHud|public DebugHud" 6
+          f=$(grep -rl "class DebugHudEntries\|class DebugHudEntryList" /tmp/src | head -3); echo "debug entry classes: $f"
+          for x in $f; do grep -n "public boolean\|public static" $x | head -15; done
+          sec SOUND_CLIENT; g net/minecraft/client/sound/PositionedSoundInstance.java "public static PositionedSoundInstance|public PositionedSoundInstance\(" 20
+          g net/minecraft/client/sound/SoundManager.java "public void play\(" 5
+          sec TICKCOUNTER; g net/minecraft/client/render/RenderTickCounter.java "float get|interface RenderTickCounter" 10
+          sec ITEMSTACK_DAMAGE; g net/minecraft/item/ItemStack.java "public void damage\(|public void decrementUnlessCreative|public <T> T set\(|public <T> T remove\(" 15
+          sec COOLDOWN; g net/minecraft/entity/player/ItemCooldownManager.java "public (void|boolean) [a-zA-Z]+\(" 10
+          sec ATTRIBUTES; g net/minecraft/entity/attribute/EntityAttributeInstance.java "public [A-Za-z<>]+ [a-zA-Z]+\(" 30
+          g net/minecraft/entity/attribute/EntityAttributes.java "BLOCK_BREAK_SPEED|MINING_EFFICIENCY|SUBMERGED_MINING_SPEED|MOVEMENT_SPEED =" 6
+          full net/minecraft/entity/attribute/EntityAttributeModifier.java 60
+          g net/minecraft/entity/LivingEntity.java "public EntityAttributeInstance getAttributeInstance|public boolean damage\(|public final boolean damage\(|public boolean isInvulnerableTo" 8
+          g net/minecraft/server/network/ServerPlayerEntity.java "public boolean damage\(|playSoundToPlayer|public void sendMessage\(|isCreative|isSpectator|public boolean isCreative" 15
+          g net/minecraft/entity/player/PlayerEntity.java "public boolean isCreative|public abstract boolean isCreative|isSpectator|getItemCooldownManager|public void playSoundToPlayer|sendMessage\(" 15
+          sec DAMAGE; full net/minecraft/entity/damage/DamageSource.java 80 | grep -n "public DamageSource("
+          g net/minecraft/entity/damage/DamageSources.java "public DamageSource create\(|private DamageSource create|public DamageSources\(" 8
+          sec CHUNKSECTION; g net/minecraft/world/chunk/ChunkSection.java "public boolean hasAny|public boolean isEmpty|public BlockState getBlockState|getBlockStateContainer" 10
+          g net/minecraft/world/chunk/Chunk.java "public ChunkSection getSection|getSectionArray|getSectionIndex|countVerticalSections|getBottomSectionCoord" 10
+          sec CHUNKMANAGER; g net/minecraft/server/world/ServerChunkManager.java "chunkLoadingManager|public WorldChunk getWorldChunk|isChunkLoaded" 8
+          g net/minecraft/server/world/ServerChunkLoadingManager.java "sendChunkBiomePackets" 4
+          g net/minecraft/server/world/ServerWorld.java "public PersistentStateManager getPersistentStateManager|getChunkManager\(\)|public boolean isChunkLoaded" 6
+          sec COMMANDTAGS; g net/minecraft/entity/Entity.java "getCommandTags|addCommandTag|removeCommandTag" 6
+          sec ADVANCEMENTS; g net/minecraft/server/ServerAdvancementLoader.java "public [A-Za-z<>]+ get\(|public Collection" 6
+          g net/minecraft/advancement/PlayerAdvancementTracker.java "public boolean grantCriterion|public AdvancementProgress getProgress" 4
+          g net/minecraft/server/MinecraftServer.java "getAdvancementLoader|getOverworld\(\)|getSaveProperties" 6
+          sec PERSISTENT; full net/minecraft/world/PersistentState.java 80
+          full net/minecraft/world/PersistentStateType.java 80
+          g net/minecraft/world/PersistentStateManager.java "public <T extends PersistentState> T|public <T> T" 10
+          sec COMPONENT_TYPE; g net/minecraft/component/ComponentType.java "static <T> Builder<T> builder|public Builder<T> [a-z]+\(|public ComponentType<T> build" 10
+          g net/minecraft/component/DataComponentTypes.java "LODESTONE_TRACKER =|CUSTOM_DATA =|LORE =|ENCHANTABLE =|REPAIRABLE =|CONSUMABLE =|TOOLTIP_DISPLAY|private static <T> ComponentType<T> register" 12
+          sec LODESTONE; full net/minecraft/component/type/LodestoneTrackerComponent.java 70
+          sec CONSUMABLE; g net/minecraft/component/type/ConsumableComponent.java "public record|static Builder builder|public Builder [a-zA-Z]+\(|public ConsumableComponent build" 20
+          g net/minecraft/component/type/ConsumableComponents.java "public static final ConsumableComponent|public static ConsumableComponent.Builder" 15
+          f=$(grep -rl "^public enum UseAction" /tmp/src | head -1); echo "UseAction file: $f"; [ -n "$f" ] && grep -n "^\s*[A-Z_]*(" $f | head -12
+          g net/minecraft/item/consume/ApplyEffectsConsumeEffect.java "public record|public ApplyEffectsConsumeEffect\(" 6
+          sec SOUNDS; g net/minecraft/sound/SoundEvent.java "public static SoundEvent of" 4
+          g net/minecraft/sound/SoundEvents.java "private static SoundEvent register\(|private static RegistryEntry.Reference<SoundEvent> registerReference" 6
+          sec COMMANDS; g net/minecraft/server/command/CommandManager.java "public static LiteralArgumentBuilder|public static <T> RequiredArgumentBuilder|requirePermissionLevel|GAMEMASTERS_CHECK|ADMINS_CHECK|OWNERS_CHECK" 12
+          g net/minecraft/server/command/ServerCommandSource.java "public void sendFeedback|public void sendError|public ServerPlayerEntity getPlayerOrThrow|public ServerPlayerEntity getPlayer\(|public ServerWorld getWorld" 8
+          sec FALLING; g net/minecraft/entity/FallingBlockEntity.java "public static FallingBlockEntity spawnFromBlock|setHurtEntities" 4
+          sec ENV_ATTR; grep -rl "ambient_particles" /tmp/src | head -5
+          f=$(grep -rl "\"visual/ambient_particles\"" /tmp/src | head -1); echo "ENV ATTR FILE: $f"; [ -n "$f" ] && grep -n "register(\"" $f | head -60
+          sec BLOCK_SETTINGS; g net/minecraft/block/AbstractBlock.java "public AbstractBlock.Settings (luminance|emissiveLighting|postProcess|ticksRandomly|sounds|requiresTool|strength|instrument|mapColor)\(" 15
+          sec TEXT; g net/minecraft/text/Text.java "static MutableText translatable\(" 6
+          sec DONE; echo DONE
+
+      - name: Fabric API javap probe
+        run: |
+          set +e
+          jp() { jar=$(find /home/runner/.gradle/caches/modules-2 -ipath "*$1*" -iname "*.jar" | grep -v sources | head -1); echo "--- javap $2 from $jar"; javap -p -classpath "$jar" "$2" 2>&1 | head -60; }
+          lst() { jar=$(find /home/runner/.gradle/caches/modules-2 -ipath "*$1*" -iname "*.jar" | grep -v sources | head -1); echo "--- classes in $jar matching $2"; unzip -l "$jar" | grep -E "$2" | awk '{print $NF}' | head -40; }
+          lst fabric-rendering-v1 "hud|Hud"
+          jp fabric-rendering-v1 net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
+          jp fabric-rendering-v1 net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
+          jp fabric-rendering-v1 net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement
+          lst fabric-item-api-v1 "Tooltip"
+          jp fabric-item-api-v1 net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback
+          jp fabric-lifecycle-events-v1 net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents
+          lst fabric-lifecycle-events-v1 "ServerChunkEvents"
+          jp fabric-lifecycle-events-v1 'net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents$Load'
+          jp fabric-lifecycle-events-v1 'net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents$Generate'
+          jp fabric-command-api-v2 net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
+          lst fabric-object-builder-api-v1 "Trade|BlockSet"
+          lst fabric-content-registries-v0 "Compost|Fuel"
+          jp fabric-content-registries-v0 net.fabricmc.fabric.api.registry.CompostingChanceRegistry
+          echo DONE
+
+      - name: Download vanilla server + client jars
+        run: |
+          set -e
+          mkdir -p /tmp/vanilla && cd /tmp/vanilla
+          MANIFEST=$(curl -sSL https://piston-meta.mojang.com/mc/game/version_manifest_v2.json)
+          VERSION_URL=$(echo "$MANIFEST" | python3 -c "import json,sys; d=json.load(sys.stdin); print([v['url'] for v in d['versions'] if v['id']=='1.21.11'][0])")
+          VERSION_JSON=$(curl -sSL "$VERSION_URL")
+          SERVER_URL=$(echo "$VERSION_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['downloads']['server']['url'])")
+          CLIENT_URL=$(echo "$VERSION_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['downloads']['client']['url'])")
+          curl -sSL -o server.jar "$SERVER_URL"
+          curl -sSL -o client.jar "$CLIENT_URL"
+          ls -la
+
+      - name: Vanilla datagen reference JSON
+        working-directory: /tmp/vanilla
+        run: |
+          set +e
+          java -DbundlerMainClass=net.minecraft.data.Main -jar server.jar --all --output /tmp/vanilla/datagen > /dev/null 2>&1
+          D=/tmp/vanilla/datagen/data/minecraft
+          for f in loot_table/blocks/diamond_ore.json loot_table/blocks/redstone_ore.json loot_table/blocks/amethyst_cluster.json \
+                   advancement/story/root.json advancement/story/mine_diamond.json advancement/adventure/root.json advancement/nether/find_fortress.json \
+                   damage_type/in_wall.json damage_type/outside_border.json \
+                   worldgen/biome/basalt_deltas.json worldgen/biome/crimson_forest.json worldgen/biome/warped_forest.json \
+                   worldgen/configured_feature/moss_patch.json worldgen/placed_feature/lush_caves_vegetation.json \
+                   worldgen/placed_feature/cave_vines.json worldgen/configured_feature/glow_lichen.json worldgen/placed_feature/glow_lichen.json \
+                   tags/item/enchantable/head_armor.json tags/item/enchantable/armor.json tags/item/enchantable/equippable.json \
+                   tags/item/enchantable/durability.json tags/item/head_armor.json tags/item/repairs_iron_armor.json tags/item/trimmable_armor.json \
+                   recipe/iron_helmet.json recipe/redstone_lamp.json recipe/raw_iron_block.json recipe/iron_ingot_from_smelting_raw_iron.json; do
+            echo ""; echo "######## DATA $f"; cat "$D/$f" 2>&1 | head -150
+          done
+          echo ""; echo "######## TAG damage_type bypasses_armor"; cat $D/tags/damage_type/bypasses_armor.json | head -20
+          echo ""; echo "######## TAG damage_type no_knockback"; cat $D/tags/damage_type/no_knockback.json | head -20
+          echo DONE
+
+      - name: Vanilla client assets reference
+        working-directory: /tmp/vanilla
+        run: |
+          set +e
+          mkdir -p cl && cd cl && unzip -oq ../client.jar 'assets/*' && cd ..
+          A=/tmp/vanilla/cl/assets/minecraft
+          echo "######## equipment dir"; ls $A/equipment | head -40
+          echo "######## equipment/iron.json"; cat $A/equipment/iron.json
+          echo "######## equipment/turtle_scute.json"; cat $A/equipment/turtle_scute.json
+          echo "######## humanoid textures"; ls $A/textures/entity/equipment/ ; ls $A/textures/entity/equipment/humanoid | head -30
+          echo "######## mob_effect dirs"; ls $A/textures/mob_effect 2>&1 | head -5; ls $A/textures/gui/sprites/mob_effect 2>&1 | head -5
+          echo "######## atlases"; ls $A/atlases
+          echo "######## items/compass.json"; cat $A/items/compass.json | head -40
+          echo "######## items/iron_helmet.json"; cat $A/items/iron_helmet.json
+          echo "######## misc"; ls $A/textures/misc | head -30
+          echo "######## hud sprites"; ls $A/textures/gui/sprites/hud | head -60
+          echo "######## sounds.json sample (block.amethyst_block.chime)"; python3 -c "import json; d=json.load(open('$A/sounds.json')); print(json.dumps({k:d[k] for k in ['block.amethyst_block.chime','entity.warden.heartbeat','ambient.basalt_deltas.loop'] if k in d}, indent=1))"
+          for t in textures/entity/equipment/humanoid/iron.png textures/entity/equipment/humanoid/turtle_scute.png textures/entity/equipment/humanoid/chainmail.png \
+                   textures/item/iron_helmet.png textures/item/diamond_helmet.png textures/item/netherite_helmet.png textures/item/turtle_helmet.png textures/item/chainmail_helmet.png \
+                   textures/item/amethyst_shard.png textures/item/raw_iron.png textures/item/raw_copper.png textures/item/echo_shard.png textures/item/spyglass.png textures/item/honey_bottle.png textures/item/glow_berries.png textures/item/disc_fragment_5.png textures/item/recovery_compass_00.png \
+                   textures/block/deepslate.png textures/block/deepslate_top.png textures/block/deepslate_diamond_ore.png textures/block/deepslate_redstone_ore.png textures/block/deepslate_lapis_ore.png \
+                   textures/block/tuff.png textures/block/moss_block.png textures/block/sculk.png textures/block/basalt_side.png textures/block/basalt_top.png textures/block/redstone_lamp_on.png textures/block/cobbled_deepslate.png \
+                   textures/block/amethyst_block.png textures/block/calcite.png textures/block/stone.png textures/block/sea_lantern.png \
+                   textures/mob_effect/conduit_power.png textures/mob_effect/resistance.png textures/misc/vignette.png; do
+            p="$A/$t"; [ -f "$p" ] || p="$A/$(echo $t | sed 's#textures/mob_effect#textures/gui/sprites/mob_effect#')"
+            if [ -f "$p" ]; then echo "B64 $t $(base64 -w0 "$p")"; else echo "MISSING $t"; fi
+          done
+          echo DONE
