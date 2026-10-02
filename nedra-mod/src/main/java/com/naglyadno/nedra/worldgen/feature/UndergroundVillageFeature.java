@@ -46,6 +46,11 @@ public class UndergroundVillageFeature extends Feature<UndergroundVillageFeature
 		BlockPos min = cursor;
 		BlockPos max = cursor;
 
+		// Как и в случае с рекой: держим всю цепочку залов внутри небольшого
+		// радиуса от точки появления, чтобы не записывать блоки в чанк, который
+		// генератор уже не считает "соседним" для текущего шага генерации.
+		int maxHorizontalReach = 14;
+
 		for (int i = 0; i < config.rooms(); i++) {
 			carveRoom(world, random, cursor);
 			min = minOf(min, cursor);
@@ -53,7 +58,13 @@ public class UndergroundVillageFeature extends Feature<UndergroundVillageFeature
 
 			int tunnelLength = 3 + random.nextInt(3);
 			for (int t = 0; t < tunnelLength; t++) {
-				cursor = cursor.offset(facing);
+				BlockPos next = cursor.offset(facing);
+				if (Math.abs(next.getX() - origin.getX()) > maxHorizontalReach
+						|| Math.abs(next.getZ() - origin.getZ()) > maxHorizontalReach) {
+					facing = facing.getOpposite();
+					next = cursor.offset(facing);
+				}
+				cursor = next;
 				carveTunnel(world, cursor, facing);
 			}
 			if (random.nextFloat() < 0.4f) {

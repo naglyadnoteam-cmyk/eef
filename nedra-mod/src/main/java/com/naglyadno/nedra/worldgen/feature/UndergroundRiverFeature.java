@@ -48,6 +48,12 @@ public class UndergroundRiverFeature extends Feature<UndergroundRiverFeature.Con
 		int bottomLimit = world.getBottomY() + 6;
 		int radius = config.radius();
 
+		// Высекание блоков далеко за пределами стартового чанка во время шага
+		// "features" некорректно (ванильная генерация не гарантирует, что такой
+		// соседний чанк ещё не сохранён) - поэтому блуждание жёстко ограничено
+		// небольшим радиусом вокруг точки появления.
+		double maxHorizontalReach = 12.0;
+
 		for (int step = 0; step < config.length(); step++) {
 			dx += (random.nextDouble() - 0.5) * 0.35;
 			dy += (random.nextDouble() - 0.5) * 0.25;
@@ -60,9 +66,19 @@ public class UndergroundRiverFeature extends Feature<UndergroundRiverFeature.Con
 			dy /= norm;
 			dz /= norm;
 
-			x += dx * 1.5;
+			double nextX = x + dx * 1.5;
+			double nextZ = z + dz * 1.5;
+			if (nextX - origin.getX() > maxHorizontalReach || nextX - origin.getX() < -maxHorizontalReach) {
+				dx = -dx;
+				nextX = x + dx * 1.5;
+			}
+			if (nextZ - origin.getZ() > maxHorizontalReach || nextZ - origin.getZ() < -maxHorizontalReach) {
+				dz = -dz;
+				nextZ = z + dz * 1.5;
+			}
+			x = nextX;
+			z = nextZ;
 			y += dy * 1.5;
-			z += dz * 1.5;
 
 			if (y < bottomLimit) {
 				y = bottomLimit;

@@ -39,7 +39,14 @@ public class GiantCavernFeature extends Feature<GiantCavernFeature.Config> {
 			return false;
 		}
 
-		int radiusXZ = config.minRadius() + random.nextInt(Math.max(1, config.maxRadius() - config.minRadius() + 1));
+		// Жёсткий потолок радиуса: запись блоков далеко за пределами чанка, в
+		// котором появилась точка фичи, не гарантированно безопасна во время
+		// шага "features" генерации, поэтому каверна не может выйти за пределы
+		// соседнего чанка независимо от того, что указано в конфиге.
+		int safeMaxRadius = 14;
+		int clampedMax = Math.min(config.maxRadius(), safeMaxRadius);
+		int clampedMin = Math.min(config.minRadius(), clampedMax);
+		int radiusXZ = clampedMin + random.nextInt(Math.max(1, clampedMax - clampedMin + 1));
 		int radiusY = Math.max(3, (int) (radiusXZ * 0.65));
 		BlockState fill = config.ocean() ? Blocks.WATER.getDefaultState() : Blocks.CAVE_AIR.getDefaultState();
 
