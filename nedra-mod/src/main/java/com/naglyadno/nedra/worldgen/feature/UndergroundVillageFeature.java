@@ -125,6 +125,12 @@ public class UndergroundVillageFeature extends Feature<UndergroundVillageFeature
 		decorateRoom(world, random, center);
 	}
 
+	private static void assignLoot(StructureWorldAccess world, Random random, BlockPos pos) {
+		if (world.getBlockEntity(pos) instanceof LootableContainerBlockEntity container) {
+			container.setLootTable(LOOT_TABLE, random.nextLong());
+		}
+	}
+
 	private void decorateRoom(StructureWorldAccess world, Random random, BlockPos center) {
 		// мебель вдоль одной из стен, чтобы проход через центр зала оставался свободным
 		Direction wall = HORIZONTALS[random.nextInt(HORIZONTALS.length)];
@@ -134,12 +140,12 @@ public class UndergroundVillageFeature extends Feature<UndergroundVillageFeature
 		placeIfOpen(world, base, Blocks.FURNACE.getDefaultState().with(FurnaceBlock.FACING, wall.getOpposite()));
 		BlockPos chestPos = base.offset(along, 1);
 		if (placeIfOpen(world, chestPos, Blocks.CHEST.getDefaultState().with(ChestBlock.FACING, wall.getOpposite()))) {
-			LootableContainerBlockEntity.setLootTable(world, random, chestPos, LOOT_TABLE);
+			assignLoot(world, random, chestPos);
 		}
 		if (random.nextFloat() < 0.4f) {
 			BlockPos barrel = center.offset(wall.getOpposite(), 2).offset(along, 2).up();
 			if (placeIfOpen(world, barrel, Blocks.BARREL.getDefaultState())) {
-				LootableContainerBlockEntity.setLootTable(world, random, barrel, LOOT_TABLE);
+				assignLoot(world, random, barrel);
 			}
 		}
 

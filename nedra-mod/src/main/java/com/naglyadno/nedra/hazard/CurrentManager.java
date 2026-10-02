@@ -3,6 +3,7 @@ package com.naglyadno.nedra.hazard;
 import com.naglyadno.nedra.block.CurrentVentBlock;
 import com.naglyadno.nedra.block.ModBlocks;
 import com.naglyadno.nedra.config.NedraConfig;
+import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -62,7 +63,8 @@ public class CurrentManager {
 		Vec3d velocity = player.getVelocity();
 		double targetUp = Math.min(0.55, velocity.y + bestStrength);
 		player.setVelocity(velocity.x, targetUp, velocity.z);
-		player.velocityModified = true;
+		// скорость игрока считает клиент, поэтому новую скорость нужно отправить явно
+		player.networkHandler.sendPacket(new EntityVelocityUpdateS2CPacket(player));
 		player.onLanding();
 	}
 
