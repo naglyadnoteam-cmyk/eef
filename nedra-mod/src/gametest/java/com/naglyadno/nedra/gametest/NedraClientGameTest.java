@@ -1,6 +1,7 @@
 package com.naglyadno.nedra.gametest;
 
 import com.naglyadno.nedra.entity.ModEntities;
+import com.naglyadno.nedra.entity.RustBruteEntity;
 import com.naglyadno.nedra.guide.GuideBook;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -14,10 +15,13 @@ import net.minecraft.client.option.Perspective;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -202,13 +206,54 @@ public class NedraClientGameTest implements FabricClientGameTest {
 				break;
 			}
 		}
-		server.runCommand("execute as @e[type=nedra:rust_brute,limit=1,sort=nearest] run data merge entity @s {NoAI:1b,PersistenceRequired:1b}");
-		server.runCommand("execute as @e[type=nedra:rust_brute,limit=1,sort=nearest] at @s run tp @a ^ ^0.6 ^3.5 facing entity @s eyes");
+		Vec3d view = server.computeOnServer(NedraClientGameTest::viewRustBrute);
+		if (view == null) {
+			LOGGER.info("STATS| natural spawn: no rust brute with an open view");
+			server.runCommand("difficulty peaceful");
+			return;
+		}
+		LOGGER.info("STATS| rust brute view from {}", view);
+		server.runCommand(String.format(Locale.ROOT, "tp @a %.2f %.2f %.2f facing entity @e[tag=nedra_view,limit=1] eyes",
+				view.x, view.y, view.z));
 		context.waitTicks(60);
 		singleplayer.getClientWorld().waitForChunksRender();
 		context.waitTicks(20);
 		shot(context, "nedra_15_rust_brute_wild");
 		server.runCommand("difficulty peaceful");
+	}
+
+	/**
+	 * Ищет громилу, к которому можно встать в 3-5 блоках по открытому воздуху, замораживает его (тег
+	 * nedra_view) и возвращает точку для камеры.
+	 */
+	private static Vec3d viewRustBrute(MinecraftServer server) {
+		ServerWorld world = server.getOverworld();
+		for (Entity entity : world.iterateEntities()) {
+			if (!(entity instanceof RustBruteEntity brute)) {
+				continue;
+			}
+			BlockPos base = brute.getBlockPos();
+			for (int r = 4; r >= 3; r--) {
+				for (int i = 0; i < 8; i++) {
+					double angle = Math.toRadians(i * 45.0);
+					int dx = (int) Math.round(Math.cos(angle) * r);
+					int dz = (int) Math.round(Math.sin(angle) * r);
+					boolean open = true;
+					for (int step = 1; step <= r && open; step++) {
+						BlockPos p = base.add(Math.round((float) dx * step / r), 0, Math.round((float) dz * step / r));
+						open = world.getBlockState(p).isAir() && world.getBlockState(p.up()).isAir();
+					}
+					BlockPos feet = base.add(dx, 0, dz);
+					if (open && !world.getBlockState(feet.down()).isAir()) {
+						brute.setAiDisabled(true);
+						brute.setPersistent();
+						brute.addCommandTag("nedra_view");
+						return new Vec3d(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5);
+					}
+				}
+			}
+		}
+		return null;
 	}
 
 	private static int count(MinecraftServer server, EntityType<?> type) {
