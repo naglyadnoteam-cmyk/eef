@@ -149,7 +149,7 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			int[] cave = server.computeOnServer(WorldStats::report);
 			if (cave != null) {
 				server.runCommand("tp @a " + cave[0] + ".5 " + cave[1] + " " + cave[2] + ".5 0 10");
-				context.waitTicks(100);
+				context.waitTicks(200);
 				singleplayer.getClientWorld().waitForChunksRender();
 				shot(context, "nedra_09_deep_cave");
 			}

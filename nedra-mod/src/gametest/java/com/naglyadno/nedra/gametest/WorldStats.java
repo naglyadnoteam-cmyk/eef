@@ -41,6 +41,7 @@ final class WorldStats {
 		long surfaceSum = 0;
 		int columns = 0, chunks = 0;
 		int[] cave = null;
+		int bestOpen = 0;
 
 		for (int cx = scx - RADIUS; cx <= scx + RADIUS; cx++) {
 			for (int cz = scz - RADIUS; cz <= scz + RADIUS; cz++) {
@@ -74,10 +75,14 @@ final class WorldStats {
 								total[band]++;
 								if (state.isAir()) {
 									air[band]++;
-									if (cave == null && y > -230 && y < -110 && lx > 0 && lx < 15 && lz > 0 && lz < 15
-											&& ly < 14 && section.getBlockState(lx, ly + 1, lz).isAir()
-											&& ly > 0 && section.getBlockState(lx, ly - 1, lz).isSolid()) {
-										cave = new int[]{(cx << 4) + lx, y, (cz << 4) + lz};
+									if (y > -230 && y < -110 && lx >= 4 && lx < 12 && lz >= 4 && lz < 12 && ly >= 4 && ly < 12
+											&& section.getBlockState(lx, ly + 1, lz).isAir()
+											&& section.getBlockState(lx, ly - 1, lz).isSolid()) {
+										int open = openness(section, lx, ly, lz);
+										if (open > bestOpen) {
+											bestOpen = open;
+											cave = new int[]{(cx << 4) + lx, y, (cz << 4) + lz};
+										}
 									}
 								} else if (state.isOf(Blocks.LAVA)) {
 									lava[band]++;
@@ -113,6 +118,21 @@ final class WorldStats {
 		biomes.forEach((k, v) -> LOGGER.info("STATS| biome {} = {}", k, v));
 		LOGGER.info("STATS| deep cave spot: {}", cave == null ? "none" : cave[0] + " " + cave[1] + " " + cave[2]);
 		return cave;
+	}
+
+	/** Сколько воздуха вокруг точки (куб 9x9x9 внутри секции) - для снимка выбираем самую просторную пещеру. */
+	private static int openness(ChunkSection section, int x, int y, int z) {
+		int open = 0;
+		for (int dy = -4; dy <= 3; dy++) {
+			for (int dz = -4; dz <= 3; dz++) {
+				for (int dx = -4; dx <= 3; dx++) {
+					if (section.getBlockState(x + dx, y + dy, z + dz).isAir()) {
+						open++;
+					}
+				}
+			}
+		}
+		return open;
 	}
 
 	private static int band(int y) {
