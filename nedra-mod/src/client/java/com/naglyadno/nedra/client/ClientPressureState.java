@@ -51,8 +51,8 @@ public final class ClientPressureState {
 		float k = 1f - (float) Math.exp(-dt * 6.0);
 		shownEffective += (targetEffective - shownEffective) * k;
 		shownRaw += (targetRaw - shownRaw) * k;
-		// манометр появляется, когда игрок ощутимо ушёл под землю, а не у кромки воды на пляже
-		float visibleTarget = active && (targetRaw >= 4f || tier > 0) ? 1f : 0f;
+		// манометр появляется, как только игрок опускается ниже нулевой высоты (там начинается давление)
+		float visibleTarget = active && (targetRaw > 0.2f || tier > 0) ? 1f : 0f;
 		float step = dt * 2.5f;
 		visibility = visibility < visibleTarget ? Math.min(visibleTarget, visibility + step) : Math.max(visibleTarget, visibility - step);
 	}

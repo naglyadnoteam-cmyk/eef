@@ -116,6 +116,44 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			shot(context, "nedra_07_deepsuit_third_person");
 			context.runOnClient(client -> client.options.setPerspective(Perspective.FIRST_PERSON));
 		}
+
+		naturalWorld(context);
+	}
+
+	/**
+	 * Обычный (не плоский) мир: поверхность должна выглядеть ванильной, а недра - пещеры без
+	 * лавовых морей и биомы по ярусам. Снимок поверхности, статистика генерации в лог (STATS|)
+	 * и снимок настоящей глубинной пещеры.
+	 */
+	private static void naturalWorld(ClientGameTestContext context) {
+		try (TestSingleplayerContext singleplayer = context.worldBuilder()
+				.setUseConsistentSettings(false)
+				.adjustSettings(creator -> creator.setSeed("nedra"))
+				.create()) {
+			TestServerContext server = singleplayer.getServer();
+			singleplayer.getClientWorld().waitForChunksRender();
+			server.runCommand("difficulty peaceful");
+			server.runCommand("time set noon");
+			server.runCommand("weather clear");
+			server.runCommand("gamemode survival @a");
+			server.runCommand("effect give @a minecraft:resistance infinite 255 true");
+			server.runCommand("effect give @a minecraft:night_vision infinite 0 true");
+			server.runCommand("effect give @a minecraft:slow_falling infinite 0 true");
+
+			// вид на поверхность сверху: рельеф должен быть обычным
+			server.runCommand("execute as @a at @s run tp @s ~ ~25 ~ 30 20");
+			context.waitTicks(60);
+			singleplayer.getClientWorld().waitForChunksRender();
+			shot(context, "nedra_08_surface");
+
+			int[] cave = server.computeOnServer(WorldStats::report);
+			if (cave != null) {
+				server.runCommand("tp @a " + cave[0] + ".5 " + cave[1] + " " + cave[2] + ".5 0 10");
+				context.waitTicks(100);
+				singleplayer.getClientWorld().waitForChunksRender();
+				shot(context, "nedra_09_deep_cave");
+			}
+		}
 	}
 
 	/**

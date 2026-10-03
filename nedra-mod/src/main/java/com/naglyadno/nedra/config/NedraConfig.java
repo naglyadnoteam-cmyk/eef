@@ -2,6 +2,8 @@ package com.naglyadno.nedra.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.naglyadno.nedra.NedraMod;
 
 import java.io.IOException;
@@ -18,9 +20,13 @@ public class NedraConfig {
 
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
+	/** Версия формата файла: по ней старые конфиги обновляются при загрузке. */
+	public static final int CURRENT_VERSION = 2;
+	public int configVersion = CURRENT_VERSION;
+
 	// --- Давление ---
-	/** Y, на котором давление ещё нулевое. */
-	public int surfaceY = 62;
+	/** Y, на котором давление ещё нулевое: выше - обычный мир, ниже - недра. */
+	public int surfaceY = 0;
 	/** Y, на котором давление достигает максимума без снаряжения (новое дно мира). */
 	public int deepY = -352;
 	public int helmetLightReductionPercent = 20;
@@ -57,8 +63,10 @@ public class NedraConfig {
 	public static NedraConfig load(Path path) {
 		if (Files.exists(path)) {
 			try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-				NedraConfig loaded = GSON.fromJson(reader, NedraConfig.class);
+				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+				NedraConfig loaded = GSON.fromJson(json, NedraConfig.class);
 				if (loaded != null) {
+					loaded.migrate(json);
 					loaded.sanitize();
 					// дописываем в файл поля, появившиеся в новых версиях мода
 					loaded.save(path);
@@ -85,6 +93,18 @@ public class NedraConfig {
 				throw new IllegalStateException(e);
 			}
 		}
+	}
+
+	private void migrate(JsonObject json) {
+		int version = json.has("configVersion") ? json.get("configVersion").getAsInt() : 1;
+		if (version < 2) {
+			// 1.2.0: давление начинается с Y 0, а не с уровня моря - поверхность мира остаётся обычной
+			if (surfaceY == 62) {
+				surfaceY = 0;
+			}
+			NedraMod.LOGGER.info("config/nedra.json обновлён до версии 2: давление теперь начинается с Y {}", surfaceY);
+		}
+		configVersion = CURRENT_VERSION;
 	}
 
 	private void sanitize() {

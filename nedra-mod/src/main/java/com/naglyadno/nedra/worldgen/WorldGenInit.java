@@ -7,9 +7,10 @@ import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.gen.GenerationStep;
+import net.minecraft.world.gen.carver.ConfiguredCarver;
 import net.minecraft.world.gen.feature.PlacedFeature;
 
-/** Подключает руды и подземные фичи мода к генерации всех биомов Overworld через Fabric API. */
+/** Подключает руды, подземные фичи и вырезатели глубин мода ко всем биомам Overworld через Fabric API. */
 public final class WorldGenInit {
 
 	private WorldGenInit() {
@@ -31,6 +32,18 @@ public final class WorldGenInit {
 		// разломы и мох ищут настоящий пол пещеры (environment_scan), поэтому идут после всех вырезаний
 		add("current_vent_placed", GenerationStep.Feature.UNDERGROUND_DECORATION);
 		add("deepmoss_patch_placed", GenerationStep.Feature.VEGETAL_DECORATION);
+
+		// самым последним: осушение глубинных пещер и биомы ярусов - после всех руд и украшений
+		add("deep_layers_placed", GenerationStep.Feature.TOP_LAYER_MODIFICATION);
+
+		// пещеры и ущелья новых глубин (ванильные вырезатели оставлены на своих ванильных высотах)
+		addCarver("deep_cave");
+		addCarver("deep_canyon");
+	}
+
+	private static void addCarver(String path) {
+		RegistryKey<ConfiguredCarver<?>> key = RegistryKey.of(RegistryKeys.CONFIGURED_CARVER, Identifier.of(NedraMod.MOD_ID, path));
+		BiomeModifications.addCarver(BiomeSelectors.foundInOverworld(), key);
 	}
 
 	private static void add(String path, GenerationStep.Feature step) {
