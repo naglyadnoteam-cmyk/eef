@@ -8,6 +8,10 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContex
 import net.minecraft.client.gui.screen.ingame.BookScreen;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.option.Perspective;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
 
 /**
  * Визуальная проверка мода в настоящем клиенте: строит "выставочный зал" из блоков мода на разной
@@ -15,8 +19,15 @@ import net.minecraft.client.option.Perspective;
  */
 public class NedraClientGameTest implements FabricClientGameTest {
 
+	private static final Logger LOGGER = LoggerFactory.getLogger("nedra-gametest");
+
 	@Override
 	public void runTest(ClientGameTestContext context) {
+		startWatchdog();
+		context.runOnClient(client -> {
+			client.options.getViewDistance().setValue(6);
+			client.options.getSimulationDistance().setValue(5);
+		});
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			TestServerContext server = singleplayer.getServer();
 			singleplayer.getClientWorld().waitForChunksRender();
@@ -97,6 +108,36 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot("nedra_07_deepsuit_third_person");
 			context.runOnClient(client -> client.options.setPerspective(Perspective.FIRST_PERSON));
 		}
+	}
+
+	/**
+	 * Если загрузка мира зависла, в лог попадают стеки ключевых потоков (каждая строка с префиксом
+	 * DUMP|, чтобы CI мог их отфильтровать) - так видно, где именно стоит сервер.
+	 */
+	private static void startWatchdog() {
+		Thread watchdog = new Thread(() -> {
+			try {
+				Thread.sleep(40_000);
+				for (int round = 0; round < 3; round++) {
+					for (Map.Entry<Thread, StackTraceElement[]> entry : Thread.getAllStackTraces().entrySet()) {
+						String name = entry.getKey().getName();
+						if (!name.equals("Server thread") && !name.equals("Render thread") && !name.startsWith("Worker-Main")) {
+							continue;
+						}
+						StringBuilder dump = new StringBuilder("DUMP| ").append(name).append(" [").append(entry.getKey().getState()).append("]");
+						StackTraceElement[] frames = entry.getValue();
+						for (int i = 0; i < Math.min(frames.length, 40); i++) {
+							dump.append("\nDUMP|     ").append(frames[i]);
+						}
+						LOGGER.info(dump.toString());
+					}
+					Thread.sleep(8_000);
+				}
+			} catch (InterruptedException ignored) {
+			}
+		}, "nedra-watchdog");
+		watchdog.setDaemon(true);
+		watchdog.start();
 	}
 
 	/** Полая коробка из глубинного сланца 13x9x13 с полом на высоте floorY и светильниками в своде. */

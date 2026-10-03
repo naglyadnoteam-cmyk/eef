@@ -55,6 +55,8 @@ jobs:
           if [ -n "$LOG" ]; then
             echo "===== world loading state (last reports) ====="
             grep "World loading finished" "$LOG" | tail -4
+            echo "===== thread dumps (if loading hung) ====="
+            grep "DUMP|" "$LOG" | head -300
             echo "===== nedra / error lines ====="
             grep -iE "nedra|error|exception|failed|missing" "$LOG" | grep -vE "Realms|realms|flite|OpenAL|Anisotropic|user properties" | grep -vE "^\s+at " | head -60
             echo "===== log tail without stack frames ====="
