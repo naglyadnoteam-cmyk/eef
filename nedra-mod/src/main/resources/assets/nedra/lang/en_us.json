@@ -34,6 +34,7 @@
 	"hud.nedra.tier.5": "Critical",
 	"hud.nedra.depth": "Y %s",
 	"hud.nedra.protection": "Shield %s%%",
+	"hud.nedra.exempt": "No effect",
 	"tooltip.nedra.helmet.protection": "Pressure protection: %s%%",
 	"tooltip.nedra.helmet_light": "A simple hard hat with a crystal headlamp",
 	"tooltip.nedra.helmet_reinforced": "Magnetite plates carry the weight of the rock",

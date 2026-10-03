@@ -41,7 +41,7 @@ public final class PressureHud {
 		TextRenderer font = client.textRenderer;
 		float effective = ClientPressureState.effective();
 		float raw = ClientPressureState.raw();
-		int tier = ClientPressureState.tier();
+		int tier = ClientPressureState.displayTier();
 		float pulse = ClientAmbience.pulse();
 
 		int width = context.getScaledWindowWidth();
@@ -100,7 +100,9 @@ public final class PressureHud {
 		Text depth = Text.translatable("hud.nedra.depth", client.player.getBlockY());
 		drawSmall(context, font, depth, x2 + 1, footerY, argb(0x9AA0AA, alpha), true);
 		int protection = ClientPressureState.protection();
-		if (protection > 0) {
+		if (ClientPressureState.exempt()) {
+			drawSmall(context, font, Text.translatable("hud.nedra.exempt"), x2 + 1, footerY + 8, argb(0x9AA0AA, alpha), true);
+		} else if (protection > 0) {
 			Text shield = Text.translatable("hud.nedra.protection", protection);
 			drawSmall(context, font, shield, x2 + 1, footerY + 8, argb(0x8FB7FF, alpha), true);
 		}

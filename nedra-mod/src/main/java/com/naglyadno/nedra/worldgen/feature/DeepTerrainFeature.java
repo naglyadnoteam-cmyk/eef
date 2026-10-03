@@ -284,6 +284,10 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 					double r = DeepTerrain.hash01(seed, x, y, z, 31);
 					double r2 = DeepTerrain.hash01(seed, x, y, z, 32);
 					BlockState skin = floor ? floorBlock(layer, r) : ceiling ? ceilingBlock(layer, r) : wallBlock(layer, r);
+					BlockState vein = caveVein(seed, layer, x, y, z);
+					if (vein != null) {
+						skin = vein;
+					}
 					if (skin != null) {
 						section.setBlockState(lx, y & 15, lz, skin);
 					}
@@ -297,6 +301,78 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 				}
 			}
 		}
+	}
+
+	// ------------------------------------------------------------------ рудные жилы на стенах пещер
+
+	/** Доля ячеек 8x8x8, через которые проходит открытая жила, и доля богатых жил (крупных). */
+	private static final double VEIN_CHANCE = 0.075;
+	private static final double RICH_VEIN_CHANCE = 0.012;
+
+	private record VeinOre(BlockState state, int weight, double radius) {
+	}
+
+	private static final VeinOre[] VEINS_NONE = {
+			vein(Blocks.DEEPSLATE_COAL_ORE, 30, 3.2), vein(Blocks.DEEPSLATE_IRON_ORE, 30, 2.8), vein(Blocks.DEEPSLATE_COPPER_ORE, 20, 3.0),
+			vein(Blocks.DEEPSLATE_GOLD_ORE, 10, 2.2), vein(Blocks.DEEPSLATE_REDSTONE_ORE, 10, 2.4)};
+	private static final VeinOre[] VEINS_ECHO = {
+			vein(Blocks.DEEPSLATE_COAL_ORE, 25, 3.2), vein(Blocks.DEEPSLATE_IRON_ORE, 25, 2.8), vein(Blocks.DEEPSLATE_COPPER_ORE, 20, 3.0),
+			vein(Blocks.DEEPSLATE_GOLD_ORE, 15, 2.4), vein(Blocks.DEEPSLATE_LAPIS_ORE, 15, 2.2)};
+	private static final VeinOre[] VEINS_MAGNETIC = {
+			vein(Blocks.DEEPSLATE_IRON_ORE, 40, 3.2), vein(Blocks.DEEPSLATE_REDSTONE_ORE, 25, 2.6), vein(Blocks.DEEPSLATE_GOLD_ORE, 15, 2.4),
+			vein(Blocks.DEEPSLATE_COPPER_ORE, 10, 2.8), vein(ModBlocks.MAGNETITE_ORE, 10, 2.4)};
+	private static final VeinOre[] VEINS_CRYSTAL = {
+			vein(Blocks.DEEPSLATE_DIAMOND_ORE, 18, 1.7), vein(Blocks.DEEPSLATE_LAPIS_ORE, 25, 2.4), vein(Blocks.DEEPSLATE_REDSTONE_ORE, 20, 2.6),
+			vein(Blocks.DEEPSLATE_GOLD_ORE, 15, 2.4), vein(Blocks.DEEPSLATE_EMERALD_ORE, 8, 1.6), vein(Blocks.DEEPSLATE_IRON_ORE, 14, 2.8)};
+	/** Богатые жилы - только неценные руды: целая стена угля, железа или меди. */
+	private static final VeinOre[] VEINS_RICH = {
+			vein(Blocks.DEEPSLATE_COAL_ORE, 35, 4.8), vein(Blocks.DEEPSLATE_IRON_ORE, 35, 4.4), vein(Blocks.DEEPSLATE_COPPER_ORE, 25, 4.6),
+			vein(Blocks.DEEPSLATE_GOLD_ORE, 5, 3.6)};
+
+	private static VeinOre vein(Block block, int weight, double radius) {
+		return new VeinOre(block.getDefaultState(), weight, radius);
+	}
+
+	/**
+	 * Открытая рудная жила: мир поделён на ячейки 8x8x8, в небольшой части ячеек есть сгусток руды вокруг
+	 * случайной точки. Здесь он проступает на поверхности пещеры (пол, стены, свод), поэтому руду видно
+	 * прямо из прохода. Считается по координатам, так что жила непрерывна через границы чанков.
+	 */
+	private static BlockState caveVein(long seed, Layer layer, int x, int y, int z) {
+		int cx = x >> 3;
+		int cy = y >> 3;
+		int cz = z >> 3;
+		double roll = DeepTerrain.hash01(seed, cx, cy, cz, 41);
+		if (roll >= VEIN_CHANCE) {
+			return null;
+		}
+		VeinOre[] table = roll < RICH_VEIN_CHANCE ? VEINS_RICH : switch (layer) {
+			case ECHO -> VEINS_ECHO;
+			case MAGNETIC -> VEINS_MAGNETIC;
+			case CRYSTAL -> VEINS_CRYSTAL;
+			case NONE -> VEINS_NONE;
+		};
+		int total = 0;
+		for (VeinOre ore : table) {
+			total += ore.weight();
+		}
+		double pick = DeepTerrain.hash01(seed, cx, cy, cz, 42) * total;
+		VeinOre ore = table[table.length - 1];
+		for (VeinOre candidate : table) {
+			pick -= candidate.weight();
+			if (pick < 0) {
+				ore = candidate;
+				break;
+			}
+		}
+		double ox = (cx << 3) + 1.5 + DeepTerrain.hash01(seed, cx, cy, cz, 43) * 5.0 - x;
+		double oy = (cy << 3) + 1.5 + DeepTerrain.hash01(seed, cx, cy, cz, 44) * 5.0 - y;
+		double oz = (cz << 3) + 1.5 + DeepTerrain.hash01(seed, cx, cy, cz, 45) * 5.0 - z;
+		double radius = ore.radius();
+		if (ox * ox + oy * oy * 1.6 + oz * oz > radius * radius) {
+			return null;
+		}
+		return DeepTerrain.hash01(seed, x, y, z, 46) < 0.78 ? ore.state() : null;
 	}
 
 	private static void placeIfAir(Chunk chunk, byte[] codes, int lx, int lz, int y, BlockState state) {

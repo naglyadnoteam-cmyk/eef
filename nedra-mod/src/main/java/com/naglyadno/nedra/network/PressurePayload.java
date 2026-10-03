@@ -8,9 +8,10 @@ import net.minecraft.util.Identifier;
 
 /**
  * Текущее давление игрока для HUD: эффективное (с учётом защиты) и "сырое" (без защиты),
- * суммарная защита в процентах, ярус 0..5 и признак "давление действует" (только в Overworld).
+ * суммарная защита в процентах, ярус 0..5, признак "давление действует" (только в Overworld) и признак
+ * "без последствий" (творческий режим и наблюдатель: шкала видна, но давление ничего не делает).
  */
-public record PressurePayload(float effective, float raw, int protection, int tier, boolean active) implements CustomPayload {
+public record PressurePayload(float effective, float raw, int protection, int tier, boolean active, boolean exempt) implements CustomPayload {
 
 	public static final CustomPayload.Id<PressurePayload> ID =
 			new CustomPayload.Id<>(Identifier.of(NedraMod.MOD_ID, "pressure_state"));
@@ -24,10 +25,11 @@ public record PressurePayload(float effective, float raw, int protection, int ti
 		buf.writeByte(p.protection);
 		buf.writeByte(p.tier);
 		buf.writeBoolean(p.active);
+		buf.writeBoolean(p.exempt);
 	}
 
 	private static PressurePayload read(RegistryByteBuf buf) {
-		return new PressurePayload(buf.readFloat(), buf.readFloat(), buf.readByte(), buf.readByte(), buf.readBoolean());
+		return new PressurePayload(buf.readFloat(), buf.readFloat(), buf.readByte(), buf.readByte(), buf.readBoolean(), buf.readBoolean());
 	}
 
 	@Override

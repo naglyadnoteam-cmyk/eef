@@ -24,10 +24,11 @@ public final class WorldGenInit {
 		add("magnetite_ore_placed", GenerationStep.Feature.UNDERGROUND_ORES);
 		add("echo_ore_placed", GenerationStep.Feature.UNDERGROUND_ORES);
 		add("unstable_stone_patch_placed", GenerationStep.Feature.UNDERGROUND_ORES);
-		// ванильные руды и породы ярусов в глубинном сланце
-		for (String ore : new String[]{"deep_ore_iron", "deep_ore_gold", "deep_ore_redstone", "deep_ore_lapis", "deep_ore_copper",
-				"deep_ore_diamond", "deep_ore_diamond_large", "deep_ore_emerald", "deep_ore_tuff",
-				"deep_smooth_basalt_blob", "deep_magma_blob", "deep_calcite_blob", "deep_tuff_blob"}) {
+		// сначала породы ярусов, затем ванильные руды в глубинном сланце: руды умеют замещать и эти породы
+		// (тег nedra:deep_ore_replaceables), поэтому попадаются и в базальте, и в кальците
+		for (String ore : new String[]{"deep_smooth_basalt_blob", "deep_magma_blob", "deep_calcite_blob", "deep_tuff_blob",
+				"deep_ore_tuff", "deep_ore_coal", "deep_ore_iron", "deep_ore_copper", "deep_ore_gold", "deep_ore_redstone",
+				"deep_ore_lapis", "deep_ore_diamond", "deep_ore_diamond_large", "deep_ore_emerald"}) {
 			add(ore, GenerationStep.Feature.UNDERGROUND_ORES);
 		}
 		add("deep_geode", GenerationStep.Feature.LOCAL_MODIFICATIONS);

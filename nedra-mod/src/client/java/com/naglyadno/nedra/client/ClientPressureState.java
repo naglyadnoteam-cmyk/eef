@@ -14,6 +14,7 @@ public final class ClientPressureState {
 	private static int protection;
 	private static int tier;
 	private static boolean active;
+	private static boolean exempt;
 
 	private static float shownEffective;
 	private static float shownRaw;
@@ -31,6 +32,7 @@ public final class ClientPressureState {
 		protection = payload.protection();
 		tier = payload.tier();
 		active = payload.active();
+		exempt = payload.exempt();
 	}
 
 	public static void updateConfig(ConfigSyncPayload payload) {
@@ -41,6 +43,7 @@ public final class ClientPressureState {
 		targetEffective = targetRaw = shownEffective = shownRaw = visibility = 0f;
 		protection = tier = 0;
 		active = false;
+		exempt = false;
 	}
 
 	/** Продвигает анимацию; вызывается раз за кадр из HUD. */
@@ -69,8 +72,18 @@ public final class ClientPressureState {
 		return protection;
 	}
 
+	/** Ярус для последствий (виньетка, звуки, помехи F3): в творческом режиме и у наблюдателя - 0. */
 	public static int tier() {
+		return active && !exempt ? tier : 0;
+	}
+
+	/** Ярус для подписи на манометре - показывается и тогда, когда давление ни на что не влияет. */
+	public static int displayTier() {
 		return active ? tier : 0;
+	}
+
+	public static boolean exempt() {
+		return exempt;
 	}
 
 	public static float visibility() {

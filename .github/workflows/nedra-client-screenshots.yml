@@ -59,7 +59,7 @@ jobs:
             echo "===== world loading state (last reports) ====="
             grep "World loading finished" "$LOG" | tail -4
             echo "===== world generation stats ====="
-            grep "STATS|" "$LOG" | sed -E 's/^.*STATS\| //' | head -150
+            grep "STATS|" "$LOG" | sed -E 's/^.*STATS\| //' | head -400
             echo "===== thread dumps (if loading hung) ====="
             grep "DUMP|" "$LOG" | head -300
             echo "===== nedra / error lines ====="

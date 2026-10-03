@@ -34,6 +34,7 @@
 	"hud.nedra.tier.5": "Критическое",
 	"hud.nedra.depth": "Y %s",
 	"hud.nedra.protection": "Защита %s%%",
+	"hud.nedra.exempt": "Без эффекта",
 	"tooltip.nedra.helmet.protection": "Защита от давления: %s%%",
 	"tooltip.nedra.helmet_light": "Простая каска с кристаллом во лбу",
 	"tooltip.nedra.helmet_reinforced": "Магнетитовые пластины держат вес породы",

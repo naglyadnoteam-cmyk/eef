@@ -1,12 +1,16 @@
 package com.naglyadno.nedra.gametest;
 
 import com.naglyadno.nedra.block.ModBlocks;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.registry.Registries;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.ChunkSection;
@@ -14,6 +18,7 @@ import net.minecraft.world.chunk.WorldChunk;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -24,7 +29,20 @@ final class WorldStats {
 	private static final int[] BANDS = {-352, -338, -272, -176, -80, -64, 0, 63, 320};
 	private static final int RADIUS = 5;
 
+	private static final Map<Block, String> ORE_NAMES = new HashMap<>();
+
 	private WorldStats() {
+	}
+
+	/** Короткое имя руды (deepslate_ и _ore отрезаны, ванильная и глубинная руда считаются вместе) или null. */
+	private static String oreName(Block block) {
+		Identifier id = Registries.BLOCK.getId(block);
+		String path = id.getPath();
+		if (!path.endsWith("_ore") || path.equals("nether_gold_ore") || path.equals("nether_quartz_ore")) {
+			return null;
+		}
+		String name = path.replaceFirst("^deepslate_", "").replaceFirst("_ore$", "");
+		return id.getNamespace().equals("minecraft") ? name : id.getNamespace() + ":" + name;
 	}
 
 	/** Возвращает самую просторную точку в глубинной пещере (x, y, z) или null. */
@@ -36,6 +54,7 @@ final class WorldStats {
 		int bands = BANDS.length - 1;
 		long[] air = new long[bands], lava = new long[bands], water = new long[bands], total = new long[bands];
 		Map<String, Integer> ores = new TreeMap<>();
+		Map<String, Integer> exposed = new TreeMap<>();
 		Map<String, Integer> biomes = new TreeMap<>();
 		int minSurface = Integer.MAX_VALUE, maxSurface = Integer.MIN_VALUE;
 		long surfaceSum = 0;
@@ -88,10 +107,18 @@ final class WorldStats {
 									lava[band]++;
 								} else if (state.isOf(Blocks.WATER)) {
 									water[band]++;
-								} else if (state.isOf(ModBlocks.LUMENITE_ORE) || state.isOf(ModBlocks.MAGNETITE_ORE)
-										|| state.isOf(ModBlocks.ECHO_ORE) || state.isOf(Blocks.DEEPSLATE_DIAMOND_ORE)
-										|| state.isOf(Blocks.DIAMOND_ORE)) {
-									ores.merge(state.getBlock().getTranslationKey().replaceFirst("^block\\.", "") + "@" + BANDS[band], 1, Integer::sum);
+								} else if (ORE_NAMES.computeIfAbsent(state.getBlock(), WorldStats::oreName) != null) {
+									// руда по ярусам: всего и сколько блоков видно из пещеры (касаются воздуха или воды)
+									String key = BANDS[band] + " " + ORE_NAMES.get(state.getBlock());
+									ores.merge(key, 1, Integer::sum);
+									BlockPos pos = new BlockPos((cx << 4) + lx, y, (cz << 4) + lz);
+									for (Direction direction : Direction.values()) {
+										BlockState next = world.getBlockState(pos.offset(direction));
+										if (next.isAir() || next.isOf(Blocks.WATER)) {
+											exposed.merge(key, 1, Integer::sum);
+											break;
+										}
+									}
 								}
 							}
 						}
@@ -114,7 +141,10 @@ final class WorldStats {
 			LOGGER.info(String.format("STATS| Y %4d..%4d  air %5.1f%%  lava %5.2f%%  water %5.2f%%",
 					BANDS[b], BANDS[b + 1], 100.0 * air[b] / total[b], 100.0 * lava[b] / total[b], 100.0 * water[b] / total[b]));
 		}
-		ores.forEach((k, v) -> LOGGER.info("STATS| ore {} = {}", k, v));
+		LOGGER.info("STATS| ores per band (lower Y): total / visible from caves, per chunk");
+		final int chunkCount = Math.max(1, chunks);
+		ores.forEach((k, v) -> LOGGER.info(String.format("STATS| ore %-28s %7d / %6d   %7.1f / %6.1f", k, v,
+				exposed.getOrDefault(k, 0), v / (double) chunkCount, exposed.getOrDefault(k, 0) / (double) chunkCount)));
 		biomes.forEach((k, v) -> LOGGER.info("STATS| biome {} = {}", k, v));
 		LOGGER.info("STATS| deep cave spot: {}", cave == null ? "none" : cave[0] + " " + cave[1] + " " + cave[2]);
 		return cave;

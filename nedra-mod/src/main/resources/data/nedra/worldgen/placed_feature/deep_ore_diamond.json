@@ -1,9 +1,9 @@
 {
-	"feature": "minecraft:ore_diamond_small",
+	"feature": "nedra:deep_ore_diamond",
 	"placement": [
 		{
 			"type": "minecraft:count",
-			"count": 3
+			"count": 5
 		},
 		{
 			"type": "minecraft:in_square"

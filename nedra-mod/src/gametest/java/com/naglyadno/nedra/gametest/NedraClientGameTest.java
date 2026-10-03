@@ -1,8 +1,11 @@
 package com.naglyadno.nedra.gametest;
 
+import com.naglyadno.nedra.NedraMod;
+import com.naglyadno.nedra.client.ClientPressureState;
 import com.naglyadno.nedra.entity.ModEntities;
 import com.naglyadno.nedra.entity.RustBruteEntity;
 import com.naglyadno.nedra.guide.GuideBook;
+import com.naglyadno.nedra.pressure.PressureManager;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
@@ -14,7 +17,9 @@ import com.naglyadno.nedra.worldgen.deep.DeepTerrain;
 import net.minecraft.client.option.Perspective;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -55,6 +60,8 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			server.runCommand("time set noon");
 			server.runCommand("effect give @a minecraft:resistance infinite 255 true");
 			server.runCommand("effect give @a minecraft:saturation infinite 255 true");
+
+			pressureCheck(context, singleplayer);
 
 			// ---- зал на глубине -190: стена с рудами и блоками мода, светильники в своде
 			room(server, -192);
@@ -188,6 +195,68 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			BlockPos river = DeepLocator.river(seed, 1, 0, 0);
 			visit(context, singleplayer, river == null ? null : river.up(), 0, 20, "nedra_14_river");
 		}
+	}
+
+	/**
+	 * Замеры давления на разных высотах (сервер и HUD клиента), защита шлемов, творческий режим и урон
+	 * на дне без защиты. Всё пишется в лог строками STATS| pressure ...
+	 */
+	private static void pressureCheck(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		TestServerContext server = singleplayer.getServer();
+		server.runCommand("item replace entity @a armor.head with minecraft:air");
+		int[] heights = {40, 0, -10, -36, -64, -107, -150, -195, -230, -265, -300, -325, -350};
+		for (int y : heights) {
+			pressureAt(context, server, y, "no helmet");
+		}
+		String[] helmets = {"nedra:helmet_light", "nedra:helmet_reinforced", "nedra:helmet_deepsuit"};
+		for (String helmet : helmets) {
+			server.runCommand("item replace entity @a armor.head with " + helmet);
+			pressureAt(context, server, -300, helmet);
+		}
+		server.runCommand("item replace entity @a armor.head with minecraft:air");
+		server.runCommand("gamemode creative @a");
+		pressureAt(context, server, -300, "creative");
+		server.runCommand("gamemode survival @a");
+
+		// урон на дне без защиты: должен идти, но никогда не опускать здоровье ниже 1
+		pressureAt(context, server, -350, "damage test");
+		server.runCommand("effect clear @a minecraft:resistance");
+		server.runCommand("effect clear @a minecraft:saturation");
+		// в мирной сложности и на сытый желудок здоровье восстанавливается само - на время проверки отключаем
+		server.runCommand("difficulty easy");
+		server.runOnServer(s -> {
+			ServerPlayerEntity player = s.getPlayerManager().getPlayerList().get(0);
+			player.getHungerManager().setFoodLevel(10);
+			player.getHungerManager().setSaturationLevel(0f);
+		});
+		for (int i = 1; i <= 8; i++) {
+			context.waitTicks(40);
+			float health = server.computeOnServer(s -> s.getPlayerManager().getPlayerList().get(0).getHealth());
+			LOGGER.info("STATS| pressure damage after {} ticks: health {}", i * 40, health);
+		}
+		server.runCommand("effect give @a minecraft:resistance infinite 255 true");
+		server.runCommand("effect give @a minecraft:saturation infinite 255 true");
+		server.runCommand("effect give @a minecraft:instant_health 1 10 true");
+		server.runCommand("difficulty peaceful");
+		context.waitTicks(10);
+	}
+
+	private static void pressureAt(ClientGameTestContext context, TestServerContext server, int y, String label) {
+		server.runCommand("setblock 0 " + (y - 1) + " 0 minecraft:polished_deepslate");
+		server.runCommand("tp @a 0.5 " + y + " 0.5");
+		context.waitTicks(30);
+		String serverSide = server.computeOnServer(s -> {
+			ServerPlayerEntity player = s.getPlayerManager().getPlayerList().get(0);
+			PressureManager.Reading r = NedraMod.pressureManager().read(player);
+			double mining = player.getAttributeValue(EntityAttributes.BLOCK_BREAK_SPEED);
+			return String.format(Locale.ROOT, "Y=%d raw=%.1f%% effective=%.1f%% protection=%d%% tier=%s mining=x%.2f",
+					player.getBlockY(), r.raw(), r.effective(), r.protection(), r.tier(), mining);
+		});
+		String clientSide = context.computeOnClient(client -> String.format(Locale.ROOT,
+				"hud visible=%.2f shown=%.1f%% label tier=%d effect tier=%d exempt=%s",
+				ClientPressureState.visibility(), ClientPressureState.effective(), ClientPressureState.displayTier(),
+				ClientPressureState.tier(), ClientPressureState.exempt()));
+		LOGGER.info("STATS| pressure [{}] {} | {}", label, serverSide, clientSide);
 	}
 
 	/**
