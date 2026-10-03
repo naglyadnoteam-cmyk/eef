@@ -74,22 +74,72 @@ public final class DeepLocator {
 		return null;
 	}
 
-	/** Точка с полом под ногами и двумя блоками воздуха в пределах ±12 блоков от (x, y, z). */
+	/**
+	 * Самая просторная точка с полом под ногами и двумя блоками воздуха в пределах ±15 блоков от (x, y, z):
+	 * сначала собираются кандидаты, затем выбирается тот, вокруг которого больше всего пустоты.
+	 */
 	public static BlockPos caveNear(DeepTerrain terrain, int x, int y, int z) {
-		for (int r = 0; r <= 12; r += 2) {
-			for (int dx = -r; dx <= r; dx += 2) {
-				for (int dz = -r; dz <= r; dz += 2) {
-					for (int dy = -16; dy <= 16; dy++) {
-						int px = x + dx;
-						int py = y + dy;
-						int pz = z + dz;
-						if (terrain.isCaveAir(px, py, pz) && terrain.isCaveAir(px, py + 1, pz) && !terrain.isCaveAir(px, py - 1, pz)) {
-							return new BlockPos(px, py, pz);
+		BlockPos best = null;
+		int bestOpen = -1;
+		int candidates = 0;
+		for (int dx = -15; dx <= 15 && candidates < 40; dx += 3) {
+			for (int dz = -15; dz <= 15 && candidates < 40; dz += 3) {
+				for (int dy = -16; dy <= 16; dy++) {
+					int px = x + dx;
+					int py = y + dy;
+					int pz = z + dz;
+					if (terrain.isCaveAir(px, py, pz) && terrain.isCaveAir(px, py + 1, pz) && !terrain.isCaveAir(px, py - 1, pz)) {
+						candidates++;
+						int open = openness(terrain, px, py, pz);
+						if (open > bestOpen) {
+							bestOpen = open;
+							best = new BlockPos(px, py, pz);
 						}
+						break;
 					}
 				}
 			}
 		}
-		return null;
+		return best;
+	}
+
+	private static int openness(DeepTerrain terrain, int x, int y, int z) {
+		int open = 0;
+		for (int dx = -9; dx <= 9; dx += 3) {
+			for (int dz = -9; dz <= 9; dz += 3) {
+				for (int dy = 0; dy <= 9; dy += 3) {
+					if (terrain.isCaveAir(x + dx, y + dy, z + dz)) {
+						open++;
+					}
+				}
+			}
+		}
+		return open;
+	}
+
+	/** Направление взгляда (yaw) вдоль самого длинного свободного пролёта - для красивого вида на пещеру. */
+	public static float bestYaw(long seed, BlockPos pos) {
+		DeepTerrain terrain = DeepTerrain.of(seed);
+		float bestYaw = 0;
+		int bestRun = -1;
+		for (int i = 0; i < 8; i++) {
+			double angle = Math.toRadians(i * 45.0);
+			double sx = -Math.sin(angle);
+			double sz = Math.cos(angle);
+			int run = 0;
+			for (int step = 1; step <= 40; step++) {
+				int px = (int) Math.floor(pos.getX() + 0.5 + sx * step);
+				int pz = (int) Math.floor(pos.getZ() + 0.5 + sz * step);
+				if (!terrain.isCaveAir(px, pos.getY() + 1, pz)) {
+					break;
+				}
+				run++;
+			}
+			if (run > bestRun) {
+				bestRun = run;
+				bestYaw = i * 45f;
+			}
+		}
+		return bestYaw;
 	}
 }

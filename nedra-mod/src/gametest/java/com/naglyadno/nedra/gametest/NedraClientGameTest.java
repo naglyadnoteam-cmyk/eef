@@ -26,7 +26,7 @@ public class NedraClientGameTest implements FabricClientGameTest {
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
-		startWatchdog();
+		// startWatchdog(); - включить при отладке зависаний загрузки мира
 		context.runOnClient(client -> {
 			// размытие фона меню на программном OpenGL (CI без видеокарты) занимает секунды на кадр
 			client.options.getMenuBackgroundBlurriness().setValue(0);
@@ -153,10 +153,15 @@ public class NedraClientGameTest implements FabricClientGameTest {
 
 			// места недр находим той же функцией, что и /nedra locate, и снимаем каждое
 			long seed = server.computeOnServer(s -> s.getOverworld().getSeed());
+			// в шлеме скафандра: на снимках биомов не нужна красная виньетка давления
+			server.runCommand("item replace entity @a armor.head with nedra:helmet_deepsuit");
 			visit(context, singleplayer, DeepLocator.settlement(seed, 0, 0), 45, 8, "nedra_10_settlement");
-			visit(context, singleplayer, DeepLocator.layer(seed, DeepTerrain.Layer.ECHO, 0, 0), 0, 10, "nedra_11_echo_hollows");
-			visit(context, singleplayer, DeepLocator.layer(seed, DeepTerrain.Layer.MAGNETIC, 0, 0), 0, 10, "nedra_12_magnetic_caverns");
-			visit(context, singleplayer, DeepLocator.layer(seed, DeepTerrain.Layer.CRYSTAL, 0, 0), 0, 10, "nedra_13_crystal_depths");
+			BlockPos echo = DeepLocator.layer(seed, DeepTerrain.Layer.ECHO, 0, 0);
+			BlockPos magnetic = DeepLocator.layer(seed, DeepTerrain.Layer.MAGNETIC, 0, 0);
+			BlockPos crystal = DeepLocator.layer(seed, DeepTerrain.Layer.CRYSTAL, 0, 0);
+			visit(context, singleplayer, echo, echo == null ? 0 : DeepLocator.bestYaw(seed, echo), 5, "nedra_11_echo_hollows");
+			visit(context, singleplayer, magnetic, magnetic == null ? 0 : DeepLocator.bestYaw(seed, magnetic), -5, "nedra_12_magnetic_caverns");
+			visit(context, singleplayer, crystal, crystal == null ? 0 : DeepLocator.bestYaw(seed, crystal), 5, "nedra_13_crystal_depths");
 			BlockPos river = DeepLocator.river(seed, 1, 0, 0);
 			visit(context, singleplayer, river == null ? null : river.up(), 0, 20, "nedra_14_river");
 		}
