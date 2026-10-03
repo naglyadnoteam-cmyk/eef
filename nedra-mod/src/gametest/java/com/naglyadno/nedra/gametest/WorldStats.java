@@ -27,7 +27,7 @@ final class WorldStats {
 	private WorldStats() {
 	}
 
-	/** Возвращает подходящую точку в глубинной пещере (x, y, z) или null. */
+	/** Возвращает самую просторную точку в глубинной пещере (x, y, z) или null. */
 	static int[] report(MinecraftServer server) {
 		ServerWorld world = server.getOverworld();
 		BlockPos spawn = server.getPlayerManager().getPlayerList().get(0).getBlockPos();

@@ -1,0 +1,31 @@
+{
+	"feature": "minecraft:glow_lichen",
+	"placement": [
+		{
+			"type": "minecraft:count",
+			"count": {
+				"type": "minecraft:uniform",
+				"min_inclusive": 40,
+				"max_inclusive": 70
+			}
+		},
+		{
+			"type": "minecraft:height_range",
+			"height": {
+				"type": "minecraft:uniform",
+				"min_inclusive": {
+					"absolute": -340
+				},
+				"max_inclusive": {
+					"absolute": -72
+				}
+			}
+		},
+		{
+			"type": "minecraft:in_square"
+		},
+		{
+			"type": "minecraft:biome"
+		}
+	]
+}

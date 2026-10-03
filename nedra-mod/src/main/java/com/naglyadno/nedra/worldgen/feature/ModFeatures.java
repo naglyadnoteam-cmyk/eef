@@ -22,6 +22,9 @@ public final class ModFeatures {
 	public static final Feature<UndergroundVillageFeature.Config> UNDERGROUND_VILLAGE =
 			register("underground_village", new UndergroundVillageFeature(UndergroundVillageFeature.Config.CODEC));
 
+	public static final Feature<DefaultFeatureConfig> DEEP_TERRAIN =
+			register("deep_terrain", new DeepTerrainFeature(DefaultFeatureConfig.CODEC));
+
 	public static final Feature<DefaultFeatureConfig> DEEP_LAYERS =
 			register("deep_layers", new DeepLayersFeature(DefaultFeatureConfig.CODEC));
 

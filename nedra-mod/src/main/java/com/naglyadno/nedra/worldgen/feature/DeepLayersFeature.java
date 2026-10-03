@@ -16,7 +16,10 @@ import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.util.FeatureContext;
+import com.naglyadno.nedra.worldgen.deep.DeepTerrain;
+import com.naglyadno.nedra.worldgen.deep.Settlements;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -26,8 +29,8 @@ import java.util.Optional;
  * <ul>
  *     <li>Осушает пещеры: ванильный акифер заливает лавой любую полость ниже Y -54, поэтому без этого
  *     глубинные пещеры были бы сплошными лавовыми туннелями. Лава остаётся только у самого дна.</li>
- *     <li>Расставляет биомы глубин по ярусам: Эхо-пустоты, Магнитные пещеры, Кристальные глубины. В каждом
- *     ярусе биом занимает только часть областей (по плавному шуму), в остальных продолжается ванильный.</li>
+ *     <li>Расставляет биомы глубин по ярусам {@link DeepTerrain} (а залы поселений - Эхо-пустоты); там, где
+ *     биом яруса не выражен, продолжается ванильный.</li>
  * </ul>
  * Биомы ставятся после всех остальных фич, поэтому руды и пещеры генерируются как обычно.
  */
@@ -90,15 +93,24 @@ public class DeepLayersFeature extends Feature<DefaultFeatureConfig> {
 			return;
 		}
 		long seed = world.getSeed();
+		DeepTerrain terrain = DeepTerrain.of(seed);
+		int bx = chunk.getPos().getStartX();
+		int bz = chunk.getPos().getStartZ();
+		List<Settlements.Site> sites = Settlements.near(seed, bx, bz, bx + 15, bz + 15, 12);
 		chunk.populateBiomes((qx, qy, qz, noise) -> {
 			RegistryEntry<Biome> current = chunk.getBiomeForNoiseGen(qx, qy, qz);
 			int y = BiomeCoords.toBlock(qy);
 			if (y >= DEEP_TOP) {
 				return current;
 			}
-			int x = BiomeCoords.toBlock(qx);
-			int z = BiomeCoords.toBlock(qz);
-			return switch (DepthBands.layerAt(seed, x, y, z)) {
+			int x = BiomeCoords.toBlock(qx) + 2;
+			int z = BiomeCoords.toBlock(qz) + 2;
+			for (Settlements.Site site : sites) {
+				if (site.distance(x, z) < site.radius() + 12 && y > site.floorY() - 8 && y < site.floorY() + 26) {
+					return echo.get();
+				}
+			}
+			return switch (terrain.dominant(terrain.column(x, z), y)) {
 				case ECHO -> echo.get();
 				case MAGNETIC -> magnetic.get();
 				case CRYSTAL -> crystal.get();

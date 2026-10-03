@@ -55,6 +55,10 @@
 	"command.nedra.info": "Y %s · pressure %s%% (unprotected %s%%) · protection %s%% · %s",
 	"command.nedra.info.inactive": "Deep pressure only exists in the Overworld",
 	"command.nedra.reload.done": "Nedra config reloaded",
+	"command.nedra.locate.found": "%1$s: %2$s %3$s %4$s (%5$s blocks)",
+	"command.nedra.locate.none": "Nothing found nearby: %s",
+	"command.nedra.locate.settlement": "Abandoned settlement",
+	"command.nedra.locate.river": "Underground river",
 	"subtitles.nedra.geophone.ping": "Geophone knocks",
 	"subtitles.nedra.geophone.return": "Echo answers",
 	"subtitles.nedra.echo_ore.chime": "Echo ore chimes",
@@ -101,7 +105,7 @@
 	"guide.nedra.page.11": "§1§lMagnetite§r\n\nA dark ore found below Y -64. Smelt raw magnetite into ingots.\n\nMagnetite confuses compasses: within %1$s blocks of the ore the needle spins wildly. Walk away and it settles.",
 	"guide.nedra.page.12": "§1§lEcho ore§r\n\nA rare ore below Y -96. Easier to hear than to see: a faint crystal chime rings nearby.\n\nDrops a §3resonant shard§r, the heart of the geophone and the deepsuit.",
 	"guide.nedra.page.13": "§1§lGeophone§r\n\nShard on top, copper on the sides and bottom, magnetite in the middle.\n\nRight-click to sound the rock within %1$s blocks: signal, ore, direction and distance. The echo comes from the ore.",
-	"guide.nedra.page.14": "§1§lDeep biomes§r\n\n§5Echo Hollows§r: Y -80 to -176\n§8Magnetic Caverns§r: Y -176 to -272\n§3Crystal Depths§r: below -272\n\nEach biome covers part of its layer, with ordinary caves in between.\n§8New chunks only.",
-	"guide.nedra.page.15": "§1§lCaverns and water§r\n\nBelow Y -64 run caves and ravines of their own; deeper lie huge caverns, rivers and lakes.\n\nLava only pools at the very bottom. The largest hollows are flooded: rare underground oceans.",
-	"guide.nedra.page.16": "§1§lSettlements§r\n\nThe echo hollows hide carved halls with crafting tables, furnaces and chests. Their people are long gone.\n\n§1Commands:§r\n/nedra info\n/nedra guide\n/nedra reload §8(op)"
+	"guide.nedra.page.14": "§1§lDeep biomes§r\n\n§5Echo Hollows§r, Y -80 to -176: flat halls with pillars, tuff, sculk.\n§8Magnetic Caverns§r, -176 to -272: tall shafts, basalt, magma.\n§3Crystal Depths§r, below -272: calcite, amethyst, lakes.",
+	"guide.nedra.page.15": "§1§lCaverns and water§r\n\nTwo networks of underground rivers, near Y -116 and Y -228, run for hundreds of blocks.\n\nIron, gold and diamonds hide in the deepslate. Lava only at the very bottom.",
+	"guide.nedra.page.16": "§1§lSettlements§r\n\nAbandoned miner towns: a huge hall with houses, streets, lamps, a well and chests.\n\n§1Commands:§r\n/nedra info, /nedra guide\n§8op:§r /nedra locate,\n/nedra reload"
 }

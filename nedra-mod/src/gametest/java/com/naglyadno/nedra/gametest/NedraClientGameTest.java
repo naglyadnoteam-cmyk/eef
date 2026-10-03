@@ -7,7 +7,10 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.client.gui.screen.ingame.BookScreen;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
+import com.naglyadno.nedra.worldgen.deep.DeepLocator;
+import com.naglyadno.nedra.worldgen.deep.DeepTerrain;
 import net.minecraft.client.option.Perspective;
+import net.minecraft.util.math.BlockPos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,14 +149,31 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			singleplayer.getClientWorld().waitForChunksRender();
 			shot(context, "nedra_08_surface");
 
-			int[] cave = server.computeOnServer(WorldStats::report);
-			if (cave != null) {
-				server.runCommand("tp @a " + cave[0] + ".5 " + cave[1] + " " + cave[2] + ".5 0 10");
-				context.waitTicks(200);
-				singleplayer.getClientWorld().waitForChunksRender();
-				shot(context, "nedra_09_deep_cave");
-			}
+			server.computeOnServer(WorldStats::report);
+
+			// места недр находим той же функцией, что и /nedra locate, и снимаем каждое
+			long seed = server.computeOnServer(s -> s.getOverworld().getSeed());
+			visit(context, singleplayer, DeepLocator.settlement(seed, 0, 0), 45, 8, "nedra_10_settlement");
+			visit(context, singleplayer, DeepLocator.layer(seed, DeepTerrain.Layer.ECHO, 0, 0), 0, 10, "nedra_11_echo_hollows");
+			visit(context, singleplayer, DeepLocator.layer(seed, DeepTerrain.Layer.MAGNETIC, 0, 0), 0, 10, "nedra_12_magnetic_caverns");
+			visit(context, singleplayer, DeepLocator.layer(seed, DeepTerrain.Layer.CRYSTAL, 0, 0), 0, 10, "nedra_13_crystal_depths");
+			BlockPos river = DeepLocator.river(seed, 1, 0, 0);
+			visit(context, singleplayer, river == null ? null : river.up(), 0, 20, "nedra_14_river");
 		}
+	}
+
+	private static void visit(ClientGameTestContext context, TestSingleplayerContext singleplayer, BlockPos pos,
+			float yaw, float pitch, String name) {
+		if (pos == null) {
+			LOGGER.info("STATS| {}: место не найдено", name);
+			return;
+		}
+		LOGGER.info("STATS| {}: {} {} {}", name, pos.getX(), pos.getY(), pos.getZ());
+		singleplayer.getServer().runCommand("tp @a " + pos.getX() + ".5 " + pos.getY() + " " + pos.getZ() + ".5 " + yaw + " " + pitch);
+		context.waitTicks(120);
+		singleplayer.getClientWorld().waitForChunksRender();
+		context.waitTicks(40);
+		shot(context, name);
 	}
 
 	/**
