@@ -28,11 +28,16 @@ public class CurrentVentBlock extends Block {
 		if (!isActive(world, pos)) {
 			return;
 		}
-		for (int i = 0; i < 3; i++) {
-			double x = pos.getX() + 0.3 + random.nextDouble() * 0.4;
-			double z = pos.getZ() + 0.3 + random.nextDouble() * 0.4;
+		// лёгкий пар над разломом и вихрь ветра повыше - струя читается как поток воздуха, а не дым
+		if (random.nextBoolean()) {
+			double x = pos.getX() + 0.35 + random.nextDouble() * 0.3;
+			double z = pos.getZ() + 0.35 + random.nextDouble() * 0.3;
 			world.addParticleClient(ParticleTypes.CLOUD, x, pos.getY() + 1.05, z,
-					(random.nextDouble() - 0.5) * 0.02, 0.12 + random.nextDouble() * 0.08, (random.nextDouble() - 0.5) * 0.02);
+					(random.nextDouble() - 0.5) * 0.01, 0.06 + random.nextDouble() * 0.04, (random.nextDouble() - 0.5) * 0.01);
+		}
+		if (random.nextInt(3) == 0) {
+			world.addParticleClient(ParticleTypes.SMALL_GUST, pos.getX() + 0.5, pos.getY() + 1.3 + random.nextDouble() * 1.5,
+					pos.getZ() + 0.5, 0.0, 0.0, 0.0);
 		}
 		if (random.nextInt(18) == 0) {
 			world.playSoundClient(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, ModSounds.VENT_GUST,

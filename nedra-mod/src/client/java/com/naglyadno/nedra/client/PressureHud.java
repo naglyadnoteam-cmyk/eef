@@ -48,8 +48,9 @@ public final class PressureHud {
 		int height = context.getScaledWindowHeight();
 		int x1 = width - EDGE - BAR_W;
 		int x2 = x1 + BAR_W;
-		int y1 = height / 2 - BAR_H / 2 - 6;
-		int y2 = y1 + BAR_H;
+		// низ правого края: там не бывает всплывающих уведомлений (они сверху) и таблицы счёта (по центру)
+		int y2 = height - 52;
+		int y1 = y2 - BAR_H;
 
 		// корпус манометра: тёмная подложка, контур и блик
 		context.fill(x1 - 3, y1 - 3, x2 + 3, y2 + 3, argb(0x05070A, 0.55f * alpha));
@@ -128,23 +129,26 @@ public final class PressureHud {
 			return;
 		}
 		float pulse = ClientAmbience.pulse();
-		float strength = (tier >= 5 ? 0.55f : 0.32f) + pulse * (tier >= 5 ? 0.3f : 0.18f);
+		boolean critical = tier >= 5;
+		// виньетка должна читаться и в тёмной пещере, поэтому насыщенный красный и заметная непрозрачность по краю
+		float strength = (critical ? 0.62f : 0.42f) + pulse * (critical ? 0.3f : 0.2f);
+		int color = critical ? 0x8C0505 : 0x6E0606;
 		int width = context.getScaledWindowWidth();
 		int height = context.getScaledWindowHeight();
-		int thickness = (int) (Math.min(width, height) * 0.3f);
-		int steps = 16;
+		int thickness = (int) (Math.min(width, height) * (critical ? 0.38f : 0.3f));
+		int steps = 18;
 		int band = Math.max(1, thickness / steps);
 		for (int i = 0; i < steps; i++) {
 			float falloff = 1f - (float) i / steps;
-			int color = argb(0x5A0606, strength * falloff * falloff * 0.35f);
+			int argbColor = argb(color, strength * falloff * falloff);
 			int o = i * band;
-			context.fill(o, o, width - o, o + band, color);
-			context.fill(o, height - o - band, width - o, height - o, color);
-			context.fill(o, o + band, o + band, height - o - band, color);
-			context.fill(width - o - band, o + band, width - o, height - o - band, color);
+			context.fill(o, o, width - o, o + band, argbColor);
+			context.fill(o, height - o - band, width - o, height - o, argbColor);
+			context.fill(o, o + band, o + band, height - o - band, argbColor);
+			context.fill(width - o - band, o + band, width - o, height - o - band, argbColor);
 		}
-		if (tier >= 5) {
-			context.fill(0, 0, width, height, argb(0x2A0000, 0.05f + pulse * 0.07f));
+		if (critical) {
+			context.fill(0, 0, width, height, argb(0x3A0000, 0.08f + pulse * 0.1f));
 		}
 	}
 

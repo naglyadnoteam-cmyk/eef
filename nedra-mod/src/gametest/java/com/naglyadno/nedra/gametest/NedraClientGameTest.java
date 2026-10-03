@@ -55,10 +55,11 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			server.runCommand("setblock -3 -192 -3 nedra:deepmoss");
 			server.runCommand("setblock 3 -192 -3 nedra:deepmoss");
 			server.runCommand("item replace entity @a armor.head with nedra:helmet_light");
+			server.runCommand("item replace entity @a hotbar.0 with minecraft:air");
 			server.runCommand("tp @a 0.5 -191 3.5 180 12");
 			context.waitTicks(80);
 			singleplayer.getClientWorld().waitForChunksRender();
-			context.takeScreenshot("nedra_01_showroom_hud");
+			shot(context, "nedra_01_showroom_hud");
 
 			// ---- три шлема на стойках
 			server.runCommand("summon minecraft:armor_stand -1.5 -191 -1.5 {Rotation:[0f,0f],equipment:{head:{id:\"nedra:helmet_light\",count:1}}}");
@@ -66,7 +67,7 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			server.runCommand("summon minecraft:armor_stand 2.5 -191 -1.5 {Rotation:[0f,0f],equipment:{head:{id:\"nedra:helmet_deepsuit\",count:1}}}");
 			server.runCommand("tp @a 0.5 -190 1.8 180 25");
 			context.waitTicks(30);
-			context.takeScreenshot("nedra_02_helmets");
+			shot(context, "nedra_02_helmets");
 			server.runCommand("kill @e[type=minecraft:armor_stand]");
 
 			// ---- инвентарь со всеми предметами
@@ -80,7 +81,7 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			context.waitTicks(10);
 			context.runOnClient(client -> client.setScreen(new InventoryScreen(client.player)));
 			context.waitTicks(10);
-			context.takeScreenshot("nedra_03_inventory");
+			shot(context, "nedra_03_inventory");
 
 			// ---- справочник: титул и страница ярусов давления
 			context.runOnClient(client -> {
@@ -88,14 +89,14 @@ public class NedraClientGameTest implements FabricClientGameTest {
 				client.setScreen(new BookScreen(contents));
 			});
 			context.waitTicks(10);
-			context.takeScreenshot("nedra_04_guide_title");
+			shot(context, "nedra_04_guide_title");
 			context.runOnClient(client -> {
 				if (client.currentScreen instanceof BookScreen book) {
 					book.setPage(3);
 				}
 			});
 			context.waitTicks(5);
-			context.takeScreenshot("nedra_05_guide_tiers");
+			shot(context, "nedra_05_guide_tiers");
 			context.runOnClient(client -> client.setScreen(null));
 
 			// ---- самое дно без защиты: критическое давление, виньетка
@@ -104,13 +105,13 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			server.runCommand("tp @a 0.5 -345 2.5 180 5");
 			context.waitTicks(100);
 			singleplayer.getClientWorld().waitForChunksRender();
-			context.takeScreenshot("nedra_06_critical_depth");
+			shot(context, "nedra_06_critical_depth");
 
 			// ---- то же место в шлеме скафандра, вид от третьего лица
 			server.runCommand("item replace entity @a armor.head with nedra:helmet_deepsuit");
 			context.runOnClient(client -> client.options.setPerspective(Perspective.THIRD_PERSON_FRONT));
 			context.waitTicks(80);
-			context.takeScreenshot("nedra_07_deepsuit_third_person");
+			shot(context, "nedra_07_deepsuit_third_person");
 			context.runOnClient(client -> client.options.setPerspective(Perspective.FIRST_PERSON));
 		}
 	}
@@ -145,13 +146,24 @@ public class NedraClientGameTest implements FabricClientGameTest {
 		watchdog.start();
 	}
 
+	/** Снимок без всплывающих уведомлений и чата, которые иначе закрывают HUD и книгу. */
+	private static void shot(ClientGameTestContext context, String name) {
+		context.runOnClient(client -> {
+			client.getToastManager().clear();
+			client.inGameHud.getChatHud().clear(false);
+		});
+		context.waitTicks(2);
+		context.takeScreenshot(name);
+	}
+
 	/** Полая коробка из глубинного сланца 13x9x13 с полом на высоте floorY и светильниками в своде. */
 	private static void room(TestServerContext server, int floorY) {
 		int top = floorY + 8;
 		server.runCommand("fill -6 " + floorY + " -6 6 " + top + " 6 minecraft:deepslate_tiles hollow");
 		server.runCommand("fill -6 " + floorY + " -6 6 " + floorY + " 6 minecraft:polished_deepslate");
-		server.runCommand("setblock 0 " + top + " 0 nedra:lumenite_lamp");
-		server.runCommand("setblock -4 " + top + " -3 nedra:lumenite_lamp");
-		server.runCommand("setblock 4 " + top + " -3 nedra:lumenite_lamp");
+		int[][] lamps = {{0, 0}, {-4, -3}, {4, -3}, {-4, 3}, {4, 3}, {0, -4}};
+		for (int[] lamp : lamps) {
+			server.runCommand("setblock " + lamp[0] + " " + top + " " + lamp[1] + " nedra:lumenite_lamp");
+		}
 	}
 }
