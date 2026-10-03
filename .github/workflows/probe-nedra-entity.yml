@@ -1,0 +1,124 @@
+name: Probe Nedra Entity APIs
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - claude/minecraft-speedrunner-hunter-mod-q48dt3
+    paths:
+      - '.github/workflows/probe-nedra-entity.yml'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nedra-mod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Cache decompiled sources
+        uses: actions/cache@v4
+        with:
+          path: nedra-mod/.gradle/loom-cache
+          key: nedra-decompile-1.21.11-build6-v1
+
+      - name: Gen sources
+        run: ./gradlew genSources --no-daemon --quiet
+
+      - name: Unpack sources
+        run: |
+          set +e
+          COMMON=$(realpath "$(find .gradle/loom-cache/minecraftMaven -ipath "*minecraft-common-*" -iname "*-sources.jar" | head -1)")
+          CLIENT=$(realpath "$(find .gradle/loom-cache/minecraftMaven -ipath "*minecraft-clientOnly-*" -iname "*-sources.jar" | head -1)")
+          mkdir -p /tmp/src
+          cd /tmp/src
+          unzip -oq "$COMMON"
+          unzip -oq "$CLIENT"
+          find /tmp/src -name "*.java" | wc -l
+
+      - name: Java API probe
+        working-directory: /tmp/src
+        run: |
+          set +e
+          sec() { echo ""; echo "######## $1"; }
+          g() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- $f :: $2"; [ -n "$f" ] && grep -n -E "$2" "$f" | head -${3:-25}; }
+          full() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- FULL $f"; [ -n "$f" ] && sed -n "1,${2:-200}p" "$f"; }
+          ctx() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- CTX $f :: $2"; [ -n "$f" ] && grep -n -A ${3:-8} -E "$2" "$f" | head -${4:-60}; }
+          sec HUSK; full net/minecraft/entity/mob/HuskEntity.java 140
+          sec ZOMBIE_SIGS; g net/minecraft/entity/mob/ZombieEntity.java "^\s*(public|protected|private)[^=]*\(" 120
+          ctx net/minecraft/entity/mob/ZombieEntity.java "public static DefaultAttributeContainer.Builder createZombieAttributes" 10 14
+          ctx net/minecraft/entity/mob/ZombieEntity.java "public EntityData initialize" 40 50
+          ctx net/minecraft/entity/mob/ZombieEntity.java "protected void initGoals|protected void initCustomGoals" 14 32
+          sec ETYPE; ctx net/minecraft/entity/EntityType.java "public static final EntityType<HuskEntity> HUSK" 10 12
+          ctx net/minecraft/entity/EntityType.java "private static <T extends Entity> EntityType<T> register\(" 6 30
+          g net/minecraft/entity/EntityType.java "public EntityType.Builder<T> [a-zA-Z]+\(|public Builder<T> [a-zA-Z]+\(|public EntityType<T> build|public static <T extends Entity> EntityType.Builder<T> create" 40
+          sec SPAWNRESTR; g net/minecraft/entity/SpawnRestriction.java "HUSK|public static <T extends|SpawnLocation|interface SpawnPredicate|public static boolean" 20
+          g net/minecraft/entity/mob/HostileEntity.java "public static boolean" 10
+          g net/minecraft/entity/SpawnLocationTypes.java "public static final" 10
+          sec ATTRS; g net/minecraft/entity/attribute/DefaultAttributeRegistry.java "HUSK|ZOMBIE" 6
+          g net/minecraft/entity/attribute/EntityAttributes.java "public static final RegistryEntry<EntityAttribute> [A-Z_]+" 60
+          g net/minecraft/entity/attribute/DefaultAttributeContainer.java "public DefaultAttributeContainer.Builder add|public Builder add" 6
+          sec ITEMS_EGG; g net/minecraft/item/Items.java "HUSK_SPAWN_EGG|ZOMBIE_SPAWN_EGG" 4
+          ctx net/minecraft/item/Items.java "HUSK_SPAWN_EGG =" 3 4
+          full net/minecraft/item/SpawnEggItem.java 70 | grep -n -E "public|SpawnEggItem\("
+          g net/minecraft/item/Item.java "spawnEgg|public Item.Settings [a-zA-Z]+\(" 60
+          sec LIVING; g net/minecraft/entity/LivingEntity.java "protected float getSoundPitch|public float getSoundPitch|getScale\(\)|getSoundVolume" 8
+          g net/minecraft/entity/mob/MobEntity.java "protected void initGoals|getAmbientSound|public static DefaultAttributeContainer.Builder createMobAttributes|isAffectedByDaylight" 10
+          g net/minecraft/world/World.java "addParticleClient|public void addParticle" 6
+          g net/minecraft/entity/Entity.java "public World getEntityWorld|public final World getWorld|public World getWorld" 4
+          sec CLIENT_RENDER; full net/minecraft/client/render/entity/HuskEntityRenderer.java 80
+          full net/minecraft/client/render/entity/ZombieEntityRenderer.java 80
+          full net/minecraft/client/render/entity/ZombieBaseEntityRenderer.java 120
+          full net/minecraft/client/render/entity/state/ZombieEntityRenderState.java 40
+          g net/minecraft/client/render/entity/EntityRendererFactories.java "HUSK|ZOMBIE,|public static <T extends Entity> void register|private static <T extends Entity> void register" 8
+          g net/minecraft/client/render/entity/EntityRenderers.java "HUSK|register\(" 8
+          g net/minecraft/client/render/entity/model/EntityModelLayers.java "HUSK|ZOMBIE =" 10
+          sec FABRIC_ATTR_JAVAP; echo
+      - name: Fabric javap
+        run: |
+          set +e
+          jp() { jar=$(find /home/runner/.gradle/caches/modules-2 -ipath "*$1*" -iname "*.jar" | grep -v sources | head -1); echo "--- javap $2 from $jar"; javap -p -classpath "$jar" "$2" 2>&1 | head -60; }
+          lst() { jar=$(find /home/runner/.gradle/caches/modules-2 -ipath "*$1*" -iname "*.jar" | grep -v sources | head -1); echo "--- classes in $jar matching $2"; unzip -l "$jar" | grep -E "$2" | awk '{print $NF}' | head -40; }
+          lst fabric-object-builder-api-v1 "api/.*\.class"
+          jp fabric-object-builder-api-v1 net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry
+          lst fabric-rendering-v1 "Entity.*Renderer|EntityModelLayer"
+          jp fabric-rendering-v1 net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry
+          jp fabric-biome-api-v1 net.fabricmc.fabric.api.biome.v1.BiomeModificationContext\$SpawnSettingsContext
+          echo DONE
+      - name: Vanilla references
+        run: |
+          set +e
+          mkdir -p /tmp/vanilla && cd /tmp/vanilla
+          MANIFEST=$(curl -sSL https://piston-meta.mojang.com/mc/game/version_manifest_v2.json)
+          VERSION_URL=$(echo "$MANIFEST" | python3 -c "import json,sys; d=json.load(sys.stdin); print([v['url'] for v in d['versions'] if v['id']=='1.21.11'][0])")
+          VERSION_JSON=$(curl -sSL "$VERSION_URL")
+          SERVER_URL=$(echo "$VERSION_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['downloads']['server']['url'])")
+          CLIENT_URL=$(echo "$VERSION_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['downloads']['client']['url'])")
+          curl -sSL -o server.jar "$SERVER_URL"
+          curl -sSL -o client.jar "$CLIENT_URL"
+          java -DbundlerMainClass=net.minecraft.data.Main -jar server.jar --server --output /tmp/vanilla/datagen > /dev/null 2>&1
+          D=/tmp/vanilla/datagen/data/minecraft
+          for f in loot_table/entities/husk.json tags/entity_type/zombies.json tags/entity_type/undead.json tags/entity_type/sensitive_to_smite.json; do
+            echo ""; echo "######## DATA $f"; cat "$D/$f" 2>&1 | head -80
+          done
+          ls $D/tags/entity_type | head -100
+          mkdir -p cl && cd cl && unzip -oq ../client.jar 'assets/*' && cd ..
+          A=/tmp/vanilla/cl/assets/minecraft
+          echo "######## items/husk_spawn_egg.json"; cat $A/items/husk_spawn_egg.json
+          echo "######## models/item/husk_spawn_egg.json"; cat $A/models/item/husk_spawn_egg.json
+          ls $A/textures/entity/zombie
+          for t in textures/entity/zombie/zombie.png textures/entity/zombie/husk.png textures/item/husk_spawn_egg.png textures/item/zombie_spawn_egg.png; do
+            echo "B64 $t $(base64 -w0 "$A/$t")"
+          done
+          echo DONE
