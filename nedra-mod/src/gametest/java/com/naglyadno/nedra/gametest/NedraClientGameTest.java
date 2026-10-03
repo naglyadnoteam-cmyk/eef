@@ -1,5 +1,6 @@
 package com.naglyadno.nedra.gametest;
 
+import com.naglyadno.nedra.entity.ModEntities;
 import com.naglyadno.nedra.guide.GuideBook;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -10,6 +11,9 @@ import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import com.naglyadno.nedra.worldgen.deep.DeepLocator;
 import com.naglyadno.nedra.worldgen.deep.DeepTerrain;
 import net.minecraft.client.option.Perspective;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,11 +79,23 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			shot(context, "nedra_02_helmets");
 			server.runCommand("kill @e[type=minecraft:armor_stand]");
 
+			// ---- ржавый громила рядом с обычным зомби: видно цвет и разницу в росте
+			server.runCommand("difficulty easy");
+			server.runCommand("summon nedra:rust_brute -1.5 -191 -2.5 {NoAI:1b,PersistenceRequired:1b,Rotation:[20f,0f]}");
+			server.runCommand("summon minecraft:zombie 2.5 -191 -2.5 {NoAI:1b,PersistenceRequired:1b,IsBaby:0b,Rotation:[-20f,0f]}");
+			server.runCommand("tp @a 0.5 -191 3.5 180 -6");
+			context.waitTicks(30);
+			shot(context, "nedra_09_rust_brute");
+			server.runCommand("kill @e[type=nedra:rust_brute]");
+			server.runCommand("kill @e[type=minecraft:zombie]");
+			server.runCommand("difficulty peaceful");
+
 			// ---- инвентарь со всеми предметами
 			String[] items = {"nedra:geophone", "nedra:pressure_tablet 16", "nedra:lumenite_crystal 24", "nedra:raw_magnetite 12",
 					"nedra:magnetite_ingot 9", "nedra:resonant_shard 3", "nedra:deepmoss_clump 20", "nedra:helmet_reinforced",
 					"nedra:helmet_deepsuit", "nedra:lumenite_lamp 8", "nedra:lumenite_ore", "nedra:magnetite_ore",
-					"nedra:echo_ore", "nedra:unstable_stone", "nedra:current_vent", "nedra:deepmoss", "minecraft:compass"};
+					"nedra:echo_ore", "nedra:unstable_stone", "nedra:current_vent", "nedra:deepmoss", "minecraft:compass",
+					"nedra:rust_brute_spawn_egg 4"};
 			for (String item : items) {
 				server.runCommand("give @a " + item);
 			}
@@ -161,10 +177,48 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			BlockPos crystal = DeepLocator.layer(seed, DeepTerrain.Layer.CRYSTAL, 0, 0);
 			visit(context, singleplayer, echo, echo == null ? 0 : DeepLocator.bestYaw(seed, echo), 5, "nedra_11_echo_hollows");
 			visit(context, singleplayer, magnetic, magnetic == null ? 0 : DeepLocator.bestYaw(seed, magnetic), -5, "nedra_12_magnetic_caverns");
+			if (magnetic != null) {
+				wildRustBrutes(context, singleplayer);
+			}
 			visit(context, singleplayer, crystal, crystal == null ? 0 : DeepLocator.bestYaw(seed, crystal), 5, "nedra_13_crystal_depths");
 			BlockPos river = DeepLocator.river(seed, 1, 0, 0);
 			visit(context, singleplayer, river == null ? null : river.up(), 0, 20, "nedra_14_river");
 		}
+	}
+
+	/**
+	 * Естественный спавн: на нормальной сложности ждём у Магнитных пещер, считаем громил в мире и
+	 * снимаем ближайшего, если он появился сам (без /summon).
+	 */
+	private static void wildRustBrutes(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		TestServerContext server = singleplayer.getServer();
+		server.runCommand("difficulty normal");
+		for (int round = 1; round <= 3; round++) {
+			context.waitTicks(300);
+			int brutes = server.computeOnServer(s -> count(s, ModEntities.RUST_BRUTE));
+			int zombies = server.computeOnServer(s -> count(s, EntityType.ZOMBIE));
+			LOGGER.info("STATS| natural spawn after {} ticks: rust_brute={} zombie={}", round * 300, brutes, zombies);
+			if (brutes > 0) {
+				break;
+			}
+		}
+		server.runCommand("execute as @e[type=nedra:rust_brute,limit=1,sort=nearest] run data merge entity @s {NoAI:1b,PersistenceRequired:1b}");
+		server.runCommand("execute as @e[type=nedra:rust_brute,limit=1,sort=nearest] at @s run tp @a ^ ^0.6 ^3.5 facing entity @s eyes");
+		context.waitTicks(60);
+		singleplayer.getClientWorld().waitForChunksRender();
+		context.waitTicks(20);
+		shot(context, "nedra_15_rust_brute_wild");
+		server.runCommand("difficulty peaceful");
+	}
+
+	private static int count(MinecraftServer server, EntityType<?> type) {
+		int n = 0;
+		for (Entity entity : server.getOverworld().iterateEntities()) {
+			if (entity.getType() == type) {
+				n++;
+			}
+		}
+		return n;
 	}
 
 	private static void visit(ClientGameTestContext context, TestSingleplayerContext singleplayer, BlockPos pos,

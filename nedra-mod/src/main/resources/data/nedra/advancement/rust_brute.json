@@ -1,0 +1,36 @@
+{
+	"parent": "nedra:magnetite",
+	"criteria": {
+		"rust_brute": {
+			"trigger": "minecraft:player_killed_entity",
+			"conditions": {
+				"entity": [
+					{
+						"condition": "minecraft:entity_properties",
+						"entity": "this",
+						"predicate": {
+							"type": "nedra:rust_brute"
+						}
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "nedra:rust_brute_spawn_egg"
+		},
+		"title": {
+			"translate": "advancements.nedra.rust_brute.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.rust_brute.description"
+		}
+	},
+	"requirements": [
+		[
+			"rust_brute"
+		]
+	]
+}

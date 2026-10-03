@@ -5,6 +5,7 @@ import com.naglyadno.nedra.command.NedraCommands;
 import com.naglyadno.nedra.component.ModComponents;
 import com.naglyadno.nedra.config.NedraConfig;
 import com.naglyadno.nedra.effect.ModEffects;
+import com.naglyadno.nedra.entity.ModEntities;
 import com.naglyadno.nedra.guide.GuideBook;
 import com.naglyadno.nedra.hazard.CurrentManager;
 import com.naglyadno.nedra.hazard.MagnetiteInterferenceManager;
@@ -59,6 +60,7 @@ public class NedraMod implements ModInitializer {
 		ModComponents.init();
 		ModEffects.init();
 		ModBlocks.init();
+		ModEntities.init();
 		ModItems.init();
 		ModItemGroup.init();
 		ModFeatures.init();

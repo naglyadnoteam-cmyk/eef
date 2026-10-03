@@ -1,0 +1,6 @@
+{
+	"parent": "minecraft:item/generated",
+	"textures": {
+		"layer0": "nedra:item/rust_brute_spawn_egg"
+	}
+}

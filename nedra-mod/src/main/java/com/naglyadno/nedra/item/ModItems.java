@@ -1,11 +1,13 @@
 package com.naglyadno.nedra.item;
 
 import com.naglyadno.nedra.NedraMod;
+import com.naglyadno.nedra.entity.ModEntities;
 import com.naglyadno.nedra.sound.ModSounds;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.ConsumableComponent;
 import net.minecraft.component.type.ConsumableComponents;
 import net.minecraft.item.Item;
+import net.minecraft.item.SpawnEggItem;
 import net.minecraft.item.equipment.ArmorMaterial;
 import net.minecraft.item.equipment.EquipmentType;
 import net.minecraft.registry.Registries;
@@ -46,6 +48,10 @@ public final class ModItems {
 	public static final Item HELMET_LIGHT = registerHelmet("helmet_light", ModArmorMaterials.MINER, Rarity.COMMON);
 	public static final Item HELMET_REINFORCED = registerHelmet("helmet_reinforced", ModArmorMaterials.REINFORCED, Rarity.UNCOMMON);
 	public static final Item HELMET_DEEPSUIT = registerHelmet("helmet_deepsuit", ModArmorMaterials.DEEPSUIT, Rarity.RARE);
+
+	// --- яйца призыва ---
+	public static final Item RUST_BRUTE_SPAWN_EGG = register("rust_brute_spawn_egg", SpawnEggItem::new,
+			new Item.Settings().spawnEgg(ModEntities.RUST_BRUTE));
 
 	private static Item register(String path, Function<Item.Settings, Item> factory, Item.Settings settings) {
 		RegistryKey<Item> key = RegistryKey.of(RegistryKeys.ITEM, Identifier.of(NedraMod.MOD_ID, path));
