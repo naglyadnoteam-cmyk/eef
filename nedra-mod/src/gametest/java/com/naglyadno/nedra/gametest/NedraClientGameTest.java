@@ -27,7 +27,12 @@ public class NedraClientGameTest implements FabricClientGameTest {
 		context.runOnClient(client -> {
 			client.options.getViewDistance().setValue(6);
 			client.options.getSimulationDistance().setValue(5);
+			// скриншоты - на русском, основном языке мода
+			client.options.language = "ru_ru";
+			client.getLanguageManager().setLanguage("ru_ru");
+			client.reloadResources();
 		});
+		context.waitFor(client -> client.getOverlay() == null);
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			TestServerContext server = singleplayer.getServer();
 			singleplayer.getClientWorld().waitForChunksRender();

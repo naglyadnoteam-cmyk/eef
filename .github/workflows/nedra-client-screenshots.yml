@@ -47,8 +47,11 @@ jobs:
         if: always()
         run: |
           mkdir -p docs/screenshots
-          find . -path ./docs -prune -o -name "nedra_*.png" -print
-          find . -path ./docs -prune -o -name "nedra_*.png" -exec cp {} docs/screenshots/ \;
+          find build/run -name "*.png" | head -40
+          for f in $(find build/run -name "*nedra_*.png"); do
+            name=$(basename "$f" | sed -E 's/^.*(nedra_)/\1/')
+            cp "$f" "docs/screenshots/$name"
+          done
           ls -la docs/screenshots
           LOG=$(find build -path "*clientGameTest*" -name "latest.log" | head -1)
           echo "client log: $LOG"
@@ -77,6 +80,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! ls docs/screenshots/*.png > /dev/null 2>&1; then
+            echo "No screenshots were produced."
+            exit 1
+          fi
           git add -f docs/screenshots/*.png
           if git diff --cached --quiet; then
             echo "Screenshots unchanged."
