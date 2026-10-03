@@ -25,6 +25,8 @@ public class NedraClientGameTest implements FabricClientGameTest {
 	public void runTest(ClientGameTestContext context) {
 		startWatchdog();
 		context.runOnClient(client -> {
+			// размытие фона меню на программном OpenGL (CI без видеокарты) занимает секунды на кадр
+			client.options.getMenuBackgroundBlurriness().setValue(0);
 			client.options.getViewDistance().setValue(6);
 			client.options.getSimulationDistance().setValue(5);
 			// скриншоты - на русском, основном языке мода
