@@ -1,5 +1,6 @@
 package com.naglyadno.nedra.worldgen.feature;
 
+import com.naglyadno.nedra.worldgen.deep.DeepTerrain;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.naglyadno.nedra.NedraMod;
@@ -47,6 +48,11 @@ public class UndergroundVillageFeature extends Feature<UndergroundVillageFeature
 		Random random = context.getRandom();
 		BlockPos origin = context.getOrigin();
 		Config config = context.getConfig();
+
+		DeepTerrain terrain = DeepTerrain.of(world.getSeed());
+		if (terrain.weight(terrain.column(origin.getX(), origin.getZ()), DeepTerrain.Layer.JUNGLE, origin.getY()) > 0.02) {
+			return false;
+		}
 
 		BlockPos cursor = origin;
 		Direction facing = HORIZONTALS[random.nextInt(HORIZONTALS.length)];

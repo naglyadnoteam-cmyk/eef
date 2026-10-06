@@ -1,6 +1,7 @@
 package com.naglyadno.nedra.client;
 
 import com.naglyadno.nedra.NedraMod;
+import com.naglyadno.nedra.block.ModBlocks;
 import com.naglyadno.nedra.entity.ModEntities;
 import com.naglyadno.nedra.network.ConfigSyncPayload;
 import com.naglyadno.nedra.network.PressurePayload;
@@ -9,9 +10,12 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+import net.minecraft.block.Blocks;
+import net.minecraft.client.render.BlockRenderLayers;
 import net.minecraft.util.Identifier;
 
 public class NedraClient implements ClientModInitializer {
@@ -37,6 +41,13 @@ public class NedraClient implements ClientModInitializer {
 				Identifier.of(NedraMod.MOD_ID, "pressure_gauge"), (context, tickCounter) -> PressureHud.renderGauge(context));
 
 		EntityRendererRegistry.register(ModEntities.RUST_BRUTE, RustBruteRenderer::new);
+		EntityRendererRegistry.register(ModEntities.OVERGROWN_ZOMBIE, OvergrownZombieRenderer::new);
+		EntityRendererRegistry.register(ModEntities.OVERGROWN_SKELETON, OvergrownSkeletonRenderer::new);
+		EntityRendererRegistry.register(ModEntities.OVERGROWN_CREEPER, OvergrownCreeperRenderer::new);
+
+		// растения с прозрачными пикселями рисуются в том же слое, что и ванильные свисающие корни
+		BlockRenderLayerMap.putBlocks(BlockRenderLayers.getBlockLayer(Blocks.HANGING_ROOTS.getDefaultState()),
+				ModBlocks.DEEP_VINE, ModBlocks.DEEP_FERN, ModBlocks.GLOWCAP);
 
 		ItemTooltipCallback.EVENT.register((stack, tooltipContext, type, lines) -> NedraTooltips.append(stack, lines));
 	}

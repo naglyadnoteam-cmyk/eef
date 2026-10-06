@@ -18,7 +18,7 @@ import net.minecraft.util.Formatting;
 /**
  * /nedra guide  - выдать ещё один справочник
  * /nedra info   - текущая глубина, давление и защита
- * /nedra locate settlement|river|echo_hollows|magnetic_caverns|crystal_depths - найти место в недрах (операторы)
+ * /nedra locate settlement|river|echo_hollows|magnetic_caverns|crystal_depths|overgrown_depths - найти место в недрах (операторы)
  * /nedra reload - перечитать config/nedra.json (только для операторов)
  */
 public final class NedraCommands {
@@ -36,7 +36,8 @@ public final class NedraCommands {
 						.then(CommandManager.literal("river").executes(context -> locate(context.getSource(), "river")))
 						.then(CommandManager.literal("echo_hollows").executes(context -> locate(context.getSource(), "echo_hollows")))
 						.then(CommandManager.literal("magnetic_caverns").executes(context -> locate(context.getSource(), "magnetic_caverns")))
-						.then(CommandManager.literal("crystal_depths").executes(context -> locate(context.getSource(), "crystal_depths"))))
+						.then(CommandManager.literal("crystal_depths").executes(context -> locate(context.getSource(), "crystal_depths")))
+						.then(CommandManager.literal("overgrown_depths").executes(context -> locate(context.getSource(), "overgrown_depths"))))
 				.then(CommandManager.literal("reload")
 						.requires(CommandManager.requirePermissionLevel(CommandManager.GAMEMASTERS_CHECK))
 						.executes(context -> reload(context.getSource()))));
@@ -82,6 +83,7 @@ public final class NedraCommands {
 			case "river" -> DeepLocator.river(seed, from.getY() < -170 ? 2 : 1, from.getX(), from.getZ());
 			case "echo_hollows" -> DeepLocator.layer(seed, DeepTerrain.Layer.ECHO, from.getX(), from.getZ());
 			case "magnetic_caverns" -> DeepLocator.layer(seed, DeepTerrain.Layer.MAGNETIC, from.getX(), from.getZ());
+			case "overgrown_depths" -> DeepLocator.layer(seed, DeepTerrain.Layer.JUNGLE, from.getX(), from.getZ());
 			default -> DeepLocator.layer(seed, DeepTerrain.Layer.CRYSTAL, from.getX(), from.getZ());
 		};
 		Text name = Text.translatable(what.equals("settlement") || what.equals("river")

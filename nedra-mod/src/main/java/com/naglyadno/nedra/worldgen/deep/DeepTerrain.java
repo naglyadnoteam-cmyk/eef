@@ -8,27 +8,31 @@ import java.util.concurrent.ConcurrentHashMap;
  * чанков, и команда /nedra locate, поэтому пещеры, реки и ярусы непрерывно тянутся через границы чанков.
  *
  * <ul>
- *     <li>Ярусы биомов: Эхо-пустоты (-80…-176), Магнитные пещеры (-176…-272), Кристальные глубины (ниже -272).
- *     Каждый биом занимает пятна в несколько сотен блоков; границы ярусов плавные и слегка «гуляют».</li>
+ *     <li>Ярусы биомов: Эхо-пустоты (-80…-176), Магнитные пещеры (-176…-272), а ниже -272 - Кристальные
+ *     глубины и Заросшие глубины, которые делят самый нижний ярус. Каждый биом занимает пятна в несколько
+ *     сотен блоков; границы ярусов плавные и слегка «гуляют».</li>
  *     <li>Пещеры: обычные «сырные» полости + форма своего биома (плоские залы с колоннами, высокие
  *     шахты, огромные круглые камеры) + длинные туннели-«спагетти».</li>
- *     <li>Две сети подземных рек (около Y -116 и -228) и озёра на дне кристальных камер.</li>
+ *     <li>Две сети подземных рек (около Y -116 и -228), озёра на дне кристальных камер и болота
+ *     в Заросших глубинах.</li>
  * </ul>
  */
 public final class DeepTerrain {
 
-	public enum Layer { NONE, ECHO, MAGNETIC, CRYSTAL }
+	public enum Layer { NONE, ECHO, MAGNETIC, CRYSTAL, JUNGLE }
 
 	public static final int TOP = -64;
 	public static final int FLOOR = -344;
 	/** Уровень воды озёр в кристальных глубинах. */
 	public static final int LAKE_LEVEL = -318;
+	/** Уровень воды болот в Заросших глубинах. */
+	public static final int SWAMP_LEVEL = -321;
 	public static final int RIVER1_Y = -116;
 	public static final int RIVER2_Y = -228;
 
 	private static final Map<Long, DeepTerrain> CACHE = new ConcurrentHashMap<>();
 
-	private final DeepNoise c1, c2, e1, m1, k1, ta, tb, pil, r1, r1y, r2, r2y, jit, regE, regM, regC;
+	private final DeepNoise c1, c2, e1, m1, k1, ta, tb, pil, r1, r1y, r2, r2y, jit, regE, regM, regC, regJ, j1, trunks;
 
 	private DeepTerrain(long seed) {
 		long s = seed * 0x9E3779B97F4A7C15L;
@@ -48,6 +52,9 @@ public final class DeepTerrain {
 		regE = new DeepNoise(s + 14);
 		regM = new DeepNoise(s + 15);
 		regC = new DeepNoise(s + 16);
+		regJ = new DeepNoise(s + 17);
+		j1 = new DeepNoise(s + 18);
+		trunks = new DeepNoise(s + 19);
 	}
 
 	public static DeepTerrain of(long seed) {
@@ -59,8 +66,8 @@ public final class DeepTerrain {
 
 	// ------------------------------------------------------------------ ярусы и биомы
 
-	/** Данные колонны (x, z), которые не зависят от высоты: сдвиг границ ярусов и сила трёх биомов. */
-	public record Column(double jitter, double echo, double magnetic, double crystal) {
+	/** Данные колонны (x, z), которые не зависят от высоты: сдвиг границ ярусов и сила биомов. */
+	public record Column(double jitter, double echo, double magnetic, double crystal, double jungle) {
 	}
 
 	public Column column(int x, int z) {
@@ -68,7 +75,8 @@ public final class DeepTerrain {
 				jit.sample(x / 48.0, 0.3, z / 48.0) * 30.0,
 				smooth((regE.sample(x / 240.0, 0.5, z / 240.0) - 0.02) / 0.12),
 				smooth((regM.sample(x / 260.0, 0.5, z / 260.0) + 0.03) / 0.12),
-				smooth((regC.sample(x / 280.0, 0.5, z / 280.0) + 0.08) / 0.12));
+				smooth((regC.sample(x / 280.0, 0.5, z / 280.0) + 0.08) / 0.12),
+				smooth((regJ.sample(x / 300.0, 0.5, z / 300.0) + 0.02) / 0.12));
 	}
 
 	public double weight(Column column, Layer layer, int y) {
@@ -76,7 +84,9 @@ public final class DeepTerrain {
 		return switch (layer) {
 			case ECHO -> band(yy, -80, -176) * column.echo();
 			case MAGNETIC -> band(yy, -176, -272) * column.magnetic();
-			case CRYSTAL -> band(yy, -272, Integer.MIN_VALUE) * column.crystal();
+			// нижний ярус делят два биома: где выражены Заросшие глубины, кристаллы уступают им место
+			case CRYSTAL -> band(yy, -272, Integer.MIN_VALUE) * column.crystal() * (1.0 - column.jungle());
+			case JUNGLE -> band(yy, -272, Integer.MIN_VALUE) * column.jungle();
 			case NONE -> 0.0;
 		};
 	}
@@ -88,7 +98,7 @@ public final class DeepTerrain {
 		}
 		Layer best = Layer.NONE;
 		double bestWeight = 0.5;
-		for (Layer layer : new Layer[]{Layer.ECHO, Layer.MAGNETIC, Layer.CRYSTAL}) {
+		for (Layer layer : new Layer[]{Layer.ECHO, Layer.MAGNETIC, Layer.CRYSTAL, Layer.JUNGLE}) {
 			double w = weight(column, layer, y);
 			if (w > bestWeight) {
 				bestWeight = w;
@@ -127,6 +137,11 @@ public final class DeepTerrain {
 		if (wc > 0.001) {
 			d += (0.8 * k1.sample(x / 62.0, y / 44.0, z / 62.0) + detail - 0.06 - plain) * wc;
 		}
+		double wj = weight(column, Layer.JUNGLE, y);
+		if (wj > 0.001) {
+			// широкие низкие залы-болота
+			d += (0.8 * j1.sample(x / 90.0, y / 30.0, z / 90.0) + detail - 0.02 - plain) * wj;
+		}
 		double tunnel = (0.055 - Math.max(Math.abs(ta.sample(x / 48.0, y / 32.0, z / 48.0)),
 				Math.abs(tb.sample(x / 48.0, y / 32.0, z / 48.0)))) * 4.0;
 		d = Math.max(d, tunnel);
@@ -136,6 +151,16 @@ public final class DeepTerrain {
 	/** Колонна внутри зала Эхо-пустот, где стоит каменная колонна. */
 	public boolean pillar(int x, int z) {
 		return pil.sample(x / 9.0, 0.7, z / 9.0) > 0.42;
+	}
+
+	/** Колонна Заросших глубин, где от пола до свода стоит ствол древнего дерева. */
+	public boolean trunk(int x, int z) {
+		return trunks.sample(x / 6.0, 0.3, z / 6.0) > 0.5;
+	}
+
+	/** Колонна-препятствие (каменная колонна или ствол), которая не даёт пещере пройти сквозь неё. */
+	public boolean blocked(Column column, int x, int y, int z) {
+		return (weight(column, Layer.ECHO, y) > 0.5 && pillar(x, z)) || (weight(column, Layer.JUNGLE, y) > 0.5 && trunk(x, z));
 	}
 
 	/** Профиль реки в колонне: сила 0..1 (0 - не река) и высота уровня воды. */
@@ -185,8 +210,7 @@ public final class DeepTerrain {
 		if (d <= 0.0) {
 			return false;
 		}
-		Column col = column(x, z);
-		return !(weight(col, Layer.ECHO, y) > 0.5 && pillar(x, z));
+		return !blocked(column(x, z), x, y, z);
 	}
 
 	static double trilinear(double[] c, double tx, double ty, double tz) {

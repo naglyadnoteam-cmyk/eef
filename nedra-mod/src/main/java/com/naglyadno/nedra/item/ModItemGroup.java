@@ -42,7 +42,13 @@ public final class ModItemGroup {
 					entries.add(ModBlocks.UNSTABLE_STONE);
 					entries.add(ModBlocks.CURRENT_VENT);
 					entries.add(ModBlocks.DEEPMOSS);
+					entries.add(ModBlocks.DEEP_VINE);
+					entries.add(ModBlocks.DEEP_FERN);
+					entries.add(ModBlocks.GLOWCAP);
 					entries.add(ModItems.RUST_BRUTE_SPAWN_EGG);
+					entries.add(ModItems.OVERGROWN_ZOMBIE_SPAWN_EGG);
+					entries.add(ModItems.OVERGROWN_SKELETON_SPAWN_EGG);
+					entries.add(ModItems.OVERGROWN_CREEPER_SPAWN_EGG);
 				})
 				.build());
 	}

@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.naglyadno.nedra.block.ModBlocks;
 import com.naglyadno.nedra.worldgen.BiomePainter;
 import net.minecraft.block.Block;
+import com.naglyadno.nedra.worldgen.deep.DeepTerrain;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.registry.RegistryKey;
@@ -39,6 +40,11 @@ public class GiantCavernFeature extends Feature<GiantCavernFeature.Config> {
 		Config config = context.getConfig();
 
 		if (origin.getY() < world.getBottomY() + 8) {
+			return false;
+		}
+		// в Заросших глубинах каверны не вырезаются: они срезали бы опору лиан и растений
+		DeepTerrain terrain = DeepTerrain.of(world.getSeed());
+		if (terrain.weight(terrain.column(origin.getX(), origin.getZ()), DeepTerrain.Layer.JUNGLE, origin.getY()) > 0.02) {
 			return false;
 		}
 

@@ -55,6 +55,7 @@ final class WorldStats {
 		long[] air = new long[bands], lava = new long[bands], water = new long[bands], total = new long[bands];
 		Map<String, Integer> ores = new TreeMap<>();
 		Map<String, Integer> exposed = new TreeMap<>();
+		Map<String, Integer> plants = new TreeMap<>();
 		Map<String, Integer> biomes = new TreeMap<>();
 		int minSurface = Integer.MAX_VALUE, maxSurface = Integer.MIN_VALUE;
 		long surfaceSum = 0;
@@ -107,6 +108,11 @@ final class WorldStats {
 									lava[band]++;
 								} else if (state.isOf(Blocks.WATER)) {
 									water[band]++;
+								} else if (y < -260 && (state.isOf(ModBlocks.DEEP_VINE) || state.isOf(ModBlocks.DEEP_FERN)
+										|| state.isOf(ModBlocks.GLOWCAP) || state.isOf(Blocks.LILY_PAD) || state.isOf(Blocks.JUNGLE_WOOD)
+										|| state.isOf(Blocks.MOSS_BLOCK) || state.isOf(Blocks.MUD) || state.isOf(Blocks.JUNGLE_LEAVES))) {
+									// растительность Заросших глубин
+									plants.merge(Registries.BLOCK.getId(state.getBlock()).getPath(), 1, Integer::sum);
 								} else if (ORE_NAMES.computeIfAbsent(state.getBlock(), WorldStats::oreName) != null) {
 									// руда по ярусам: всего и сколько блоков видно из пещеры (касаются воздуха или воды)
 									String key = BANDS[band] + " " + ORE_NAMES.get(state.getBlock());
@@ -146,6 +152,7 @@ final class WorldStats {
 		ores.forEach((k, v) -> LOGGER.info(String.format("STATS| ore %-28s %7d / %6d   %7.1f / %6.1f", k, v,
 				exposed.getOrDefault(k, 0), v / (double) chunkCount, exposed.getOrDefault(k, 0) / (double) chunkCount)));
 		biomes.forEach((k, v) -> LOGGER.info("STATS| biome {} = {}", k, v));
+		plants.forEach((k, v) -> LOGGER.info("STATS| overgrown block below -260: {} = {}", k, v));
 		LOGGER.info("STATS| deep cave spot: {}", cave == null ? "none" : cave[0] + " " + cave[1] + " " + cave[2]);
 		return cave;
 	}

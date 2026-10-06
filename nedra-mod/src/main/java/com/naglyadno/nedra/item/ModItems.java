@@ -52,6 +52,12 @@ public final class ModItems {
 	// --- яйца призыва ---
 	public static final Item RUST_BRUTE_SPAWN_EGG = register("rust_brute_spawn_egg", SpawnEggItem::new,
 			new Item.Settings().spawnEgg(ModEntities.RUST_BRUTE));
+	public static final Item OVERGROWN_ZOMBIE_SPAWN_EGG = register("overgrown_zombie_spawn_egg", SpawnEggItem::new,
+			new Item.Settings().spawnEgg(ModEntities.OVERGROWN_ZOMBIE));
+	public static final Item OVERGROWN_SKELETON_SPAWN_EGG = register("overgrown_skeleton_spawn_egg", SpawnEggItem::new,
+			new Item.Settings().spawnEgg(ModEntities.OVERGROWN_SKELETON));
+	public static final Item OVERGROWN_CREEPER_SPAWN_EGG = register("overgrown_creeper_spawn_egg", SpawnEggItem::new,
+			new Item.Settings().spawnEgg(ModEntities.OVERGROWN_CREEPER));
 
 	private static Item register(String path, Function<Item.Settings, Item> factory, Item.Settings settings) {
 		RegistryKey<Item> key = RegistryKey.of(RegistryKeys.ITEM, Identifier.of(NedraMod.MOD_ID, path));

@@ -36,6 +36,11 @@ if (project.hasProperty("nedraClientTest")) {
 			eula = true
 		}
 	}
+	// синхронизатор пакетов тестового API ложно срабатывает на долгих сценариях (сервер "ждёт" клиента
+	// и падает); тест сам выжидает нужные тики, поэтому синхронизация не нужна
+	loom.runs.matching { it.name == "clientGameTest" }.configureEach {
+		vmArg "-Dfabric.client.gametest.disableNetworkSynchronizer=true"
+	}
 }
 
 dependencies {

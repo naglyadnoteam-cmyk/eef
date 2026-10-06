@@ -24,7 +24,7 @@ public final class DeepLocator {
 		int centerY = switch (layer) {
 			case ECHO -> -128;
 			case MAGNETIC -> -224;
-			case CRYSTAL -> -300;
+			case CRYSTAL, JUNGLE -> -300;
 			case NONE -> -100;
 		};
 		for (int ring = 0; ring <= 64; ring++) {

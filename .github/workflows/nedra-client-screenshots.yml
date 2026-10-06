@@ -29,6 +29,8 @@ jobs:
           chmod +x gradlew
 
       - name: Run client gametest (real game client under xvfb)
+        env:
+          JAVA_TOOL_OPTIONS: -Dfabric.client.gametest.disableNetworkSynchronizer=true
         run: |
           set -o pipefail
           xvfb-run -a -s "-screen 0 1600x900x24" ./gradlew runClientGameTest -PnedraClientTest --no-daemon --stacktrace 2>&1 | tee /tmp/gametest.log

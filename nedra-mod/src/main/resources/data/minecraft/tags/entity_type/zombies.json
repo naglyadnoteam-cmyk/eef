@@ -1,6 +1,7 @@
 {
 	"replace": false,
 	"values": [
-		"nedra:rust_brute"
+		"nedra:rust_brute",
+		"nedra:overgrown_zombie"
 	]
 }

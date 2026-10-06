@@ -5,6 +5,7 @@ import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.ExperienceDroppingBlock;
 import net.minecraft.block.MapColor;
+import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.block.enums.NoteBlockInstrument;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
@@ -55,6 +56,22 @@ public final class ModBlocks {
 	public static final Block LUMENITE_LAMP = registerWithItem("lumenite_lamp", Block::new,
 			AbstractBlock.Settings.create().mapColor(MapColor.DIAMOND_BLUE).strength(0.6f)
 					.luminance(state -> 15).sounds(BlockSoundGroup.AMETHYST_BLOCK));
+
+	// --- растения Заросших глубин ---
+	public static final Block DEEP_VINE = registerWithItem("deep_vine", DeepVineBlock::new,
+			AbstractBlock.Settings.create().mapColor(MapColor.DARK_GREEN).replaceable().noCollision().breakInstantly()
+					.sounds(BlockSoundGroup.CAVE_VINES).luminance(DeepVineBlock::luminance).burnable()
+					.pistonBehavior(PistonBehavior.DESTROY));
+
+	public static final Block DEEP_FERN = registerWithItem("deep_fern", DeepFernBlock::new,
+			AbstractBlock.Settings.create().mapColor(MapColor.DARK_GREEN).replaceable().noCollision().breakInstantly()
+					.sounds(BlockSoundGroup.GRASS).offset(AbstractBlock.OffsetType.XYZ).burnable()
+					.pistonBehavior(PistonBehavior.DESTROY));
+
+	public static final Block GLOWCAP = registerWithItem("glowcap", GlowcapBlock::new,
+			AbstractBlock.Settings.create().mapColor(MapColor.CYAN).noCollision().breakInstantly()
+					.sounds(BlockSoundGroup.FUNGUS).luminance(state -> 9).offset(AbstractBlock.OffsetType.XZ)
+					.pistonBehavior(PistonBehavior.DESTROY));
 
 	private static Block registerWithItem(String path, Function<AbstractBlock.Settings, Block> factory,
 			AbstractBlock.Settings settings) {

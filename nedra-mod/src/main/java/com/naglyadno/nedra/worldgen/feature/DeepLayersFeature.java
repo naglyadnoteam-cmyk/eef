@@ -89,7 +89,8 @@ public class DeepLayersFeature extends Feature<DefaultFeatureConfig> {
 		Optional<RegistryEntry.Reference<Biome>> echo = registry.getEntry(Identifier.of(NedraMod.MOD_ID, "echo_hollows"));
 		Optional<RegistryEntry.Reference<Biome>> magnetic = registry.getEntry(Identifier.of(NedraMod.MOD_ID, "magnetic_caverns"));
 		Optional<RegistryEntry.Reference<Biome>> crystal = registry.getEntry(Identifier.of(NedraMod.MOD_ID, "crystal_depths"));
-		if (echo.isEmpty() || magnetic.isEmpty() || crystal.isEmpty()) {
+		Optional<RegistryEntry.Reference<Biome>> overgrown = registry.getEntry(Identifier.of(NedraMod.MOD_ID, "overgrown_depths"));
+		if (echo.isEmpty() || magnetic.isEmpty() || crystal.isEmpty() || overgrown.isEmpty()) {
 			return;
 		}
 		long seed = world.getSeed();
@@ -114,6 +115,7 @@ public class DeepLayersFeature extends Feature<DefaultFeatureConfig> {
 				case ECHO -> echo.get();
 				case MAGNETIC -> magnetic.get();
 				case CRYSTAL -> crystal.get();
+				case JUNGLE -> overgrown.get();
 				case NONE -> current;
 			};
 		}, world.toServerWorld().getChunkManager().getNoiseConfig().getMultiNoiseSampler());

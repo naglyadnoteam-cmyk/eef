@@ -3,7 +3,6 @@ package com.naglyadno.nedra.gametest;
 import com.naglyadno.nedra.NedraMod;
 import com.naglyadno.nedra.client.ClientPressureState;
 import com.naglyadno.nedra.entity.ModEntities;
-import com.naglyadno.nedra.entity.RustBruteEntity;
 import com.naglyadno.nedra.guide.GuideBook;
 import com.naglyadno.nedra.pressure.PressureManager;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
@@ -18,6 +17,7 @@ import net.minecraft.client.option.Perspective;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -99,6 +99,28 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			shot(context, "nedra_09_rust_brute");
 			server.runCommand("kill @e[type=nedra:rust_brute]");
 			server.runCommand("kill @e[type=minecraft:zombie]");
+
+			// ---- жители Заросших глубин и их растения: мох, папоротник, светошляпка, свисающая лиана
+			server.runCommand("fill -4 -192 -5 4 -192 -1 minecraft:moss_block");
+			server.runCommand("setblock -3 -191 -4 nedra:deep_fern");
+			server.runCommand("setblock 3 -191 -4 nedra:deep_fern");
+			server.runCommand("setblock -1 -191 -5 nedra:glowcap");
+			server.runCommand("setblock 2 -191 -5 nedra:glowcap");
+			server.runCommand("setblock -2 -185 -5 nedra:deep_vine[tip=false]");
+			server.runCommand("setblock -2 -186 -5 nedra:deep_vine[tip=false]");
+			server.runCommand("setblock -2 -187 -5 nedra:deep_vine[tip=true,bloom=true]");
+			server.runCommand("setblock 3 -185 -5 nedra:deep_vine[tip=false]");
+			server.runCommand("setblock 3 -186 -5 nedra:deep_vine[tip=true,bloom=false]");
+			server.runCommand("summon nedra:overgrown_zombie -2.5 -191 -2.5 {NoAI:1b,PersistenceRequired:1b,IsBaby:0b,Rotation:[20f,0f]}");
+			server.runCommand("summon nedra:overgrown_skeleton 0.5 -191 -2.5 {NoAI:1b,PersistenceRequired:1b,Rotation:[0f,0f]}");
+			server.runCommand("summon nedra:overgrown_creeper 3.5 -191 -2.5 {NoAI:1b,PersistenceRequired:1b,Rotation:[-20f,0f]}");
+			server.runCommand("tp @a 0.5 -191 3.5 180 -4");
+			context.waitTicks(30);
+			shot(context, "nedra_16_overgrown_mobs");
+			for (String mob : new String[]{"overgrown_zombie", "overgrown_skeleton", "overgrown_creeper"}) {
+				server.runCommand("kill @e[type=nedra:" + mob + "]");
+			}
+			server.runCommand("kill @e[type=minecraft:item]");
 			server.runCommand("difficulty peaceful");
 
 			// ---- инвентарь со всеми предметами
@@ -106,7 +128,8 @@ public class NedraClientGameTest implements FabricClientGameTest {
 					"nedra:magnetite_ingot 9", "nedra:resonant_shard 3", "nedra:deepmoss_clump 20", "nedra:helmet_reinforced",
 					"nedra:helmet_deepsuit", "nedra:lumenite_lamp 8", "nedra:lumenite_ore", "nedra:magnetite_ore",
 					"nedra:echo_ore", "nedra:unstable_stone", "nedra:current_vent", "nedra:deepmoss", "minecraft:compass",
-					"nedra:rust_brute_spawn_egg 4"};
+					"nedra:rust_brute_spawn_egg 4", "nedra:deep_vine 16", "nedra:deep_fern 8", "nedra:glowcap 8",
+					"nedra:overgrown_zombie_spawn_egg", "nedra:overgrown_skeleton_spawn_egg", "nedra:overgrown_creeper_spawn_egg"};
 			for (String item : items) {
 				server.runCommand("give @a " + item);
 			}
@@ -189,11 +212,18 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			visit(context, singleplayer, echo, echo == null ? 0 : DeepLocator.bestYaw(seed, echo), 5, "nedra_11_echo_hollows");
 			visit(context, singleplayer, magnetic, magnetic == null ? 0 : DeepLocator.bestYaw(seed, magnetic), -5, "nedra_12_magnetic_caverns");
 			if (magnetic != null) {
-				wildRustBrutes(context, singleplayer);
+				wildSpawns(context, singleplayer, "nedra_15_rust_brute_wild", ModEntities.RUST_BRUTE);
 			}
 			visit(context, singleplayer, crystal, crystal == null ? 0 : DeepLocator.bestYaw(seed, crystal), 5, "nedra_13_crystal_depths");
 			BlockPos river = DeepLocator.river(seed, 1, 0, 0);
 			visit(context, singleplayer, river == null ? null : river.up(), 0, 20, "nedra_14_river");
+			BlockPos overgrown = DeepLocator.layer(seed, DeepTerrain.Layer.JUNGLE, 0, 0);
+			visit(context, singleplayer, overgrown, overgrown == null ? 0 : DeepLocator.bestYaw(seed, overgrown), 5,
+					"nedra_17_overgrown_depths");
+			if (overgrown != null) {
+				wildSpawns(context, singleplayer, "nedra_18_overgrown_wild",
+						ModEntities.OVERGROWN_ZOMBIE, ModEntities.OVERGROWN_SKELETON, ModEntities.OVERGROWN_CREEPER);
+			}
 		}
 	}
 
@@ -260,48 +290,56 @@ public class NedraClientGameTest implements FabricClientGameTest {
 	}
 
 	/**
-	 * Естественный спавн: на нормальной сложности ждём у Магнитных пещер, считаем громил в мире и
-	 * снимаем ближайшего, если он появился сам (без /summon).
+	 * Естественный спавн: на нормальной сложности ждём у биома, считаем его мобов в мире и снимаем
+	 * ближайшего, который появился сам (без /summon).
 	 */
-	private static void wildRustBrutes(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+	private static void wildSpawns(ClientGameTestContext context, TestSingleplayerContext singleplayer, String shotName,
+			EntityType<?>... types) {
 		TestServerContext server = singleplayer.getServer();
 		server.runCommand("difficulty normal");
 		for (int round = 1; round <= 3; round++) {
 			context.waitTicks(300);
-			int brutes = server.computeOnServer(s -> count(s, ModEntities.RUST_BRUTE));
+			int total = 0;
+			StringBuilder line = new StringBuilder();
+			for (EntityType<?> type : types) {
+				int n = server.computeOnServer(s -> count(s, type));
+				total += n;
+				line.append(EntityType.getId(type).getPath()).append('=').append(n).append(' ');
+			}
 			int zombies = server.computeOnServer(s -> count(s, EntityType.ZOMBIE));
-			LOGGER.info("STATS| natural spawn after {} ticks: rust_brute={} zombie={}", round * 300, brutes, zombies);
-			if (brutes > 0) {
+			LOGGER.info("STATS| natural spawn after {} ticks: {}zombie={}", round * 300, line, zombies);
+			if (total > 0) {
 				break;
 			}
 		}
-		Vec3d view = server.computeOnServer(NedraClientGameTest::viewRustBrute);
+		Vec3d view = server.computeOnServer(s -> viewMob(s, types));
 		if (view == null) {
-			LOGGER.info("STATS| natural spawn: no rust brute with an open view");
+			LOGGER.info("STATS| {}: no mob with an open view", shotName);
 			server.runCommand("difficulty peaceful");
 			return;
 		}
-		LOGGER.info("STATS| rust brute view from {}", view);
+		LOGGER.info("STATS| {} view from {}", shotName, view);
 		server.runCommand(String.format(Locale.ROOT, "tp @a %.2f %.2f %.2f facing entity @e[tag=nedra_view,limit=1] eyes",
 				view.x, view.y, view.z));
 		context.waitTicks(60);
 		singleplayer.getClientWorld().waitForChunksRender();
 		context.waitTicks(20);
-		shot(context, "nedra_15_rust_brute_wild");
+		shot(context, shotName);
+		server.runCommand("tag @e[tag=nedra_view] remove nedra_view");
 		server.runCommand("difficulty peaceful");
 	}
 
 	/**
-	 * Ищет громилу, к которому можно встать в 3-5 блоках по открытому воздуху, замораживает его (тег
-	 * nedra_view) и возвращает точку для камеры.
+	 * Ищет моба одного из типов, к которому можно встать в 3-4 блоках по открытому воздуху, замораживает
+	 * его (тег nedra_view) и возвращает точку для камеры.
 	 */
-	private static Vec3d viewRustBrute(MinecraftServer server) {
+	private static Vec3d viewMob(MinecraftServer server, EntityType<?>[] types) {
 		ServerWorld world = server.getOverworld();
 		for (Entity entity : world.iterateEntities()) {
-			if (!(entity instanceof RustBruteEntity brute)) {
+			if (!(entity instanceof MobEntity mob) || !java.util.Arrays.asList(types).contains(entity.getType())) {
 				continue;
 			}
-			BlockPos base = brute.getBlockPos();
+			BlockPos base = mob.getBlockPos();
 			for (int r = 4; r >= 3; r--) {
 				for (int i = 0; i < 8; i++) {
 					double angle = Math.toRadians(i * 45.0);
@@ -314,9 +352,9 @@ public class NedraClientGameTest implements FabricClientGameTest {
 					}
 					BlockPos feet = base.add(dx, 0, dz);
 					if (open && !world.getBlockState(feet.down()).isAir()) {
-						brute.setAiDisabled(true);
-						brute.setPersistent();
-						brute.addCommandTag("nedra_view");
+						mob.setAiDisabled(true);
+						mob.setPersistent();
+						mob.addCommandTag("nedra_view");
 						return new Vec3d(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5);
 					}
 				}

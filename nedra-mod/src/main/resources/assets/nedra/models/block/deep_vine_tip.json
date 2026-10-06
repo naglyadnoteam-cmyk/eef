@@ -1,0 +1,6 @@
+{
+	"parent": "minecraft:block/cross",
+	"textures": {
+		"cross": "nedra:block/deep_vine_tip"
+	}
+}

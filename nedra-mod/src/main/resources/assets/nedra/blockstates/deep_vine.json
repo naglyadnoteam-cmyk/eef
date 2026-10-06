@@ -1,0 +1,16 @@
+{
+	"variants": {
+		"bloom=false,tip=false": {
+			"model": "nedra:block/deep_vine"
+		},
+		"bloom=true,tip=false": {
+			"model": "nedra:block/deep_vine"
+		},
+		"bloom=false,tip=true": {
+			"model": "nedra:block/deep_vine_tip"
+		},
+		"bloom=true,tip=true": {
+			"model": "nedra:block/deep_vine_tip_bloom"
+		}
+	}
+}

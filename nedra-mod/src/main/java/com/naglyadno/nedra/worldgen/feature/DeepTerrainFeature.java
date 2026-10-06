@@ -2,6 +2,7 @@ package com.naglyadno.nedra.worldgen.feature;
 
 import com.mojang.serialization.Codec;
 import com.naglyadno.nedra.NedraMod;
+import com.naglyadno.nedra.block.DeepVineBlock;
 import com.naglyadno.nedra.block.ModBlocks;
 import com.naglyadno.nedra.worldgen.deep.DeepTerrain;
 import com.naglyadno.nedra.worldgen.deep.DeepTerrain.Column;
@@ -17,6 +18,7 @@ import net.minecraft.block.entity.LootableContainerBlockEntity;
 import net.minecraft.loot.LootTable;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -41,7 +43,7 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 	private static final RegistryKey<LootTable> LOOT = RegistryKey.of(RegistryKeys.LOOT_TABLE,
 			Identifier.of(NedraMod.MOD_ID, "chests/abandoned_settlement"));
 
-	private static final int KEEP = 0, AIR = 1, WATER = 2, SOLID = 3;
+	private static final int KEEP = 0, AIR = 1, WATER = 2, SOLID = 3, TRUNK = 4;
 	private static final int Y0 = DeepTerrain.FLOOR + 1;
 	private static final int H = DeepTerrain.TOP - Y0;
 	private static final int W = 18;
@@ -49,6 +51,7 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 	private static final BlockState CAVE_AIR = Blocks.CAVE_AIR.getDefaultState();
 	private static final BlockState WATER_STATE = Blocks.WATER.getDefaultState();
 	private static final BlockState DEEPSLATE = Blocks.DEEPSLATE.getDefaultState();
+	private static final BlockState TRUNK_WOOD = Blocks.JUNGLE_WOOD.getDefaultState();
 
 	public DeepTerrainFeature(Codec<DefaultFeatureConfig> codec) {
 		super(codec);
@@ -116,6 +119,7 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 				int z = bz + lz;
 				Column column = columns[(lx + 1) * W + (lz + 1)];
 				boolean pillar = terrain.pillar(x, z);
+				boolean trunk = terrain.trunk(x, z);
 				Site hall = null;
 				boolean nearSite = false;
 				for (Site site : sites) {
@@ -159,9 +163,15 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 						c[5] = corners[ix + 1][iz + 1][iy];
 						c[6] = corners[ix][iz + 1][iy + 1];
 						c[7] = corners[ix + 1][iz + 1][iy + 1];
-						if (trilinear(c, tx, ty, tz) > 0.0
-								&& !(pillar && terrain.weight(column, Layer.ECHO, y) > 0.5)) {
-							code = y < DeepTerrain.LAKE_LEVEL && terrain.weight(column, Layer.CRYSTAL, y) > 0.4 ? WATER : AIR;
+						if (trilinear(c, tx, ty, tz) > 0.0 && !(pillar && terrain.weight(column, Layer.ECHO, y) > 0.5)) {
+							if (trunk && terrain.weight(column, Layer.JUNGLE, y) > 0.5) {
+								code = TRUNK;
+							} else if (y < DeepTerrain.LAKE_LEVEL && terrain.weight(column, Layer.CRYSTAL, y) > 0.4
+									|| y < DeepTerrain.SWAMP_LEVEL && terrain.weight(column, Layer.JUNGLE, y) > 0.4) {
+								code = WATER;
+							} else {
+								code = AIR;
+							}
 						}
 					}
 					codes[index(lx, lz, y)] = (byte) code;
@@ -218,6 +228,8 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 						section.setBlockState(lx, y & 15, lz, WATER_STATE);
 					} else if (code == SOLID && (current.isAir() || !current.getFluidState().isEmpty())) {
 						section.setBlockState(lx, y & 15, lz, DEEPSLATE);
+					} else if (code == TRUNK) {
+						section.setBlockState(lx, y & 15, lz, TRUNK_WOOD);
 					}
 				}
 			}
@@ -263,6 +275,11 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 				Column column = columns[(lx + 1) * W + (lz + 1)];
 				for (int y = Y0 + 1; y < DeepTerrain.TOP - 1; y++) {
 					if (open(chunk, codes, lx, lz, y)) {
+						// кувшинки на поверхности болот Заросших глубин
+						if (codes[index(lx, lz, y)] == WATER && codes[index(lx, lz, y + 1)] == AIR
+								&& terrain.dominant(column, y) == Layer.JUNGLE && DeepTerrain.hash01(seed, x, y, z, 33) < 0.07) {
+							placeIfAir(chunk, codes, lx, lz, y + 1, Blocks.LILY_PAD.getDefaultState());
+						}
 						continue;
 					}
 					ChunkSection section = section(chunk, y);
@@ -283,7 +300,9 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 					Layer layer = terrain.dominant(column, y);
 					double r = DeepTerrain.hash01(seed, x, y, z, 31);
 					double r2 = DeepTerrain.hash01(seed, x, y, z, 32);
-					BlockState skin = floor ? floorBlock(layer, r) : ceiling ? ceilingBlock(layer, r) : wallBlock(layer, r);
+					boolean underwater = floor && codes[index(lx, lz, y + 1)] == WATER;
+					BlockState skin = floor ? (underwater ? underwaterFloor(layer, r) : floorBlock(layer, r))
+							: ceiling ? ceilingBlock(layer, r) : wallBlock(layer, r);
 					BlockState vein = caveVein(seed, layer, x, y, z);
 					if (vein != null) {
 						skin = vein;
@@ -291,9 +310,16 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 					if (skin != null) {
 						section.setBlockState(lx, y & 15, lz, skin);
 					}
-					if (floor && !inSite) {
+					if (underwater) {
+						if (layer == Layer.JUNGLE && r2 < 0.22) {
+							placeInWater(chunk, codes, lx, lz, y + 1, Blocks.SEAGRASS.getDefaultState());
+						}
+					} else if (floor && !inSite) {
 						BlockState above = floorDecoration(layer, skin, r2);
 						placeIfAir(chunk, codes, lx, lz, y + 1, above);
+					} else if (ceiling && layer == Layer.JUNGLE && r2 < 0.13) {
+						hangVine(chunk, codes, lx, lz, y - 1, 2 + (int) (DeepTerrain.hash01(seed, x, y, z, 34) * 7),
+								DeepTerrain.hash01(seed, x, y, z, 35) < 0.04);
 					} else if (ceiling) {
 						BlockState below = ceilingDecoration(layer, skin, r2);
 						placeIfAir(chunk, codes, lx, lz, y - 1, below);
@@ -324,6 +350,9 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 	private static final VeinOre[] VEINS_CRYSTAL = {
 			vein(Blocks.DEEPSLATE_DIAMOND_ORE, 18, 1.7), vein(Blocks.DEEPSLATE_LAPIS_ORE, 25, 2.4), vein(Blocks.DEEPSLATE_REDSTONE_ORE, 20, 2.6),
 			vein(Blocks.DEEPSLATE_GOLD_ORE, 15, 2.4), vein(Blocks.DEEPSLATE_EMERALD_ORE, 8, 1.6), vein(Blocks.DEEPSLATE_IRON_ORE, 14, 2.8)};
+	private static final VeinOre[] VEINS_JUNGLE = {
+			vein(Blocks.DEEPSLATE_EMERALD_ORE, 14, 1.8), vein(Blocks.DEEPSLATE_GOLD_ORE, 20, 2.4), vein(Blocks.DEEPSLATE_COPPER_ORE, 25, 3.0),
+			vein(Blocks.DEEPSLATE_LAPIS_ORE, 18, 2.2), vein(Blocks.DEEPSLATE_DIAMOND_ORE, 10, 1.6), vein(Blocks.DEEPSLATE_IRON_ORE, 13, 2.8)};
 	/** Богатые жилы - только неценные руды: целая стена угля, железа или меди. */
 	private static final VeinOre[] VEINS_RICH = {
 			vein(Blocks.DEEPSLATE_COAL_ORE, 35, 4.8), vein(Blocks.DEEPSLATE_IRON_ORE, 35, 4.4), vein(Blocks.DEEPSLATE_COPPER_ORE, 25, 4.6),
@@ -350,6 +379,7 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 			case ECHO -> VEINS_ECHO;
 			case MAGNETIC -> VEINS_MAGNETIC;
 			case CRYSTAL -> VEINS_CRYSTAL;
+			case JUNGLE -> VEINS_JUNGLE;
 			case NONE -> VEINS_NONE;
 		};
 		int total = 0;
@@ -385,6 +415,42 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 		}
 	}
 
+	private static void placeInWater(Chunk chunk, byte[] codes, int lx, int lz, int y, BlockState state) {
+		if (y < Y0 || y >= DeepTerrain.TOP || codes[index(lx, lz, y)] != WATER) {
+			return;
+		}
+		ChunkSection section = section(chunk, y);
+		if (section.getBlockState(lx, y & 15, lz).isOf(Blocks.WATER)) {
+			section.setBlockState(lx, y & 15, lz, state);
+		}
+	}
+
+	/** Свисающая лиана: цепочка блоков вниз, пока есть воздух; нижний блок - кончик (иногда со спорой). */
+	private static void hangVine(Chunk chunk, byte[] codes, int lx, int lz, int top, int length, boolean bloom) {
+		BlockState body = ModBlocks.DEEP_VINE.getDefaultState().with(DeepVineBlock.TIP, false);
+		int placed = 0;
+		int y = top;
+		while (placed < length && y >= Y0 && y < DeepTerrain.TOP && codes[index(lx, lz, y)] != WATER
+				&& section(chunk, y).getBlockState(lx, y & 15, lz).isAir()) {
+			section(chunk, y).setBlockState(lx, y & 15, lz, body);
+			placed++;
+			y--;
+		}
+		if (placed > 0) {
+			int tipY = y + 1;
+			section(chunk, tipY).setBlockState(lx, tipY & 15, lz, ModBlocks.DEEP_VINE.getDefaultState()
+					.with(DeepVineBlock.TIP, true).with(DeepVineBlock.BLOOM, bloom));
+		}
+	}
+
+	private static BlockState underwaterFloor(Layer layer, double r) {
+		if (layer == Layer.JUNGLE) {
+			// дно болота: грязь и глина (на глине появляются аксолотли)
+			return r < 0.55 ? Blocks.MUD.getDefaultState() : r < 0.85 ? Blocks.CLAY.getDefaultState() : null;
+		}
+		return floorBlock(layer, r);
+	}
+
 	private static BlockState floorBlock(Layer layer, double r) {
 		return switch (layer) {
 			case ECHO -> r < 0.45 ? Blocks.TUFF.getDefaultState() : r < 0.55 ? Blocks.GRAVEL.getDefaultState()
@@ -393,6 +459,8 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 					: r < 0.50 ? ModBlocks.MAGNETITE_ORE.getDefaultState() : r < 0.503 ? Blocks.RAW_IRON_BLOCK.getDefaultState() : null;
 			case CRYSTAL -> r < 0.35 ? Blocks.CALCITE.getDefaultState() : r < 0.52 ? Blocks.AMETHYST_BLOCK.getDefaultState()
 					: r < 0.54 ? Blocks.BUDDING_AMETHYST.getDefaultState() : r < 0.57 ? ModBlocks.LUMENITE_ORE.getDefaultState() : null;
+			case JUNGLE -> r < 0.46 ? Blocks.MOSS_BLOCK.getDefaultState() : r < 0.72 ? Blocks.MUD.getDefaultState()
+					: r < 0.82 ? Blocks.ROOTED_DIRT.getDefaultState() : r < 0.86 ? Blocks.MUDDY_MANGROVE_ROOTS.getDefaultState() : null;
 			case NONE -> r < 0.22 ? Blocks.COBBLED_DEEPSLATE.getDefaultState() : r < 0.27 ? Blocks.GRAVEL.getDefaultState() : null;
 		};
 	}
@@ -403,6 +471,7 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 			case MAGNETIC -> r < 0.40 ? Blocks.BASALT.getDefaultState() : r < 0.43 ? ModBlocks.MAGNETITE_ORE.getDefaultState() : null;
 			case CRYSTAL -> r < 0.32 ? Blocks.AMETHYST_BLOCK.getDefaultState() : r < 0.37 ? ModBlocks.LUMENITE_ORE.getDefaultState()
 					: r < 0.50 ? Blocks.CALCITE.getDefaultState() : null;
+			case JUNGLE -> r < 0.40 ? Blocks.MOSS_BLOCK.getDefaultState() : r < 0.55 ? Blocks.ROOTED_DIRT.getDefaultState() : null;
 			case NONE -> null;
 		};
 	}
@@ -413,11 +482,29 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 			case MAGNETIC -> r < 0.30 ? Blocks.SMOOTH_BASALT.getDefaultState() : r < 0.34 ? ModBlocks.MAGNETITE_ORE.getDefaultState() : null;
 			case CRYSTAL -> r < 0.30 ? Blocks.CALCITE.getDefaultState() : r < 0.42 ? Blocks.AMETHYST_BLOCK.getDefaultState()
 					: r < 0.45 ? ModBlocks.LUMENITE_ORE.getDefaultState() : null;
+			case JUNGLE -> r < 0.50 ? Blocks.MOSS_BLOCK.getDefaultState() : r < 0.58 ? Blocks.MUD.getDefaultState() : null;
 			case NONE -> null;
 		};
 	}
 
 	private static BlockState floorDecoration(Layer layer, BlockState floor, double r) {
+		if (layer == Layer.JUNGLE) {
+			// папоротник и трава - только на земле (мох, грязь, корневая земля); грибы и ковёр мха - на чём угодно
+			boolean soil = floor != null && floor.isIn(BlockTags.DIRT);
+			if (r < 0.26 && soil) {
+				return ModBlocks.DEEP_FERN.getDefaultState();
+			}
+			if (r < 0.34 && soil) {
+				return Blocks.SHORT_GRASS.getDefaultState();
+			}
+			if (r < 0.344) {
+				return ModBlocks.GLOWCAP.getDefaultState();
+			}
+			if (r < 0.46) {
+				return Blocks.MOSS_CARPET.getDefaultState();
+			}
+			return null;
+		}
 		if (layer == Layer.CRYSTAL && floor != null && floor.isOf(Blocks.AMETHYST_BLOCK) && r < 0.18) {
 			return Blocks.AMETHYST_CLUSTER.getDefaultState().withIfExists(Properties.FACING, Direction.UP);
 		}
@@ -428,6 +515,16 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 	}
 
 	private static BlockState ceilingDecoration(Layer layer, BlockState ceiling, double r) {
+		if (layer == Layer.JUNGLE) {
+			// лианы развешаны отдельно (hangVine); здесь - корни под корневой землёй и комья листвы
+			if (ceiling != null && ceiling.isOf(Blocks.ROOTED_DIRT) && r < 0.5) {
+				return Blocks.HANGING_ROOTS.getDefaultState();
+			}
+			if (r < 0.18) {
+				return Blocks.JUNGLE_LEAVES.getDefaultState().withIfExists(Properties.PERSISTENT, true);
+			}
+			return null;
+		}
 		if (layer == Layer.CRYSTAL && ceiling != null && ceiling.isOf(Blocks.AMETHYST_BLOCK) && r < 0.14) {
 			return Blocks.AMETHYST_CLUSTER.getDefaultState().withIfExists(Properties.FACING, Direction.DOWN);
 		}
