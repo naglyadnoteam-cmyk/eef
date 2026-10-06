@@ -99,6 +99,9 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			shot(context, "nedra_09_rust_brute");
 			server.runCommand("kill @e[type=nedra:rust_brute]");
 			server.runCommand("kill @e[type=minecraft:zombie]");
+			// выпавшие из них предметы и облачка частиц не должны попасть на следующий снимок
+			server.runCommand("kill @e[type=minecraft:item]");
+			context.waitTicks(60);
 
 			// ---- жители Заросших глубин и их растения: мох, папоротник, светошляпка, свисающая лиана
 			server.runCommand("fill -4 -192 -5 4 -192 -1 minecraft:moss_block");
