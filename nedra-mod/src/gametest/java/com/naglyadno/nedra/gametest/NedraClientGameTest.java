@@ -234,7 +234,8 @@ public class NedraClientGameTest implements FabricClientGameTest {
 	private static void pressureCheck(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
 		TestServerContext server = singleplayer.getServer();
 		server.runCommand("item replace entity @a armor.head with minecraft:air");
-		int[] heights = {40, 0, -10, -36, -64, -107, -150, -195, -230, -265, -300, -325, -350};
+		// плоский мир заканчивается землёй на Y -349, поэтому самая нижняя точка - -347 (в воздухе, не в блоке)
+		int[] heights = {40, 0, -10, -36, -64, -107, -150, -195, -230, -265, -300, -325, -347};
 		for (int y : heights) {
 			pressureAt(context, server, y, "no helmet");
 		}
@@ -249,7 +250,7 @@ public class NedraClientGameTest implements FabricClientGameTest {
 		server.runCommand("gamemode survival @a");
 
 		// урон на дне без защиты: должен идти, но никогда не опускать здоровье ниже 1
-		pressureAt(context, server, -350, "damage test");
+		pressureAt(context, server, -347, "damage test");
 		server.runCommand("effect clear @a minecraft:resistance");
 		server.runCommand("effect clear @a minecraft:saturation");
 		// в мирной сложности и на сытый желудок здоровье восстанавливается само - на время проверки отключаем
@@ -269,6 +270,13 @@ public class NedraClientGameTest implements FabricClientGameTest {
 		server.runCommand("effect give @a minecraft:instant_health 1 10 true");
 		server.runCommand("difficulty peaceful");
 		context.waitTicks(10);
+		// страховка: если игрок всё же погиб, возрождаем его, чтобы экран смерти не попал на снимки
+		context.runOnClient(client -> {
+			if (client.player != null && client.player.isDead()) {
+				client.player.requestRespawn();
+			}
+		});
+		context.waitTicks(20);
 	}
 
 	private static void pressureAt(ClientGameTestContext context, TestServerContext server, int y, String label) {
