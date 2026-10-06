@@ -1,15 +1,12 @@
 package com.naglyadno.nedra.entity;
 
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.mob.AbstractSkeletonEntity;
+import net.minecraft.entity.mob.SkeletonEntity;
 import net.minecraft.entity.projectile.ArrowEntity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.world.World;
 import org.jspecify.annotations.Nullable;
 
@@ -17,30 +14,15 @@ import org.jspecify.annotations.Nullable;
  * Заросший скелет: кости обвиты лианами. Его стрелы опутывают - замедление на 3 секунды. Как и все
  * жители недр, не горит на солнце; в отличие от обычного скелета не превращается в зимогора.
  */
-public class OvergrownSkeletonEntity extends AbstractSkeletonEntity {
+public class OvergrownSkeletonEntity extends SkeletonEntity {
 
 	public OvergrownSkeletonEntity(EntityType<? extends OvergrownSkeletonEntity> entityType, World world) {
 		super(entityType, world);
 	}
 
+	/** Обычный скелет в рыхлом снегу начинает превращаться в зимогора; заросший - нет. */
 	@Override
-	protected SoundEvent getAmbientSound() {
-		return SoundEvents.ENTITY_SKELETON_AMBIENT;
-	}
-
-	@Override
-	protected SoundEvent getHurtSound(DamageSource source) {
-		return SoundEvents.ENTITY_SKELETON_HURT;
-	}
-
-	@Override
-	protected SoundEvent getDeathSound() {
-		return SoundEvents.ENTITY_SKELETON_DEATH;
-	}
-
-	@Override
-	protected SoundEvent getStepSound() {
-		return SoundEvents.ENTITY_SKELETON_STEP;
+	public void setConversionTime(int time) {
 	}
 
 	@Override
