@@ -55,46 +55,48 @@ jobs:
           g() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- $f :: $2"; [ -n "$f" ] && grep -n -E "$2" "$f" | head -${3:-25}; }
           full() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- FULL $f"; [ -n "$f" ] && sed -n "1,${2:-200}p" "$f"; }
           ctx() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- CTX $f :: $2"; [ -n "$f" ] && grep -n -A ${3:-8} -E "$2" "$f" | head -${4:-60}; }
-          sec HUSK; full net/minecraft/entity/mob/HuskEntity.java 140
-          sec ZOMBIE_SIGS; g net/minecraft/entity/mob/ZombieEntity.java "^\s*(public|protected|private)[^=]*\(" 120
-          ctx net/minecraft/entity/mob/ZombieEntity.java "public static DefaultAttributeContainer.Builder createZombieAttributes" 10 14
-          ctx net/minecraft/entity/mob/ZombieEntity.java "public EntityData initialize" 40 50
-          ctx net/minecraft/entity/mob/ZombieEntity.java "protected void initGoals|protected void initCustomGoals" 14 32
-          sec ETYPE; ctx net/minecraft/entity/EntityType.java "public static final EntityType<HuskEntity> HUSK" 10 12
-          ctx net/minecraft/entity/EntityType.java "private static <T extends Entity> EntityType<T> register\(" 6 30
-          g net/minecraft/entity/EntityType.java "public EntityType.Builder<T> [a-zA-Z]+\(|public Builder<T> [a-zA-Z]+\(|public EntityType<T> build|public static <T extends Entity> EntityType.Builder<T> create" 40
-          sec SPAWNRESTR; g net/minecraft/entity/SpawnRestriction.java "HUSK|public static <T extends|SpawnLocation|interface SpawnPredicate|public static boolean" 20
-          g net/minecraft/entity/mob/HostileEntity.java "public static boolean" 10
-          g net/minecraft/entity/SpawnLocationTypes.java "public static final" 10
-          sec ATTRS; g net/minecraft/entity/attribute/DefaultAttributeRegistry.java "HUSK|ZOMBIE" 6
-          g net/minecraft/entity/attribute/EntityAttributes.java "public static final RegistryEntry<EntityAttribute> [A-Z_]+" 60
-          g net/minecraft/entity/attribute/DefaultAttributeContainer.java "public DefaultAttributeContainer.Builder add|public Builder add" 6
-          sec ITEMS_EGG; g net/minecraft/item/Items.java "HUSK_SPAWN_EGG|ZOMBIE_SPAWN_EGG" 4
-          ctx net/minecraft/item/Items.java "HUSK_SPAWN_EGG =" 3 4
-          full net/minecraft/item/SpawnEggItem.java 70 | grep -n -E "public|SpawnEggItem\("
-          g net/minecraft/item/Item.java "spawnEgg|public Item.Settings [a-zA-Z]+\(" 60
-          sec LIVING; g net/minecraft/entity/LivingEntity.java "protected float getSoundPitch|public float getSoundPitch|getScale\(\)|getSoundVolume" 8
-          g net/minecraft/entity/mob/MobEntity.java "protected void initGoals|getAmbientSound|public static DefaultAttributeContainer.Builder createMobAttributes|isAffectedByDaylight" 10
-          g net/minecraft/world/World.java "addParticleClient|public void addParticle" 6
-          g net/minecraft/entity/Entity.java "public World getEntityWorld|public final World getWorld|public World getWorld" 4
-          sec CLIENT_RENDER; full net/minecraft/client/render/entity/HuskEntityRenderer.java 80
-          full net/minecraft/client/render/entity/ZombieEntityRenderer.java 80
-          full net/minecraft/client/render/entity/ZombieBaseEntityRenderer.java 120
-          full net/minecraft/client/render/entity/state/ZombieEntityRenderState.java 40
-          g net/minecraft/client/render/entity/EntityRendererFactories.java "HUSK|ZOMBIE,|public static <T extends Entity> void register|private static <T extends Entity> void register" 8
-          g net/minecraft/client/render/entity/EntityRenderers.java "HUSK|register\(" 8
-          g net/minecraft/client/render/entity/model/EntityModelLayers.java "HUSK|ZOMBIE =" 10
-          sec FABRIC_ATTR_JAVAP; echo
+          sec PLANT; full net/minecraft/block/PlantBlock.java 80
+          full net/minecraft/block/ShortPlantBlock.java 80
+          full net/minecraft/block/HangingRootsBlock.java 120
+          full net/minecraft/block/MushroomPlantBlock.java 50 | grep -n -E "class|public|protected|MapCodec"
+          sec ABSTRACT_BLOCK; g net/minecraft/block/AbstractBlock.java "protected (BlockState|boolean|VoxelShape|void|MapCodec|FluidState) (getStateForNeighborUpdate|canPlaceAt|getOutlineShape|getCollisionShape|randomDisplayTick|getFluidState|getCodec|onEntityCollision|scheduledTick)\(" 20
+          ctx net/minecraft/block/AbstractBlock.java "protected BlockState getStateForNeighborUpdate\(" 12 16
+          g net/minecraft/block/AbstractBlock.java "public AbstractBlock.Settings (noCollision|breakInstantly|replaceable|offset|pistonBehavior|nonOpaque|ticksRandomly|dynamicBounds|burnable|solid|notSolid|velocityMultiplier|jumpVelocityMultiplier)\(" 20
+          g net/minecraft/block/Block.java "public BlockState getPlacementState|protected void appendProperties|createCodec|protected static <B extends Block> RecordCodecBuilder" 10
+          sec BLOCKS; ctx net/minecraft/block/Blocks.java "HANGING_ROOTS = register" 14 16
+          ctx net/minecraft/block/Blocks.java "public static final Block FERN = register" 10 12
+          ctx net/minecraft/block/Blocks.java "public static final Block MOSS_CARPET = register" 6 8
+          ctx net/minecraft/block/Blocks.java "public static final Block BROWN_MUSHROOM = register" 12 14
+          sec RENDER_LAYERS; grep -rn "HANGING_ROOTS" /tmp/src/net/minecraft/client --include=*.java | head -5
+          f=$(grep -rl "Blocks.HANGING_ROOTS" /tmp/src/net/minecraft/client | head -1); echo "LAYER FILE $f"; [ -n "$f" ] && grep -n -E "public static|private static final|BLOCKS.put\(Blocks.HANGING_ROOTS|class " "$f" | head -20
+          sec SKELETON_RENDER; full net/minecraft/client/render/entity/BoggedEntityRenderer.java 80
+          full net/minecraft/client/render/entity/SkeletonEntityRenderer.java 60
+          full net/minecraft/client/render/entity/AbstractSkeletonEntityRenderer.java 80
+          full net/minecraft/client/render/entity/state/SkeletonEntityRenderState.java 40
+          sec CREEPER_RENDER; full net/minecraft/client/render/entity/CreeperEntityRenderer.java 80
+          full net/minecraft/client/render/entity/state/CreeperEntityRenderState.java 30
+          sec ENTITIES; full net/minecraft/entity/mob/BoggedEntity.java 200
+          g net/minecraft/entity/mob/SkeletonEntity.java "^\s*(public|protected|private)[^=]*\(" 40
+          g net/minecraft/entity/mob/AbstractSkeletonEntity.java "^\s*(public|protected|private)[^=]*\(" 60
+          g net/minecraft/entity/mob/CreeperEntity.java "^\s*(public|protected|private)[^=]*\(" 60
+          ctx net/minecraft/entity/mob/CreeperEntity.java "private void explode\(" 20 24
+          sec ETYPE; ctx net/minecraft/entity/EntityType.java "public static final EntityType<BoggedEntity> BOGGED" 9 10
+          ctx net/minecraft/entity/EntityType.java "public static final EntityType<CreeperEntity> CREEPER" 9 10
+          ctx net/minecraft/entity/EntityType.java "public static final EntityType<SkeletonEntity> SKELETON" 9 10
+          g net/minecraft/entity/SpawnRestriction.java "SKELETON|CREEPER|BOGGED|ZOMBIE," 8
+          g net/minecraft/entity/attribute/DefaultAttributeRegistry.java "BOGGED|CREEPER|SKELETON," 6
+          g net/minecraft/entity/mob/AbstractSkeletonEntity.java "createAbstractSkeletonAttributes|public static" 4
+          g net/minecraft/entity/mob/CreeperEntity.java "createCreeperAttributes|public static" 4
+          sec DONE; echo DONE
+
       - name: Fabric javap
         run: |
           set +e
           jp() { jar=$(find /home/runner/.gradle/caches/modules-2 -ipath "*$1*" -iname "*.jar" | grep -v sources | head -1); echo "--- javap $2 from $jar"; javap -p -classpath "$jar" "$2" 2>&1 | head -60; }
-          lst() { jar=$(find /home/runner/.gradle/caches/modules-2 -ipath "*$1*" -iname "*.jar" | grep -v sources | head -1); echo "--- classes in $jar matching $2"; unzip -l "$jar" | grep -E "$2" | awk '{print $NF}' | head -40; }
-          lst fabric-object-builder-api-v1 "api/.*\.class"
-          jp fabric-object-builder-api-v1 net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry
-          lst fabric-rendering-v1 "Entity.*Renderer|EntityModelLayer"
-          jp fabric-rendering-v1 net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry
-          jp fabric-biome-api-v1 net.fabricmc.fabric.api.biome.v1.BiomeModificationContext\$SpawnSettingsContext
+          lst() { for jar in $(find /home/runner/.gradle/caches/modules-2 -iname "fabric-*.jar" | grep -v sources); do unzip -l "$jar" | grep -E "$1" | awk -v j="$jar" '{print $NF " <- " j}'; done | head -20; }
+          lst "RenderLayerMap"
+          jp fabric-rendering-v1 net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap
+          jp fabric-blockrenderlayer-v1 net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap
           echo DONE
       - name: Vanilla references
         run: |
@@ -109,16 +111,17 @@ jobs:
           curl -sSL -o client.jar "$CLIENT_URL"
           java -DbundlerMainClass=net.minecraft.data.Main -jar server.jar --server --output /tmp/vanilla/datagen > /dev/null 2>&1
           D=/tmp/vanilla/datagen/data/minecraft
-          for f in loot_table/entities/husk.json tags/entity_type/zombies.json tags/entity_type/undead.json tags/entity_type/sensitive_to_smite.json; do
-            echo ""; echo "######## DATA $f"; cat "$D/$f" 2>&1 | head -80
+          for f in worldgen/biome/lush_caves.json worldgen/biome/mangrove_swamp.json loot_table/entities/skeleton.json loot_table/entities/creeper.json loot_table/entities/bogged.json \
+                   tags/block/climbable.json tags/entity_type/skeletons.json tags/block/big_dripleaf_placeable.json tags/block/mineable/hoe.json tags/block/sword_efficient.json \
+                   tags/block/replaceable_by_trees.json tags/block/dirt.json tags/block/moss_replaceable.json tags/block/replaceable.json loot_table/blocks/hanging_roots.json loot_table/blocks/fern.json; do
+            echo ""; echo "######## DATA $f"; cat "$D/$f" 2>&1 | head -120
           done
-          ls $D/tags/entity_type | head -100
           mkdir -p cl && cd cl && unzip -oq ../client.jar 'assets/*' && cd ..
           A=/tmp/vanilla/cl/assets/minecraft
-          echo "######## items/husk_spawn_egg.json"; cat $A/items/husk_spawn_egg.json
-          echo "######## models/item/husk_spawn_egg.json"; cat $A/models/item/husk_spawn_egg.json
-          ls $A/textures/entity/zombie
-          for t in textures/entity/zombie/zombie.png textures/entity/zombie/husk.png textures/item/husk_spawn_egg.png textures/item/zombie_spawn_egg.png; do
+          for f in blockstates/hanging_roots.json models/block/hanging_roots.json blockstates/brown_mushroom.json models/block/brown_mushroom.json models/block/cross.json models/block/tinted_cross.json items/hanging_roots.json items/brown_mushroom.json items/fern.json blockstates/cave_vines.json models/block/cave_vines_lit.json items/skeleton_spawn_egg.json; do
+            echo ""; echo "######## ASSET $f"; cat "$A/$f" 2>&1 | head -60
+          done
+          for t in textures/entity/skeleton/skeleton.png textures/entity/skeleton/bogged.png textures/entity/creeper/creeper.png textures/entity/zombie/zombie.png textures/block/hanging_roots.png textures/block/cave_vines.png textures/block/cave_vines_plant.png textures/block/cave_vines_lit.png textures/block/fern.png textures/block/moss_block.png textures/block/mud.png textures/block/brown_mushroom.png textures/block/jungle_leaves.png textures/block/vine.png textures/item/creeper_spawn_egg.png textures/item/skeleton_spawn_egg.png; do
             echo "B64 $t $(base64 -w0 "$A/$t")"
           done
           echo DONE
