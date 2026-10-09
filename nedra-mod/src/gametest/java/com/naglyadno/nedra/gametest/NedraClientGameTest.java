@@ -142,10 +142,13 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			server.runCommand("setblock 3 -190 -5 nedra:scarlet_cluster[facing=up]");
 			server.runCommand("summon nedra:prism_gale 0.5 -191 -2.0 {NoAI:1b,PersistenceRequired:1b,Rotation:[0f,0f]}");
 			server.runCommand("tp @a 2.5 -191 2.0 150 -4");
+			// при слабом свете Minecraft красит всё в тёплый оранжевый - для честных цветов даём ночное зрение
+			server.runCommand("effect give @a minecraft:night_vision 30 0 true");
 			context.waitTicks(40);
 			int showroomGales = server.computeOnServer(s -> count(s, ModEntities.PRISM_GALE));
 			LOGGER.info("STATS| showroom prism gales: {}", showroomGales);
 			shot(context, "nedra_19_prism_gale");
+			server.runCommand("effect clear @a minecraft:night_vision");
 			server.runCommand("kill @e[type=nedra:prism_gale]");
 			server.runCommand("kill @e[type=minecraft:item]");
 			server.runCommand("difficulty peaceful");
@@ -314,7 +317,12 @@ public class NedraClientGameTest implements FabricClientGameTest {
 		server.runCommand("difficulty easy");
 		// с края Сердца, между колоннами, на центральный кристалл
 		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 110 -12", cx + 8, y0, cz + 3));
-		context.waitTicks(120);
+		// стражи замирают для снимка, иначе их заряды ветра отбрасывают камеру
+		for (int i = 0; i < 15; i++) {
+			context.waitTicks(10);
+			server.runCommand("execute as @e[type=nedra:prism_gale] run data merge entity @s {NoAI:1b}");
+		}
+		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 110 -12", cx + 8, y0, cz + 3));
 		singleplayer.getClientWorld().waitForChunksRender();
 		context.waitTicks(30);
 		shot(context, "nedra_23_citadel_heart");
