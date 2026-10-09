@@ -4,6 +4,9 @@ import com.naglyadno.nedra.NedraMod;
 import com.naglyadno.nedra.client.ClientPressureState;
 import com.naglyadno.nedra.entity.ModEntities;
 import com.naglyadno.nedra.guide.GuideBook;
+import com.naglyadno.nedra.block.ModBlocks;
+import com.naglyadno.nedra.worldgen.deep.Citadels;
+import net.minecraft.block.Blocks;
 import com.naglyadno.nedra.pressure.PressureManager;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -124,6 +127,21 @@ public class NedraClientGameTest implements FabricClientGameTest {
 				server.runCommand("kill @e[type=nedra:" + mob + "]");
 			}
 			server.runCommand("kill @e[type=minecraft:item]");
+
+			// ---- страж цитадели среди кристаллической кладки и алых кристаллов
+			server.runCommand("fill -4 -192 -5 4 -192 -1 nedra:crystal_tiles");
+			server.runCommand("fill -5 -191 -6 5 -186 -6 nedra:crystal_bricks");
+			server.runCommand("fill -1 -190 -6 1 -188 -6 nedra:chiseled_crystal_bricks");
+			server.runCommand("setblock -3 -191 -5 nedra:scarlet_crystal_block");
+			server.runCommand("setblock -3 -190 -5 nedra:scarlet_cluster[facing=up]");
+			server.runCommand("setblock 3 -191 -5 nedra:scarlet_stone");
+			server.runCommand("setblock 3 -190 -5 nedra:scarlet_cluster[facing=up]");
+			server.runCommand("summon nedra:prism_gale 0.5 -191 -3.0 {NoAI:1b,PersistenceRequired:1b,Rotation:[0f,0f]}");
+			server.runCommand("tp @a 0.5 -191 3.5 180 -6");
+			context.waitTicks(40);
+			shot(context, "nedra_19_prism_gale");
+			server.runCommand("kill @e[type=nedra:prism_gale]");
+			server.runCommand("kill @e[type=minecraft:item]");
 			server.runCommand("difficulty peaceful");
 
 			// ---- инвентарь со всеми предметами
@@ -132,7 +150,8 @@ public class NedraClientGameTest implements FabricClientGameTest {
 					"nedra:helmet_deepsuit", "nedra:lumenite_lamp 8", "nedra:lumenite_ore", "nedra:magnetite_ore",
 					"nedra:echo_ore", "nedra:unstable_stone", "nedra:current_vent", "nedra:deepmoss", "minecraft:compass",
 					"nedra:rust_brute_spawn_egg 4", "nedra:deep_vine 16", "nedra:deep_fern 8", "nedra:glowcap 8",
-					"nedra:overgrown_zombie_spawn_egg", "nedra:overgrown_skeleton_spawn_egg", "nedra:overgrown_creeper_spawn_egg"};
+					"nedra:overgrown_zombie_spawn_egg", "nedra:overgrown_skeleton_spawn_egg", "nedra:overgrown_creeper_spawn_egg",
+					"nedra:prism_gale_spawn_egg", "nedra:scarlet_shard 12", "nedra:scarlet_cluster 4", "nedra:crystal_bricks 32"};
 			for (String item : items) {
 				server.runCommand("give @a " + item);
 			}
@@ -227,7 +246,110 @@ public class NedraClientGameTest implements FabricClientGameTest {
 				wildSpawns(context, singleplayer, "nedra_18_overgrown_wild",
 						ModEntities.OVERGROWN_ZOMBIE, ModEntities.OVERGROWN_SKELETON, ModEntities.OVERGROWN_CREEPER);
 			}
+			waterfall(context, singleplayer, seed);
+			BlockPos lush = DeepLocator.lush(seed, 0, 0);
+			visit(context, singleplayer, lush, lush == null ? 0 : DeepLocator.bestYaw(seed, lush), 5, "nedra_21_lush_pocket");
+			BlockPos scarlet = DeepLocator.layer(seed, DeepTerrain.Layer.SCARLET, 0, 0);
+			visit(context, singleplayer, scarlet, scarlet == null ? 0 : DeepLocator.bestYaw(seed, scarlet), 5, "nedra_22_scarlet_grottoes");
+			citadel(context, singleplayer, seed);
 		}
+	}
+
+	/** Водопад подземной реки: снимок и замер течения - насколько игрока сносит за 4 секунды. */
+	private static void waterfall(ClientGameTestContext context, TestSingleplayerContext singleplayer, long seed) {
+		DeepLocator.View view = DeepLocator.waterfall(seed, 1, 0, 0);
+		if (view == null) {
+			view = DeepLocator.waterfall(seed, 2, 0, 0);
+		}
+		if (view == null) {
+			LOGGER.info("STATS| waterfall: not found");
+			return;
+		}
+		TestServerContext server = singleplayer.getServer();
+		BlockPos pos = view.pos();
+		LOGGER.info("STATS| waterfall view: {} {} {} yaw {}", pos.getX(), pos.getY(), pos.getZ(), view.yaw());
+		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 %.1f 8", pos.getX(), pos.getY(), pos.getZ(), view.yaw()));
+		// водопады начинают течь после загрузки чанков - даём воде время сбежать по ступени
+		context.waitTicks(200);
+		singleplayer.getClientWorld().waitForChunksRender();
+		context.waitTicks(20);
+		shot(context, "nedra_20_waterfall");
+		// течение: ставим игрока в воду и смотрим, куда его снесёт без управления
+		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5", pos.getX(), pos.getY() - 1, pos.getZ()));
+		context.waitTicks(5);
+		double[] before = server.computeOnServer(s -> {
+			var p = s.getPlayerManager().getPlayerList().get(0);
+			return new double[]{p.getX(), p.getZ()};
+		});
+		context.waitTicks(80);
+		double[] after = server.computeOnServer(s -> {
+			var p = s.getPlayerManager().getPlayerList().get(0);
+			return new double[]{p.getX(), p.getZ(), p.isTouchingWater() ? 1 : 0};
+		});
+		double[] flow = DeepTerrain.of(seed).riverFlow(1, pos.getX(), pos.getZ());
+		double along = flow == null ? 0 : (after[0] - before[0]) * flow[0] + (after[1] - before[1]) * flow[1];
+		LOGGER.info(String.format(Locale.ROOT, "STATS| river current: moved %.2f blocks downstream in 80 ticks (dx %.2f, dz %.2f, in water %s)",
+				along, after[0] - before[0], after[1] - before[1], after[2] > 0));
+	}
+
+	/** Хрустальная цитадель: Сердце и вход, сундуки, спавнеры и стражи внутри. */
+	private static void citadel(ClientGameTestContext context, TestSingleplayerContext singleplayer, long seed) {
+		Citadels.Site site = DeepLocator.citadel(seed, 0, 0);
+		if (site == null) {
+			LOGGER.info("STATS| citadel: not found");
+			return;
+		}
+		TestServerContext server = singleplayer.getServer();
+		int cx = site.centerX();
+		int cz = site.centerZ();
+		int y0 = site.floorY();
+		LOGGER.info("STATS| citadel at {} {} {} (entrance side {})", cx, y0, cz, site.entranceSide());
+		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 180 12", cx, y0, cz + 11));
+		context.waitTicks(120);
+		singleplayer.getClientWorld().waitForChunksRender();
+		context.waitTicks(30);
+		shot(context, "nedra_23_citadel_heart");
+		String census = server.computeOnServer(s -> {
+			var world = s.getOverworld();
+			int chests = 0;
+			int spawners = 0;
+			int bricks = 0;
+			BlockPos.Mutable p = new BlockPos.Mutable();
+			for (int x = site.x0(); x <= site.maxX(); x++) {
+				for (int z = site.z0(); z <= site.maxZ(); z++) {
+					if (!world.getChunkManager().isChunkLoaded(x >> 4, z >> 4)) {
+						continue;
+					}
+					for (int y = y0 - 2; y <= y0 + Citadels.HEIGHT + Citadels.HEART_EXTRA + 1; y++) {
+						var state = world.getBlockState(p.set(x, y, z));
+						if (state.isOf(Blocks.CHEST)) {
+							chests++;
+						} else if (state.isOf(Blocks.SPAWNER)) {
+							spawners++;
+						} else if (state.isOf(ModBlocks.CRYSTAL_BRICKS)) {
+							bricks++;
+						}
+					}
+				}
+			}
+			int guards = count(s, ModEntities.PRISM_GALE);
+			return "chests=" + chests + " spawners=" + spawners + " crystal_bricks=" + bricks + " prism_gales=" + guards;
+		});
+		LOGGER.info("STATS| citadel census (loaded part): {}", census);
+		int[] room = Citadels.entranceRoom(site);
+		int rx = site.roomX(room[0]) + 6;
+		int rz = site.roomZ(room[1]) + 6;
+		float yaw = switch (site.entranceSide()) {
+			case 0 -> 0.0F;
+			case 1 -> 90.0F;
+			case 2 -> 180.0F;
+			default -> -90.0F;
+		};
+		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 %.1f 5", rx, y0, rz, yaw));
+		context.waitTicks(60);
+		singleplayer.getClientWorld().waitForChunksRender();
+		context.waitTicks(20);
+		shot(context, "nedra_24_citadel_rooms");
 	}
 
 	/**

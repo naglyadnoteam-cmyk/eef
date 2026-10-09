@@ -56,6 +56,9 @@ final class WorldStats {
 		Map<String, Integer> ores = new TreeMap<>();
 		Map<String, Integer> exposed = new TreeMap<>();
 		Map<String, Integer> plants = new TreeMap<>();
+		Map<Integer, Integer> rails = new TreeMap<>();
+		java.util.List<String> mineshafts = new java.util.ArrayList<>();
+		var structures = world.getRegistryManager().getOrThrow(net.minecraft.registry.RegistryKeys.STRUCTURE);
 		Map<String, Integer> biomes = new TreeMap<>();
 		int minSurface = Integer.MAX_VALUE, maxSurface = Integer.MIN_VALUE;
 		long surfaceSum = 0;
@@ -79,6 +82,12 @@ final class WorldStats {
 						columns++;
 					}
 				}
+				chunk.getStructureStarts().forEach((structure, start) -> {
+					Identifier id = structures.getId(structure);
+					if (id != null && id.getPath().startsWith("mineshaft") && start.hasChildren()) {
+						mineshafts.add(id.getPath() + " Y " + start.getBoundingBox().getMinY() + ".." + start.getBoundingBox().getMaxY());
+					}
+				});
 				ChunkSection[] sections = chunk.getSectionArray();
 				for (int i = 0; i < sections.length; i++) {
 					ChunkSection section = sections[i];
@@ -108,6 +117,9 @@ final class WorldStats {
 									lava[band]++;
 								} else if (state.isOf(Blocks.WATER)) {
 									water[band]++;
+								} else if (state.isOf(Blocks.RAIL)) {
+									// рельсы бывают только в заброшенных шахтах - по ним видно, на каких глубинах шахты
+									rails.merge(BANDS[band], 1, Integer::sum);
 								} else if (y < -260 && (state.isOf(ModBlocks.DEEP_VINE) || state.isOf(ModBlocks.DEEP_FERN)
 										|| state.isOf(ModBlocks.GLOWCAP) || state.isOf(Blocks.LILY_PAD) || state.isOf(Blocks.JUNGLE_WOOD)
 										|| state.isOf(Blocks.MOSS_BLOCK) || state.isOf(Blocks.MUD) || state.isOf(Blocks.JUNGLE_LEAVES))) {
@@ -153,6 +165,8 @@ final class WorldStats {
 				exposed.getOrDefault(k, 0), v / (double) chunkCount, exposed.getOrDefault(k, 0) / (double) chunkCount)));
 		biomes.forEach((k, v) -> LOGGER.info("STATS| biome {} = {}", k, v));
 		plants.forEach((k, v) -> LOGGER.info("STATS| overgrown block below -260: {} = {}", k, v));
+		rails.forEach((k, v) -> LOGGER.info("STATS| mineshaft rails in band from Y {}: {}", k, v));
+		mineshafts.forEach(m -> LOGGER.info("STATS| mineshaft start: {}", m));
 		LOGGER.info("STATS| deep cave spot: {}", cave == null ? "none" : cave[0] + " " + cave[1] + " " + cave[2]);
 		return cave;
 	}
