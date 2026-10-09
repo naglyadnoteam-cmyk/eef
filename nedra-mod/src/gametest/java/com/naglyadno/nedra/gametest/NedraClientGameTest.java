@@ -129,6 +129,10 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			server.runCommand("kill @e[type=minecraft:item]");
 
 			// ---- страж цитадели среди кристаллической кладки и алых кристаллов
+			// (сначала дожидаемся, пока исчезнут тела и облачка частиц прошлой сцены)
+			server.runCommand("kill @e[type=!minecraft:player]");
+			context.waitTicks(60);
+			server.runCommand("kill @e[type=!minecraft:player]");
 			server.runCommand("fill -4 -192 -5 4 -192 -1 nedra:crystal_tiles");
 			server.runCommand("fill -5 -191 -6 5 -186 -6 nedra:crystal_bricks");
 			server.runCommand("fill -1 -190 -6 1 -188 -6 nedra:chiseled_crystal_bricks");
@@ -136,9 +140,10 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			server.runCommand("setblock -3 -190 -5 nedra:scarlet_cluster[facing=up]");
 			server.runCommand("setblock 3 -191 -5 nedra:scarlet_stone");
 			server.runCommand("setblock 3 -190 -5 nedra:scarlet_cluster[facing=up]");
-			server.runCommand("summon nedra:prism_gale 0.5 -191 -3.0 {NoAI:1b,PersistenceRequired:1b,Rotation:[0f,0f]}");
-			server.runCommand("tp @a 0.5 -191 3.5 180 -6");
+			server.runCommand("summon nedra:prism_gale 0.5 -191 -2.0 {NoAI:1b,PersistenceRequired:1b,Rotation:[0f,0f]}");
+			server.runCommand("tp @a 0.5 -191 2.5 180 -2");
 			context.waitTicks(40);
+			LOGGER.info("STATS| showroom prism gales: {}", server.computeOnServer(s -> count(s, ModEntities.PRISM_GALE)));
 			shot(context, "nedra_19_prism_gale");
 			server.runCommand("kill @e[type=nedra:prism_gale]");
 			server.runCommand("kill @e[type=minecraft:item]");
@@ -304,6 +309,8 @@ public class NedraClientGameTest implements FabricClientGameTest {
 		int cz = site.centerZ();
 		int y0 = site.floorY();
 		LOGGER.info("STATS| citadel at {} {} {} (entrance side {})", cx, y0, cz, site.entranceSide());
+		// на мирной сложности стражи исчезают - для переписи включаем лёгкую
+		server.runCommand("difficulty easy");
 		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 180 12", cx, y0, cz + 11));
 		context.waitTicks(120);
 		singleplayer.getClientWorld().waitForChunksRender();
@@ -337,19 +344,29 @@ public class NedraClientGameTest implements FabricClientGameTest {
 		});
 		LOGGER.info("STATS| citadel census (loaded part): {}", census);
 		int[] room = Citadels.entranceRoom(site);
-		int rx = site.roomX(room[0]) + 6;
-		int rz = site.roomZ(room[1]) + 6;
+		// встаём у входной стены зала и смотрим внутрь замка
+		int rx = site.roomX(room[0]) + switch (site.entranceSide()) {
+			case 1 -> 11;
+			case 3 -> 1;
+			default -> 6;
+		};
+		int rz = site.roomZ(room[1]) + switch (site.entranceSide()) {
+			case 0 -> 1;
+			case 2 -> 11;
+			default -> 6;
+		};
 		float yaw = switch (site.entranceSide()) {
 			case 0 -> 0.0F;
 			case 1 -> 90.0F;
 			case 2 -> 180.0F;
 			default -> -90.0F;
 		};
-		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 %.1f 5", rx, y0, rz, yaw));
+		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 %.1f 0", rx, y0, rz, yaw));
 		context.waitTicks(60);
 		singleplayer.getClientWorld().waitForChunksRender();
 		context.waitTicks(20);
 		shot(context, "nedra_24_citadel_rooms");
+		server.runCommand("difficulty peaceful");
 	}
 
 	/**
@@ -429,6 +446,8 @@ public class NedraClientGameTest implements FabricClientGameTest {
 	private static void wildSpawns(ClientGameTestContext context, TestSingleplayerContext singleplayer, String shotName,
 			EntityType<?>... types) {
 		TestServerContext server = singleplayer.getServer();
+		// освобождаем лимит враждебных мобов, занятый мобами прошлых сцен, иначе новые не появятся
+		server.runCommand("kill @e[type=!minecraft:player]");
 		server.runCommand("difficulty normal");
 		for (int round = 1; round <= 3; round++) {
 			context.waitTicks(300);

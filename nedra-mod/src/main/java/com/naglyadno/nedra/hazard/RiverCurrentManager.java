@@ -1,7 +1,9 @@
 package com.naglyadno.nedra.hazard;
 
 import com.naglyadno.nedra.network.RiverFlowPayload;
+import com.naglyadno.nedra.worldgen.deep.Citadels;
 import com.naglyadno.nedra.worldgen.deep.DeepTerrain;
+import com.naglyadno.nedra.worldgen.deep.Settlements;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -40,8 +42,9 @@ public class RiverCurrentManager {
 				sendIfChanged(player, null);
 				continue;
 			}
+			long seed = world.getSeed();
 			double[] flow = player.isTouchingWater() && !player.isSpectator()
-					? flowAt(terrain, player.getX(), player.getY(), player.getZ()) : null;
+					? flowAt(seed, terrain, player.getX(), player.getY(), player.getZ()) : null;
 			sendIfChanged(player, flow);
 			if (player.isSpectator()) {
 				continue;
@@ -51,7 +54,7 @@ public class RiverCurrentManager {
 				if (!pushed.add(entity)) {
 					continue;
 				}
-				double[] f = flowAt(terrain, entity.getX(), entity.getY(), entity.getZ());
+				double[] f = flowAt(seed, terrain, entity.getX(), entity.getY(), entity.getZ());
 				if (f != null) {
 					entity.addVelocity(f[0] * ENTITY_PUSH, 0.0, f[1] * ENTITY_PUSH);
 				}
@@ -64,9 +67,12 @@ public class RiverCurrentManager {
 	}
 
 	/** Направление течения в точке или null, если точка не в воде подземной реки. */
-	public static double[] flowAt(DeepTerrain terrain, double x, double y, double z) {
+	public static double[] flowAt(long seed, DeepTerrain terrain, double x, double y, double z) {
 		int bx = (int) Math.floor(x);
 		int bz = (int) Math.floor(z);
+		if (riverSuppressed(seed, bx, bz)) {
+			return null;
+		}
 		for (int which = 1; which <= 2; which++) {
 			DeepTerrain.River river = terrain.river(which, bx, bz);
 			if (river.strength() <= 0.05) {
@@ -77,6 +83,20 @@ public class RiverCurrentManager {
 			}
 		}
 		return null;
+	}
+
+	/** Возле поселений и цитаделей реки не прокладываются (см. DeepTerrainFeature), там и течения нет. */
+	private static boolean riverSuppressed(long seed, int x, int z) {
+		Settlements.Site town = Settlements.nearest(seed, x, z, 1);
+		if (town != null && town.distance(x, z) < town.radius() + 10) {
+			return true;
+		}
+		for (Citadels.Site citadel : Citadels.near(seed, x, z, x, z, 0)) {
+			if (x > citadel.x0() - 40 && x < citadel.maxX() + 40 && z > citadel.z0() - 40 && z < citadel.maxZ() + 40) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void sendIfChanged(ServerPlayerEntity player, double[] flow) {
