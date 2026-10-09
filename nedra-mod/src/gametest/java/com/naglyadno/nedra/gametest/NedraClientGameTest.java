@@ -143,7 +143,8 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			server.runCommand("summon nedra:prism_gale 0.5 -191 -2.0 {NoAI:1b,PersistenceRequired:1b,Rotation:[0f,0f]}");
 			server.runCommand("tp @a 0.5 -191 2.5 180 -2");
 			context.waitTicks(40);
-			LOGGER.info("STATS| showroom prism gales: {}", server.computeOnServer(s -> count(s, ModEntities.PRISM_GALE)));
+			int showroomGales = server.computeOnServer(s -> count(s, ModEntities.PRISM_GALE));
+			LOGGER.info("STATS| showroom prism gales: {}", showroomGales);
 			shot(context, "nedra_19_prism_gale");
 			server.runCommand("kill @e[type=nedra:prism_gale]");
 			server.runCommand("kill @e[type=minecraft:item]");
@@ -311,7 +312,8 @@ public class NedraClientGameTest implements FabricClientGameTest {
 		LOGGER.info("STATS| citadel at {} {} {} (entrance side {})", cx, y0, cz, site.entranceSide());
 		// на мирной сложности стражи исчезают - для переписи включаем лёгкую
 		server.runCommand("difficulty easy");
-		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 180 12", cx, y0, cz + 11));
+		// с края Сердца, между колоннами, на центральный кристалл
+		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 111 -8", cx + 13, y0, cz + 5));
 		context.waitTicks(120);
 		singleplayer.getClientWorld().waitForChunksRender();
 		context.waitTicks(30);
