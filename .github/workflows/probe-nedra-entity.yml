@@ -55,30 +55,13 @@ jobs:
           g() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- $f :: $2"; [ -n "$f" ] && grep -n -E "$2" "$f" | head -${3:-25}; }
           full() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- FULL $f"; [ -n "$f" ] && sed -n "1,${2:-200}p" "$f"; }
           ctx() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- CTX $f :: $2"; [ -n "$f" ] && grep -n -A ${3:-8} -E "$2" "$f" | head -${4:-60}; }
-          sec BREEZE; g net/minecraft/entity/mob/BreezeEntity.java "^\s*(public|protected|private|static)[^=]*\(" 70
-          ctx net/minecraft/entity/mob/BreezeEntity.java "public static DefaultAttributeContainer.Builder createBreezeAttributes" 10 14
-          full net/minecraft/client/render/entity/BreezeEntityRenderer.java 90
-          full net/minecraft/client/render/entity/state/BreezeEntityRenderState.java 40
-          full net/minecraft/client/render/entity/feature/BreezeWindFeatureRenderer.java 70
-          full net/minecraft/client/render/entity/feature/BreezeEyesFeatureRenderer.java 60
-          g net/minecraft/client/render/entity/model/EntityModelLayers.java "BREEZE" 6
-          ctx net/minecraft/entity/EntityType.java "public static final EntityType<BreezeEntity> BREEZE" 10 12
-          g net/minecraft/entity/SpawnRestriction.java "BREEZE" 3
-          sec SPAWNER; g net/minecraft/block/entity/MobSpawnerBlockEntity.java "public [A-Za-z<>]+ [a-zA-Z]+\(" 20
-          g net/minecraft/block/spawner/MobSpawnerLogic.java "public [A-Za-z<>]+ [a-zA-Z]+\(" 30
-          g net/minecraft/block/MobSpawnerLogic.java "public [A-Za-z<>]+ [a-zA-Z]+\(" 30
-          sec AMETHYST; full net/minecraft/block/AmethystClusterBlock.java 70 | grep -n -E "class|public|CODEC|FACING|WATERLOGGED|protected"
-          ctx net/minecraft/block/Blocks.java "public static final Block AMETHYST_CLUSTER = register" 12 14
-          sec CAVE_VINES; full net/minecraft/block/CaveVines.java 40 | grep -n -E "BERRIES|interface|static"
-          g net/minecraft/block/AbstractPlantStemBlock.java "AGE|public static final" 6
-          g net/minecraft/block/CaveVinesHeadBlock.java "class|public CaveVinesHeadBlock|BERRIES" 6
-          g net/minecraft/block/Blocks.java "public static final Block (CAVE_VINES|CAVE_VINES_PLANT|SPORE_BLOSSOM|AZALEA|FLOWERING_AZALEA|AZALEA_LEAVES|FLOWERING_AZALEA_LEAVES|SMALL_DRIPLEAF|BIG_DRIPLEAF|BIG_DRIPLEAF_STEM|QUARTZ_BRICKS|QUARTZ_PILLAR|CHISELED_QUARTZ_BLOCK|SEA_LANTERN|LIGHT_BLUE_STAINED_GLASS|SPAWNER|TRIAL_SPAWNER|VAULT|WAXED_COPPER_BULB|CRIMSON_FUNGUS) " 30
-          sec FLUID_TICK; grep -rn "void scheduleFluidTick" /tmp/src/net/minecraft/world/*.java /tmp/src/net/minecraft/world/tick/*.java | head -6
-          sec STRUCTURES; g net/minecraft/world/chunk/Chunk.java "getStructureStarts|getStructureStart\(" 6
-          g net/minecraft/structure/StructureStart.java "public [A-Za-z<>]+ [a-zA-Z]+\(" 12
-          ctx net/minecraft/world/gen/structure/MineshaftStructure.java "shiftInto|getSeaLevel" 3 20
-          sec ENTITY_SPAWN; g net/minecraft/world/ServerWorldAccess.java "spawnEntityAndPassengers|toServerWorld" 6
-          g net/minecraft/world/ModifiableWorld.java "spawnEntity" 4
+          sec WINDCHARGE; full net/minecraft/entity/projectile/BreezeWindChargeEntity.java 80
+          full net/minecraft/entity/projectile/AbstractWindChargeEntity.java 200 | grep -n -E "EXPLOSION_BEHAVIOR|createExplosion|AdvancedExplosionBehavior|class |protected|public" 
+          ctx net/minecraft/entity/projectile/AbstractWindChargeEntity.java "EXPLOSION_BEHAVIOR =" 6 10
+          full net/minecraft/world/explosion/AdvancedExplosionBehavior.java 80 | grep -n -E "public|knockback|Optional"
+          sec SPAWNERLOGIC; ctx net/minecraft/block/spawner/MobSpawnerLogic.java "public void serverTick" 70 80
+          full net/minecraft/block/spawner/MobSpawnerEntry.java 60 | grep -n -E "record|public|entity"
+          g net/minecraft/nbt/NbtCompound.java "public (Optional<String>|String) getString" 4
           sec DONE; echo DONE
 
       - name: Fabric javap
