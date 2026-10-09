@@ -55,38 +55,30 @@ jobs:
           g() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- $f :: $2"; [ -n "$f" ] && grep -n -E "$2" "$f" | head -${3:-25}; }
           full() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- FULL $f"; [ -n "$f" ] && sed -n "1,${2:-200}p" "$f"; }
           ctx() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- CTX $f :: $2"; [ -n "$f" ] && grep -n -A ${3:-8} -E "$2" "$f" | head -${4:-60}; }
-          sec PLANT; full net/minecraft/block/PlantBlock.java 80
-          full net/minecraft/block/ShortPlantBlock.java 80
-          full net/minecraft/block/HangingRootsBlock.java 120
-          full net/minecraft/block/MushroomPlantBlock.java 50 | grep -n -E "class|public|protected|MapCodec"
-          sec ABSTRACT_BLOCK; g net/minecraft/block/AbstractBlock.java "protected (BlockState|boolean|VoxelShape|void|MapCodec|FluidState) (getStateForNeighborUpdate|canPlaceAt|getOutlineShape|getCollisionShape|randomDisplayTick|getFluidState|getCodec|onEntityCollision|scheduledTick)\(" 20
-          ctx net/minecraft/block/AbstractBlock.java "protected BlockState getStateForNeighborUpdate\(" 12 16
-          g net/minecraft/block/AbstractBlock.java "public AbstractBlock.Settings (noCollision|breakInstantly|replaceable|offset|pistonBehavior|nonOpaque|ticksRandomly|dynamicBounds|burnable|solid|notSolid|velocityMultiplier|jumpVelocityMultiplier)\(" 20
-          g net/minecraft/block/Block.java "public BlockState getPlacementState|protected void appendProperties|createCodec|protected static <B extends Block> RecordCodecBuilder" 10
-          sec BLOCKS; ctx net/minecraft/block/Blocks.java "HANGING_ROOTS = register" 14 16
-          ctx net/minecraft/block/Blocks.java "public static final Block FERN = register" 10 12
-          ctx net/minecraft/block/Blocks.java "public static final Block MOSS_CARPET = register" 6 8
-          ctx net/minecraft/block/Blocks.java "public static final Block BROWN_MUSHROOM = register" 12 14
-          sec RENDER_LAYERS; grep -rn "HANGING_ROOTS" /tmp/src/net/minecraft/client --include=*.java | head -5
-          f=$(grep -rl "Blocks.HANGING_ROOTS" /tmp/src/net/minecraft/client | head -1); echo "LAYER FILE $f"; [ -n "$f" ] && grep -n -E "public static|private static final|BLOCKS.put\(Blocks.HANGING_ROOTS|class " "$f" | head -20
-          sec SKELETON_RENDER; full net/minecraft/client/render/entity/BoggedEntityRenderer.java 80
-          full net/minecraft/client/render/entity/SkeletonEntityRenderer.java 60
-          full net/minecraft/client/render/entity/AbstractSkeletonEntityRenderer.java 80
-          full net/minecraft/client/render/entity/state/SkeletonEntityRenderState.java 40
-          sec CREEPER_RENDER; full net/minecraft/client/render/entity/CreeperEntityRenderer.java 80
-          full net/minecraft/client/render/entity/state/CreeperEntityRenderState.java 30
-          sec ENTITIES; full net/minecraft/entity/mob/BoggedEntity.java 200
-          g net/minecraft/entity/mob/SkeletonEntity.java "^\s*(public|protected|private)[^=]*\(" 40
-          g net/minecraft/entity/mob/AbstractSkeletonEntity.java "^\s*(public|protected|private)[^=]*\(" 60
-          g net/minecraft/entity/mob/CreeperEntity.java "^\s*(public|protected|private)[^=]*\(" 60
-          ctx net/minecraft/entity/mob/CreeperEntity.java "private void explode\(" 20 24
-          sec ETYPE; ctx net/minecraft/entity/EntityType.java "public static final EntityType<BoggedEntity> BOGGED" 9 10
-          ctx net/minecraft/entity/EntityType.java "public static final EntityType<CreeperEntity> CREEPER" 9 10
-          ctx net/minecraft/entity/EntityType.java "public static final EntityType<SkeletonEntity> SKELETON" 9 10
-          g net/minecraft/entity/SpawnRestriction.java "SKELETON|CREEPER|BOGGED|ZOMBIE," 8
-          g net/minecraft/entity/attribute/DefaultAttributeRegistry.java "BOGGED|CREEPER|SKELETON," 6
-          g net/minecraft/entity/mob/AbstractSkeletonEntity.java "createAbstractSkeletonAttributes|public static" 4
-          g net/minecraft/entity/mob/CreeperEntity.java "createCreeperAttributes|public static" 4
+          sec BREEZE; g net/minecraft/entity/mob/BreezeEntity.java "^\s*(public|protected|private|static)[^=]*\(" 70
+          ctx net/minecraft/entity/mob/BreezeEntity.java "public static DefaultAttributeContainer.Builder createBreezeAttributes" 10 14
+          full net/minecraft/client/render/entity/BreezeEntityRenderer.java 90
+          full net/minecraft/client/render/entity/state/BreezeEntityRenderState.java 40
+          full net/minecraft/client/render/entity/feature/BreezeWindFeatureRenderer.java 70
+          full net/minecraft/client/render/entity/feature/BreezeEyesFeatureRenderer.java 60
+          g net/minecraft/client/render/entity/model/EntityModelLayers.java "BREEZE" 6
+          ctx net/minecraft/entity/EntityType.java "public static final EntityType<BreezeEntity> BREEZE" 10 12
+          g net/minecraft/entity/SpawnRestriction.java "BREEZE" 3
+          sec SPAWNER; g net/minecraft/block/entity/MobSpawnerBlockEntity.java "public [A-Za-z<>]+ [a-zA-Z]+\(" 20
+          g net/minecraft/block/spawner/MobSpawnerLogic.java "public [A-Za-z<>]+ [a-zA-Z]+\(" 30
+          g net/minecraft/block/MobSpawnerLogic.java "public [A-Za-z<>]+ [a-zA-Z]+\(" 30
+          sec AMETHYST; full net/minecraft/block/AmethystClusterBlock.java 70 | grep -n -E "class|public|CODEC|FACING|WATERLOGGED|protected"
+          ctx net/minecraft/block/Blocks.java "public static final Block AMETHYST_CLUSTER = register" 12 14
+          sec CAVE_VINES; full net/minecraft/block/CaveVines.java 40 | grep -n -E "BERRIES|interface|static"
+          g net/minecraft/block/AbstractPlantStemBlock.java "AGE|public static final" 6
+          g net/minecraft/block/CaveVinesHeadBlock.java "class|public CaveVinesHeadBlock|BERRIES" 6
+          g net/minecraft/block/Blocks.java "public static final Block (CAVE_VINES|CAVE_VINES_PLANT|SPORE_BLOSSOM|AZALEA|FLOWERING_AZALEA|AZALEA_LEAVES|FLOWERING_AZALEA_LEAVES|SMALL_DRIPLEAF|BIG_DRIPLEAF|BIG_DRIPLEAF_STEM|QUARTZ_BRICKS|QUARTZ_PILLAR|CHISELED_QUARTZ_BLOCK|SEA_LANTERN|LIGHT_BLUE_STAINED_GLASS|SPAWNER|TRIAL_SPAWNER|VAULT|WAXED_COPPER_BULB|CRIMSON_FUNGUS) " 30
+          sec FLUID_TICK; grep -rn "void scheduleFluidTick" /tmp/src/net/minecraft/world/*.java /tmp/src/net/minecraft/world/tick/*.java | head -6
+          sec STRUCTURES; g net/minecraft/world/chunk/Chunk.java "getStructureStarts|getStructureStart\(" 6
+          g net/minecraft/structure/StructureStart.java "public [A-Za-z<>]+ [a-zA-Z]+\(" 12
+          ctx net/minecraft/world/gen/structure/MineshaftStructure.java "shiftInto|getSeaLevel" 3 20
+          sec ENTITY_SPAWN; g net/minecraft/world/ServerWorldAccess.java "spawnEntityAndPassengers|toServerWorld" 6
+          g net/minecraft/world/ModifiableWorld.java "spawnEntity" 4
           sec DONE; echo DONE
 
       - name: Fabric javap
@@ -111,17 +103,19 @@ jobs:
           curl -sSL -o client.jar "$CLIENT_URL"
           java -DbundlerMainClass=net.minecraft.data.Main -jar server.jar --server --output /tmp/vanilla/datagen > /dev/null 2>&1
           D=/tmp/vanilla/datagen/data/minecraft
-          for f in worldgen/biome/lush_caves.json worldgen/biome/mangrove_swamp.json loot_table/entities/skeleton.json loot_table/entities/creeper.json loot_table/entities/bogged.json \
-                   tags/block/climbable.json tags/entity_type/skeletons.json tags/block/big_dripleaf_placeable.json tags/block/mineable/hoe.json tags/block/sword_efficient.json \
-                   tags/block/replaceable_by_trees.json tags/block/dirt.json tags/block/moss_replaceable.json tags/block/replaceable.json loot_table/blocks/hanging_roots.json loot_table/blocks/fern.json; do
-            echo ""; echo "######## DATA $f"; cat "$D/$f" 2>&1 | head -120
+          for f in worldgen/structure_set/mineshafts.json worldgen/structure/mineshaft.json loot_table/entities/breeze.json loot_table/chests/trial_chambers/reward.json \
+                   tags/block/crystal_sound_blocks.json tags/entity_type/fall_damage_immune.json; do
+            echo ""; echo "######## DATA $f"; cat "$D/$f" 2>&1 | head -150
           done
           mkdir -p cl && cd cl && unzip -oq ../client.jar 'assets/*' && cd ..
           A=/tmp/vanilla/cl/assets/minecraft
-          for f in blockstates/hanging_roots.json models/block/hanging_roots.json blockstates/brown_mushroom.json models/block/brown_mushroom.json models/block/cross.json models/block/tinted_cross.json items/hanging_roots.json items/brown_mushroom.json items/fern.json blockstates/cave_vines.json models/block/cave_vines_lit.json items/skeleton_spawn_egg.json; do
-            echo ""; echo "######## ASSET $f"; cat "$A/$f" 2>&1 | head -60
+          for f in blockstates/amethyst_cluster.json models/block/amethyst_cluster.json models/item/amethyst_cluster.json items/amethyst_cluster.json models/block/cube_column.json; do
+            echo ""; echo "######## ASSET $f"; cat "$A/$f" 2>&1 | head -80
           done
-          for t in textures/entity/skeleton/skeleton.png textures/entity/skeleton/bogged.png textures/entity/creeper/creeper.png textures/entity/zombie/zombie.png textures/block/hanging_roots.png textures/block/cave_vines.png textures/block/cave_vines_plant.png textures/block/cave_vines_lit.png textures/block/fern.png textures/block/moss_block.png textures/block/mud.png textures/block/brown_mushroom.png textures/block/jungle_leaves.png textures/block/vine.png textures/item/creeper_spawn_egg.png textures/item/skeleton_spawn_egg.png; do
-            echo "B64 $t $(base64 -w0 "$A/$t")"
+          ls $A/textures/entity/breeze
+          for t in textures/entity/breeze/breeze.png textures/entity/breeze/breeze_wind.png textures/entity/breeze/breeze_eyes.png textures/item/breeze_spawn_egg.png \
+                   textures/block/amethyst_cluster.png textures/block/quartz_bricks.png textures/block/calcite.png textures/block/amethyst_block.png textures/block/redstone_block.png textures/block/crimson_nylium.png; do
+            echo ""; echo "B64 $t $(base64 -w0 "$A/$t" 2>/dev/null)"
           done
+          echo ""
           echo DONE
