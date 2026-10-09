@@ -60,6 +60,13 @@ public final class ModEntities {
 					.maxTrackingRange(8)
 					.notAllowedInPeaceful());
 
+	public static final EntityType<PrismGaleEntity> PRISM_GALE = register("prism_gale",
+			EntityType.Builder.create(PrismGaleEntity::new, SpawnGroup.MONSTER)
+					.dimensions(0.6F, 1.77F)
+					.eyeHeight(1.3452F)
+					.maxTrackingRange(10)
+					.notAllowedInPeaceful());
+
 	private static <T extends Entity> EntityType<T> register(String path, EntityType.Builder<T> builder) {
 		RegistryKey<EntityType<?>> key = RegistryKey.of(RegistryKeys.ENTITY_TYPE, Identifier.of(NedraMod.MOD_ID, path));
 		return Registry.register(Registries.ENTITY_TYPE, key, builder.build(key));
@@ -69,6 +76,7 @@ public final class ModEntities {
 		FabricDefaultAttributeRegistry.register(OVERGROWN_ZOMBIE, ZombieEntity.createZombieAttributes());
 		FabricDefaultAttributeRegistry.register(OVERGROWN_SKELETON, AbstractSkeletonEntity.createAbstractSkeletonAttributes());
 		FabricDefaultAttributeRegistry.register(OVERGROWN_CREEPER, CreeperEntity.createCreeperAttributes());
+		FabricDefaultAttributeRegistry.register(PRISM_GALE, PrismGaleEntity.createPrismGaleAttributes());
 		registerDarkSpawn(OVERGROWN_ZOMBIE);
 		registerDarkSpawn(OVERGROWN_SKELETON);
 		registerDarkSpawn(OVERGROWN_CREEPER);

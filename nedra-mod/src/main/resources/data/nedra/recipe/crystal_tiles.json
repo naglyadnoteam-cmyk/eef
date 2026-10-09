@@ -1,0 +1,15 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "building",
+	"key": {
+		"B": "nedra:crystal_bricks"
+	},
+	"pattern": [
+		"BB",
+		"BB"
+	],
+	"result": {
+		"count": 4,
+		"id": "nedra:crystal_tiles"
+	}
+}

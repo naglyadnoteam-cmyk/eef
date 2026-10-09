@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.naglyadno.nedra.NedraMod;
 import com.naglyadno.nedra.block.DeepVineBlock;
 import com.naglyadno.nedra.block.ModBlocks;
+import com.naglyadno.nedra.worldgen.deep.Citadels;
 import com.naglyadno.nedra.worldgen.deep.DeepTerrain;
 import com.naglyadno.nedra.worldgen.deep.DeepTerrain.Column;
 import com.naglyadno.nedra.worldgen.deep.DeepTerrain.Layer;
@@ -15,6 +16,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.entity.LootableContainerBlockEntity;
+import net.minecraft.fluid.Fluids;
 import net.minecraft.loot.LootTable;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
@@ -43,7 +45,7 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 	private static final RegistryKey<LootTable> LOOT = RegistryKey.of(RegistryKeys.LOOT_TABLE,
 			Identifier.of(NedraMod.MOD_ID, "chests/abandoned_settlement"));
 
-	private static final int KEEP = 0, AIR = 1, WATER = 2, SOLID = 3, TRUNK = 4;
+	private static final int KEEP = 0, AIR = 1, WATER = 2, SOLID = 3, TRUNK = 4, RIVER = 5;
 	private static final int Y0 = DeepTerrain.FLOOR + 1;
 	private static final int H = DeepTerrain.TOP - Y0;
 	private static final int W = 18;
@@ -77,14 +79,44 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 			}
 		}
 		List<Site> sites = Settlements.near(seed, bx - 1, bz - 1, bx + 16, bz + 16, 10);
-		byte[] codes = classify(terrain, columns, sites, bx, bz);
+		List<Citadels.Site> citadels = Citadels.near(seed, bx - 1, bz - 1, bx + 16, bz + 16, 12);
+		byte[] codes = classify(terrain, columns, sites, citadels, bx, bz);
 
 		write(chunk, codes);
+		scheduleWaterfalls(world, codes, bx, bz);
 		decorate(chunk, terrain, columns, codes, sites, seed, bx, bz);
 		for (Site site : sites) {
 			buildSettlement(world, chunk, site, bx, bz);
 		}
+		for (Citadels.Site citadel : citadels) {
+			CitadelBuilder.build(world, chunk, citadel, bx, bz);
+		}
 		return true;
+	}
+
+	private static boolean isWater(int code) {
+		return code == WATER || code == RIVER;
+	}
+
+	/**
+	 * Речная вода, у которой сбоку или снизу пустота - край ступени русла. Ей назначается тик жидкости:
+	 * после загрузки чанка вода с верхней ступени польётся вниз водопадом.
+	 */
+	private static void scheduleWaterfalls(StructureWorldAccess world, byte[] codes, int bx, int bz) {
+		BlockPos.Mutable pos = new BlockPos.Mutable();
+		for (int lx = 0; lx < 16; lx++) {
+			for (int lz = 0; lz < 16; lz++) {
+				for (int y = Y0 + 1; y < DeepTerrain.TOP - 1; y++) {
+					if (codes[index(lx, lz, y)] != RIVER) {
+						continue;
+					}
+					if (codes[index(lx, lz, y - 1)] == AIR || codes[index(lx + 1, lz, y)] == AIR || codes[index(lx - 1, lz, y)] == AIR
+							|| codes[index(lx, lz + 1, y)] == AIR || codes[index(lx, lz - 1, y)] == AIR) {
+						world.scheduleFluidTick(pos.set(bx + lx, y, bz + lz), Fluids.WATER, 2);
+					}
+				}
+			}
+		}
 	}
 
 	// ------------------------------------------------------------------ форма
@@ -93,7 +125,8 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 		return ((lx + 1) * W + (lz + 1)) * H + (y - Y0);
 	}
 
-	private static byte[] classify(DeepTerrain terrain, Column[] columns, List<Site> sites, int bx, int bz) {
+	private static byte[] classify(DeepTerrain terrain, Column[] columns, List<Site> sites, List<Citadels.Site> citadels,
+			int bx, int bz) {
 		// узлы сетки 4x4x4 вокруг чанка с запасом на соседние колонны
 		int gx0 = bx - 4;
 		int gz0 = bz - 4;
@@ -127,6 +160,12 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 						hall = site;
 					}
 					if (site.distance(x, z) < site.radius() + 10) {
+						nearSite = true;
+					}
+				}
+				// реки обходят цитадели стороной, чтобы не затопить замок
+				for (Citadels.Site citadel : citadels) {
+					if (x > citadel.x0() - 40 && x < citadel.maxX() + 40 && z > citadel.z0() - 40 && z < citadel.maxZ() + 40) {
 						nearSite = true;
 					}
 				}
@@ -191,7 +230,7 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 			return AIR;
 		}
 		if (y >= water - depth && y < water) {
-			return WATER;
+			return RIVER;
 		}
 		if (y >= water - depth - 2 && y < water - depth) {
 			return SOLID;
@@ -224,7 +263,7 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 					}
 					if (code == AIR && !current.isAir()) {
 						section.setBlockState(lx, y & 15, lz, CAVE_AIR);
-					} else if (code == WATER) {
+					} else if (isWater(code)) {
 						section.setBlockState(lx, y & 15, lz, WATER_STATE);
 					} else if (code == SOLID && (current.isAir() || !current.getFluidState().isEmpty())) {
 						section.setBlockState(lx, y & 15, lz, DEEPSLATE);
@@ -247,7 +286,7 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 			return false;
 		}
 		int code = codes[index(lx, lz, y)];
-		if (code == AIR || code == WATER) {
+		if (code == AIR || isWater(code)) {
 			return true;
 		}
 		if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16 && code == KEEP) {
@@ -276,7 +315,7 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 				for (int y = Y0 + 1; y < DeepTerrain.TOP - 1; y++) {
 					if (open(chunk, codes, lx, lz, y)) {
 						// кувшинки на поверхности болот Заросших глубин
-						if (codes[index(lx, lz, y)] == WATER && codes[index(lx, lz, y + 1)] == AIR
+						if (isWater(codes[index(lx, lz, y)]) && codes[index(lx, lz, y + 1)] == AIR
 								&& terrain.dominant(column, y) == Layer.JUNGLE && DeepTerrain.hash01(seed, x, y, z, 33) < 0.07) {
 							placeIfAir(chunk, codes, lx, lz, y + 1, Blocks.LILY_PAD.getDefaultState());
 						}
@@ -300,8 +339,10 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 					Layer layer = terrain.dominant(column, y);
 					double r = DeepTerrain.hash01(seed, x, y, z, 31);
 					double r2 = DeepTerrain.hash01(seed, x, y, z, 32);
-					boolean underwater = floor && codes[index(lx, lz, y + 1)] == WATER;
-					BlockState skin = floor ? (underwater ? underwaterFloor(layer, r) : floorBlock(layer, r))
+					boolean underwater = floor && isWater(codes[index(lx, lz, y + 1)]);
+					boolean lush = layer != Layer.SCARLET && terrain.lush(x, y, z);
+					BlockState skin = lush ? lushSkin(floor, ceiling, underwater, r)
+							: floor ? (underwater ? underwaterFloor(layer, r) : floorBlock(layer, r))
 							: ceiling ? ceilingBlock(layer, r) : wallBlock(layer, r);
 					BlockState vein = caveVein(seed, layer, x, y, z);
 					if (vein != null) {
@@ -310,7 +351,9 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 					if (skin != null) {
 						section.setBlockState(lx, y & 15, lz, skin);
 					}
-					if (underwater) {
+					if (lush) {
+						lushDecoration(chunk, codes, lx, lz, y, floor && !inSite, ceiling, underwater, skin, seed, x, z, r2);
+					} else if (underwater) {
 						if (layer == Layer.JUNGLE && r2 < 0.22) {
 							placeInWater(chunk, codes, lx, lz, y + 1, Blocks.SEAGRASS.getDefaultState());
 						}
@@ -331,32 +374,45 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 
 	// ------------------------------------------------------------------ рудные жилы на стенах пещер
 
-	/** Доля ячеек 8x8x8, через которые проходит открытая жила, и доля богатых жил (крупных). */
-	private static final double VEIN_CHANCE = 0.075;
-	private static final double RICH_VEIN_CHANCE = 0.012;
+	/**
+	 * Доля ячеек 8x8x8, через которые проходит открытая жила, доля богатых жил (целая стена неценной руды)
+	 * и совсем редких алмазных пластов.
+	 */
+	private static final double VEIN_CHANCE = 0.10;
+	private static final double RICH_VEIN_CHANCE = 0.015;
+	private static final double DIAMOND_SEAM_CHANCE = 0.0025;
 
 	private record VeinOre(BlockState state, int weight, double radius) {
 	}
 
+	// уголь, железо, медь и алмазы встречаются во всех биомах недр; остальное - по характеру биома
 	private static final VeinOre[] VEINS_NONE = {
-			vein(Blocks.DEEPSLATE_COAL_ORE, 30, 3.2), vein(Blocks.DEEPSLATE_IRON_ORE, 30, 2.8), vein(Blocks.DEEPSLATE_COPPER_ORE, 20, 3.0),
-			vein(Blocks.DEEPSLATE_GOLD_ORE, 10, 2.2), vein(Blocks.DEEPSLATE_REDSTONE_ORE, 10, 2.4)};
+			vein(Blocks.DEEPSLATE_COAL_ORE, 26, 3.2), vein(Blocks.DEEPSLATE_IRON_ORE, 24, 2.8), vein(Blocks.DEEPSLATE_COPPER_ORE, 18, 3.0),
+			vein(Blocks.DEEPSLATE_DIAMOND_ORE, 10, 1.8), vein(Blocks.DEEPSLATE_GOLD_ORE, 10, 2.2), vein(Blocks.DEEPSLATE_REDSTONE_ORE, 12, 2.4)};
 	private static final VeinOre[] VEINS_ECHO = {
-			vein(Blocks.DEEPSLATE_COAL_ORE, 25, 3.2), vein(Blocks.DEEPSLATE_IRON_ORE, 25, 2.8), vein(Blocks.DEEPSLATE_COPPER_ORE, 20, 3.0),
-			vein(Blocks.DEEPSLATE_GOLD_ORE, 15, 2.4), vein(Blocks.DEEPSLATE_LAPIS_ORE, 15, 2.2)};
+			vein(Blocks.DEEPSLATE_COAL_ORE, 22, 3.2), vein(Blocks.DEEPSLATE_IRON_ORE, 22, 2.8), vein(Blocks.DEEPSLATE_COPPER_ORE, 18, 3.0),
+			vein(Blocks.DEEPSLATE_DIAMOND_ORE, 10, 1.8), vein(Blocks.DEEPSLATE_GOLD_ORE, 14, 2.4), vein(Blocks.DEEPSLATE_LAPIS_ORE, 14, 2.2)};
 	private static final VeinOre[] VEINS_MAGNETIC = {
-			vein(Blocks.DEEPSLATE_IRON_ORE, 40, 3.2), vein(Blocks.DEEPSLATE_REDSTONE_ORE, 25, 2.6), vein(Blocks.DEEPSLATE_GOLD_ORE, 15, 2.4),
-			vein(Blocks.DEEPSLATE_COPPER_ORE, 10, 2.8), vein(ModBlocks.MAGNETITE_ORE, 10, 2.4)};
+			vein(Blocks.DEEPSLATE_IRON_ORE, 34, 3.2), vein(Blocks.DEEPSLATE_COAL_ORE, 14, 3.0), vein(Blocks.DEEPSLATE_COPPER_ORE, 12, 2.8),
+			vein(Blocks.DEEPSLATE_DIAMOND_ORE, 10, 1.8), vein(Blocks.DEEPSLATE_REDSTONE_ORE, 20, 2.6), vein(Blocks.DEEPSLATE_GOLD_ORE, 10, 2.4),
+			vein(ModBlocks.MAGNETITE_ORE, 10, 2.4)};
 	private static final VeinOre[] VEINS_CRYSTAL = {
-			vein(Blocks.DEEPSLATE_DIAMOND_ORE, 18, 1.7), vein(Blocks.DEEPSLATE_LAPIS_ORE, 25, 2.4), vein(Blocks.DEEPSLATE_REDSTONE_ORE, 20, 2.6),
-			vein(Blocks.DEEPSLATE_GOLD_ORE, 15, 2.4), vein(Blocks.DEEPSLATE_EMERALD_ORE, 8, 1.6), vein(Blocks.DEEPSLATE_IRON_ORE, 14, 2.8)};
+			vein(Blocks.DEEPSLATE_DIAMOND_ORE, 20, 1.9), vein(Blocks.DEEPSLATE_LAPIS_ORE, 20, 2.4), vein(Blocks.DEEPSLATE_REDSTONE_ORE, 16, 2.6),
+			vein(Blocks.DEEPSLATE_COAL_ORE, 10, 3.0), vein(Blocks.DEEPSLATE_IRON_ORE, 12, 2.8), vein(Blocks.DEEPSLATE_COPPER_ORE, 8, 2.8),
+			vein(Blocks.DEEPSLATE_GOLD_ORE, 10, 2.4), vein(Blocks.DEEPSLATE_EMERALD_ORE, 8, 1.6)};
 	private static final VeinOre[] VEINS_JUNGLE = {
-			vein(Blocks.DEEPSLATE_EMERALD_ORE, 14, 1.8), vein(Blocks.DEEPSLATE_GOLD_ORE, 20, 2.4), vein(Blocks.DEEPSLATE_COPPER_ORE, 25, 3.0),
-			vein(Blocks.DEEPSLATE_LAPIS_ORE, 18, 2.2), vein(Blocks.DEEPSLATE_DIAMOND_ORE, 10, 1.6), vein(Blocks.DEEPSLATE_IRON_ORE, 13, 2.8)};
+			vein(Blocks.DEEPSLATE_EMERALD_ORE, 12, 1.8), vein(Blocks.DEEPSLATE_GOLD_ORE, 16, 2.4), vein(Blocks.DEEPSLATE_COPPER_ORE, 18, 3.0),
+			vein(Blocks.DEEPSLATE_LAPIS_ORE, 14, 2.2), vein(Blocks.DEEPSLATE_DIAMOND_ORE, 14, 1.8), vein(Blocks.DEEPSLATE_IRON_ORE, 14, 2.8),
+			vein(Blocks.DEEPSLATE_COAL_ORE, 12, 3.0)};
+	private static final VeinOre[] VEINS_SCARLET = {
+			vein(Blocks.DEEPSLATE_REDSTONE_ORE, 30, 2.8), vein(Blocks.DEEPSLATE_GOLD_ORE, 20, 2.4), vein(Blocks.DEEPSLATE_DIAMOND_ORE, 14, 1.8),
+			vein(Blocks.DEEPSLATE_IRON_ORE, 16, 2.8), vein(Blocks.DEEPSLATE_COAL_ORE, 10, 3.0), vein(Blocks.DEEPSLATE_COPPER_ORE, 10, 2.8)};
 	/** Богатые жилы - только неценные руды: целая стена угля, железа или меди. */
 	private static final VeinOre[] VEINS_RICH = {
 			vein(Blocks.DEEPSLATE_COAL_ORE, 35, 4.8), vein(Blocks.DEEPSLATE_IRON_ORE, 35, 4.4), vein(Blocks.DEEPSLATE_COPPER_ORE, 25, 4.6),
 			vein(Blocks.DEEPSLATE_GOLD_ORE, 5, 3.6)};
+	/** Алмазный пласт: редкая большая открытая жила алмазов. */
+	private static final VeinOre[] VEINS_DIAMOND = {vein(Blocks.DEEPSLATE_DIAMOND_ORE, 1, 2.7)};
 
 	private static VeinOre vein(Block block, int weight, double radius) {
 		return new VeinOre(block.getDefaultState(), weight, radius);
@@ -375,11 +431,12 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 		if (roll >= VEIN_CHANCE) {
 			return null;
 		}
-		VeinOre[] table = roll < RICH_VEIN_CHANCE ? VEINS_RICH : switch (layer) {
+		VeinOre[] table = roll < DIAMOND_SEAM_CHANCE ? VEINS_DIAMOND : roll < RICH_VEIN_CHANCE ? VEINS_RICH : switch (layer) {
 			case ECHO -> VEINS_ECHO;
 			case MAGNETIC -> VEINS_MAGNETIC;
 			case CRYSTAL -> VEINS_CRYSTAL;
 			case JUNGLE -> VEINS_JUNGLE;
+			case SCARLET -> VEINS_SCARLET;
 			case NONE -> VEINS_NONE;
 		};
 		int total = 0;
@@ -406,7 +463,7 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 	}
 
 	private static void placeIfAir(Chunk chunk, byte[] codes, int lx, int lz, int y, BlockState state) {
-		if (state == null || y < Y0 || y >= DeepTerrain.TOP || codes[index(lx, lz, y)] == WATER) {
+		if (state == null || y < Y0 || y >= DeepTerrain.TOP || isWater(codes[index(lx, lz, y)])) {
 			return;
 		}
 		ChunkSection section = section(chunk, y);
@@ -415,8 +472,76 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 		}
 	}
 
+	// ------------------------------------------------------------------ пышные карманы
+
+	/** Мох и корневая земля, как в ванильных пышных пещерах; дно водоёмов - глина. */
+	private static BlockState lushSkin(boolean floor, boolean ceiling, boolean underwater, double r) {
+		if (underwater) {
+			return Blocks.CLAY.getDefaultState();
+		}
+		if (floor) {
+			return r < 0.78 ? Blocks.MOSS_BLOCK.getDefaultState() : r < 0.88 ? Blocks.ROOTED_DIRT.getDefaultState() : null;
+		}
+		if (ceiling) {
+			return r < 0.62 ? Blocks.MOSS_BLOCK.getDefaultState() : r < 0.75 ? Blocks.ROOTED_DIRT.getDefaultState() : null;
+		}
+		return r < 0.5 ? Blocks.MOSS_BLOCK.getDefaultState() : null;
+	}
+
+	private static void lushDecoration(Chunk chunk, byte[] codes, int lx, int lz, int y, boolean floor, boolean ceiling,
+			boolean underwater, BlockState skin, long seed, int x, int z, double r) {
+		if (underwater) {
+			if (r < 0.2) {
+				placeInWater(chunk, codes, lx, lz, y + 1, Blocks.SEAGRASS.getDefaultState());
+			}
+			return;
+		}
+		boolean soil = skin != null && skin.isIn(BlockTags.DIRT);
+		if (floor) {
+			BlockState plant = null;
+			if (soil && r < 0.05) {
+				plant = Blocks.AZALEA.getDefaultState();
+			} else if (soil && r < 0.08) {
+				plant = Blocks.FLOWERING_AZALEA.getDefaultState();
+			} else if (skin != null && skin.isOf(Blocks.MOSS_BLOCK) && r < 0.10) {
+				plant = Blocks.BIG_DRIPLEAF.getDefaultState();
+			} else if (soil && r < 0.22) {
+				plant = Blocks.SHORT_GRASS.getDefaultState();
+			} else if (r < 0.40) {
+				plant = Blocks.MOSS_CARPET.getDefaultState();
+			}
+			placeIfAir(chunk, codes, lx, lz, y + 1, plant);
+		} else if (ceiling) {
+			if (r < 0.20) {
+				hangCaveVines(chunk, codes, lx, lz, y - 1, 2 + (int) (DeepTerrain.hash01(seed, x, y, z, 36) * 6), seed, x, z);
+			} else if (r < 0.23) {
+				placeIfAir(chunk, codes, lx, lz, y - 1, Blocks.SPORE_BLOSSOM.getDefaultState());
+			} else if (skin != null && skin.isOf(Blocks.ROOTED_DIRT) && r < 0.45) {
+				placeIfAir(chunk, codes, lx, lz, y - 1, Blocks.HANGING_ROOTS.getDefaultState());
+			}
+		}
+	}
+
+	/** Пещерная лоза со светящимися ягодами: стебли сверху, кончик внизу; ягоды примерно на трети блоков. */
+	private static void hangCaveVines(Chunk chunk, byte[] codes, int lx, int lz, int top, int length, long seed, int x, int z) {
+		int placed = 0;
+		int y = top;
+		while (placed < length && y >= Y0 && y < DeepTerrain.TOP && !isWater(codes[index(lx, lz, y)])
+				&& section(chunk, y).getBlockState(lx, y & 15, lz).isAir()) {
+			boolean berries = DeepTerrain.hash01(seed, x, y, z, 37) < 0.35;
+			section(chunk, y).setBlockState(lx, y & 15, lz, Blocks.CAVE_VINES_PLANT.getDefaultState().with(Properties.BERRIES, berries));
+			placed++;
+			y--;
+		}
+		if (placed > 0) {
+			int tipY = y + 1;
+			boolean berries = DeepTerrain.hash01(seed, x, tipY, z, 38) < 0.45;
+			section(chunk, tipY).setBlockState(lx, tipY & 15, lz, Blocks.CAVE_VINES.getDefaultState().with(Properties.BERRIES, berries));
+		}
+	}
+
 	private static void placeInWater(Chunk chunk, byte[] codes, int lx, int lz, int y, BlockState state) {
-		if (y < Y0 || y >= DeepTerrain.TOP || codes[index(lx, lz, y)] != WATER) {
+		if (y < Y0 || y >= DeepTerrain.TOP || !isWater(codes[index(lx, lz, y)])) {
 			return;
 		}
 		ChunkSection section = section(chunk, y);
@@ -430,7 +555,7 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 		BlockState body = ModBlocks.DEEP_VINE.getDefaultState().with(DeepVineBlock.TIP, false);
 		int placed = 0;
 		int y = top;
-		while (placed < length && y >= Y0 && y < DeepTerrain.TOP && codes[index(lx, lz, y)] != WATER
+		while (placed < length && y >= Y0 && y < DeepTerrain.TOP && !isWater(codes[index(lx, lz, y)])
 				&& section(chunk, y).getBlockState(lx, y & 15, lz).isAir()) {
 			section(chunk, y).setBlockState(lx, y & 15, lz, body);
 			placed++;
@@ -459,6 +584,8 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 					: r < 0.50 ? ModBlocks.MAGNETITE_ORE.getDefaultState() : r < 0.503 ? Blocks.RAW_IRON_BLOCK.getDefaultState() : null;
 			case CRYSTAL -> r < 0.35 ? Blocks.CALCITE.getDefaultState() : r < 0.52 ? Blocks.AMETHYST_BLOCK.getDefaultState()
 					: r < 0.54 ? Blocks.BUDDING_AMETHYST.getDefaultState() : r < 0.57 ? ModBlocks.LUMENITE_ORE.getDefaultState() : null;
+			case SCARLET -> r < 0.58 ? ModBlocks.SCARLET_STONE.getDefaultState() : r < 0.72 ? ModBlocks.SCARLET_CRYSTAL_BLOCK.getDefaultState()
+					: r < 0.80 ? Blocks.REDSTONE_BLOCK.getDefaultState() : null;
 			case JUNGLE -> r < 0.46 ? Blocks.MOSS_BLOCK.getDefaultState() : r < 0.72 ? Blocks.MUD.getDefaultState()
 					: r < 0.82 ? Blocks.ROOTED_DIRT.getDefaultState() : r < 0.86 ? Blocks.MUDDY_MANGROVE_ROOTS.getDefaultState() : null;
 			case NONE -> r < 0.22 ? Blocks.COBBLED_DEEPSLATE.getDefaultState() : r < 0.27 ? Blocks.GRAVEL.getDefaultState() : null;
@@ -472,6 +599,7 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 			case CRYSTAL -> r < 0.32 ? Blocks.AMETHYST_BLOCK.getDefaultState() : r < 0.37 ? ModBlocks.LUMENITE_ORE.getDefaultState()
 					: r < 0.50 ? Blocks.CALCITE.getDefaultState() : null;
 			case JUNGLE -> r < 0.40 ? Blocks.MOSS_BLOCK.getDefaultState() : r < 0.55 ? Blocks.ROOTED_DIRT.getDefaultState() : null;
+			case SCARLET -> r < 0.50 ? ModBlocks.SCARLET_STONE.getDefaultState() : r < 0.68 ? ModBlocks.SCARLET_CRYSTAL_BLOCK.getDefaultState() : null;
 			case NONE -> null;
 		};
 	}
@@ -483,11 +611,15 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 			case CRYSTAL -> r < 0.30 ? Blocks.CALCITE.getDefaultState() : r < 0.42 ? Blocks.AMETHYST_BLOCK.getDefaultState()
 					: r < 0.45 ? ModBlocks.LUMENITE_ORE.getDefaultState() : null;
 			case JUNGLE -> r < 0.50 ? Blocks.MOSS_BLOCK.getDefaultState() : r < 0.58 ? Blocks.MUD.getDefaultState() : null;
+			case SCARLET -> r < 0.62 ? ModBlocks.SCARLET_STONE.getDefaultState() : r < 0.74 ? ModBlocks.SCARLET_CRYSTAL_BLOCK.getDefaultState() : null;
 			case NONE -> null;
 		};
 	}
 
 	private static BlockState floorDecoration(Layer layer, BlockState floor, double r) {
+		if (layer == Layer.SCARLET) {
+			return r < 0.17 ? ModBlocks.SCARLET_CLUSTER.getDefaultState().with(Properties.FACING, Direction.UP) : null;
+		}
 		if (layer == Layer.JUNGLE) {
 			// папоротник и трава - только на земле (мох, грязь, корневая земля); грибы и ковёр мха - на чём угодно
 			boolean soil = floor != null && floor.isIn(BlockTags.DIRT);
@@ -515,6 +647,9 @@ public class DeepTerrainFeature extends Feature<DefaultFeatureConfig> {
 	}
 
 	private static BlockState ceilingDecoration(Layer layer, BlockState ceiling, double r) {
+		if (layer == Layer.SCARLET) {
+			return r < 0.15 ? ModBlocks.SCARLET_CLUSTER.getDefaultState().with(Properties.FACING, Direction.DOWN) : null;
+		}
 		if (layer == Layer.JUNGLE) {
 			// лианы развешаны отдельно (hangVine); здесь - корни под корневой землёй и комья листвы
 			if (ceiling != null && ceiling.isOf(Blocks.ROOTED_DIRT) && r < 0.5) {

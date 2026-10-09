@@ -1,0 +1,38 @@
+{
+	"parent": "nedra:explorer",
+	"criteria": {
+		"scarlet": {
+			"trigger": "minecraft:location",
+			"conditions": {
+				"player": [
+					{
+						"condition": "minecraft:entity_properties",
+						"entity": "this",
+						"predicate": {
+							"location": {
+								"biomes": "nedra:scarlet_grottoes"
+							}
+						}
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "nedra:scarlet_cluster"
+		},
+		"title": {
+			"translate": "advancements.nedra.scarlet.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.scarlet.description"
+		}
+	},
+	"requirements": [
+		[
+			"scarlet"
+		]
+	]
+}

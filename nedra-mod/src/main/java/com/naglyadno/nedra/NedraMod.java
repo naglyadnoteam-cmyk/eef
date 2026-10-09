@@ -8,12 +8,14 @@ import com.naglyadno.nedra.effect.ModEffects;
 import com.naglyadno.nedra.entity.ModEntities;
 import com.naglyadno.nedra.guide.GuideBook;
 import com.naglyadno.nedra.hazard.CurrentManager;
+import com.naglyadno.nedra.hazard.RiverCurrentManager;
 import com.naglyadno.nedra.hazard.MagnetiteInterferenceManager;
 import com.naglyadno.nedra.hazard.RockfallManager;
 import com.naglyadno.nedra.item.ModItemGroup;
 import com.naglyadno.nedra.item.ModItems;
 import com.naglyadno.nedra.network.ConfigSyncPayload;
 import com.naglyadno.nedra.network.PressurePayload;
+import com.naglyadno.nedra.network.RiverFlowPayload;
 import com.naglyadno.nedra.pressure.PressureManager;
 import com.naglyadno.nedra.sound.ModSounds;
 import com.naglyadno.nedra.util.ServerScheduler;
@@ -52,6 +54,7 @@ public class NedraMod implements ModInitializer {
 	private static PressureManager pressureManager;
 	private static RockfallManager rockfallManager;
 	private static CurrentManager currentManager;
+	private static RiverCurrentManager riverManager;
 	private static MagnetiteInterferenceManager magnetiteManager;
 
 	@Override
@@ -71,6 +74,7 @@ public class NedraMod implements ModInitializer {
 
 		PayloadTypeRegistry.playS2C().register(PressurePayload.ID, PressurePayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(ConfigSyncPayload.ID, ConfigSyncPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(RiverFlowPayload.ID, RiverFlowPayload.CODEC);
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
 				NedraCommands.register(dispatcher));
@@ -80,6 +84,7 @@ public class NedraMod implements ModInitializer {
 			pressureManager = new PressureManager(server, CONFIG);
 			rockfallManager = new RockfallManager(CONFIG);
 			currentManager = new CurrentManager(CONFIG);
+			riverManager = new RiverCurrentManager();
 			magnetiteManager = new MagnetiteInterferenceManager(CONFIG);
 			LOGGER.info("Недра готовы: подземный мир пробуждается.");
 		});
@@ -88,6 +93,7 @@ public class NedraMod implements ModInitializer {
 			pressureManager = null;
 			rockfallManager = null;
 			currentManager = null;
+			riverManager = null;
 			magnetiteManager = null;
 			ServerScheduler.clear();
 			BiomePainter.clear();
@@ -98,6 +104,7 @@ public class NedraMod implements ModInitializer {
 			if (pressureManager != null) {
 				pressureManager.tick();
 				currentManager.tick(server);
+				riverManager.tick(server);
 				rockfallManager.tick();
 				magnetiteManager.tick(server);
 			}
@@ -124,6 +131,7 @@ public class NedraMod implements ModInitializer {
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			if (pressureManager != null) {
 				pressureManager.onDisconnect(handler.getPlayer());
+				riverManager.onDisconnect(handler.getPlayer());
 			}
 		});
 

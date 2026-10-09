@@ -1,0 +1,16 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "building",
+	"key": {
+		"Q": "minecraft:quartz_bricks",
+		"L": "nedra:lumenite_crystal"
+	},
+	"pattern": [
+		"QQ",
+		"QL"
+	],
+	"result": {
+		"count": 4,
+		"id": "nedra:crystal_bricks"
+	}
+}

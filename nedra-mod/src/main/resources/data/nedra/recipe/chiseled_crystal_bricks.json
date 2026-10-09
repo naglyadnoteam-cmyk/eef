@@ -1,0 +1,16 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "building",
+	"key": {
+		"B": "nedra:crystal_bricks",
+		"L": "nedra:lumenite_crystal"
+	},
+	"pattern": [
+		"B",
+		"L"
+	],
+	"result": {
+		"count": 1,
+		"id": "nedra:chiseled_crystal_bricks"
+	}
+}

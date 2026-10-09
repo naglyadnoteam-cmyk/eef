@@ -31,6 +31,7 @@ public final class ModItems {
 	public static final Item RESONANT_SHARD = register("resonant_shard", Item::new,
 			new Item.Settings().rarity(Rarity.UNCOMMON));
 	public static final Item DEEPMOSS_CLUMP = register("deepmoss_clump", Item::new, new Item.Settings());
+	public static final Item SCARLET_SHARD = register("scarlet_shard", Item::new, new Item.Settings());
 
 	// --- снаряжение ---
 	private static final ConsumableComponent TABLET_CONSUMABLE = ConsumableComponents.food()
@@ -58,6 +59,8 @@ public final class ModItems {
 			new Item.Settings().spawnEgg(ModEntities.OVERGROWN_SKELETON));
 	public static final Item OVERGROWN_CREEPER_SPAWN_EGG = register("overgrown_creeper_spawn_egg", SpawnEggItem::new,
 			new Item.Settings().spawnEgg(ModEntities.OVERGROWN_CREEPER));
+	public static final Item PRISM_GALE_SPAWN_EGG = register("prism_gale_spawn_egg", SpawnEggItem::new,
+			new Item.Settings().spawnEgg(ModEntities.PRISM_GALE));
 
 	private static Item register(String path, Function<Item.Settings, Item> factory, Item.Settings settings) {
 		RegistryKey<Item> key = RegistryKey.of(RegistryKeys.ITEM, Identifier.of(NedraMod.MOD_ID, path));

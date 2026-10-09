@@ -19,7 +19,7 @@ import java.util.List;
  */
 public final class GuideBook {
 
-	public static final int PAGE_COUNT = 19;
+	public static final int PAGE_COUNT = 22;
 
 	private GuideBook() {
 	}

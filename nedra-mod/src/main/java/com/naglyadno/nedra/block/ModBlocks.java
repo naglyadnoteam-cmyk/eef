@@ -2,6 +2,7 @@ package com.naglyadno.nedra.block;
 
 import com.naglyadno.nedra.NedraMod;
 import net.minecraft.block.AbstractBlock;
+import net.minecraft.block.AmethystClusterBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.ExperienceDroppingBlock;
 import net.minecraft.block.MapColor;
@@ -72,6 +73,31 @@ public final class ModBlocks {
 			AbstractBlock.Settings.create().mapColor(MapColor.CYAN).noCollision().breakInstantly()
 					.sounds(BlockSoundGroup.FUNGUS).luminance(state -> 9).offset(AbstractBlock.OffsetType.XZ)
 					.pistonBehavior(PistonBehavior.DESTROY));
+
+	// --- Алые гроты ---
+	public static final Block SCARLET_STONE = registerWithItem("scarlet_stone", Block::new,
+			AbstractBlock.Settings.create().mapColor(MapColor.DARK_RED).instrument(NoteBlockInstrument.BASEDRUM)
+					.requiresTool().strength(2.0f, 6.0f).sounds(BlockSoundGroup.TUFF));
+
+	public static final Block SCARLET_CRYSTAL_BLOCK = registerWithItem("scarlet_crystal_block", Block::new,
+			AbstractBlock.Settings.create().mapColor(MapColor.RED).strength(1.5f).requiresTool()
+					.sounds(BlockSoundGroup.AMETHYST_BLOCK).luminance(state -> 7));
+
+	public static final Block SCARLET_CLUSTER = registerWithItem("scarlet_cluster",
+			settings -> new AmethystClusterBlock(7.0F, 10.0F, settings),
+			AbstractBlock.Settings.create().mapColor(MapColor.RED).solid().nonOpaque().strength(1.5f)
+					.sounds(BlockSoundGroup.AMETHYST_CLUSTER).luminance(state -> 6).pistonBehavior(PistonBehavior.DESTROY));
+
+	// --- Хрустальная цитадель ---
+	private static AbstractBlock.Settings crystalMasonry() {
+		return AbstractBlock.Settings.create().mapColor(MapColor.DIAMOND_BLUE).instrument(NoteBlockInstrument.BASEDRUM)
+				.requiresTool().strength(3.0f, 9.0f).sounds(BlockSoundGroup.AMETHYST_BLOCK);
+	}
+
+	public static final Block CRYSTAL_BRICKS = registerWithItem("crystal_bricks", Block::new, crystalMasonry());
+	public static final Block CHISELED_CRYSTAL_BRICKS = registerWithItem("chiseled_crystal_bricks", Block::new,
+			crystalMasonry().luminance(state -> 4));
+	public static final Block CRYSTAL_TILES = registerWithItem("crystal_tiles", Block::new, crystalMasonry());
 
 	private static Block registerWithItem(String path, Function<AbstractBlock.Settings, Block> factory,
 			AbstractBlock.Settings settings) {

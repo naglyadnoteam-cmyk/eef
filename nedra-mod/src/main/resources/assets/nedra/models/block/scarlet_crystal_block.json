@@ -1,0 +1,6 @@
+{
+	"parent": "minecraft:block/cube_all",
+	"textures": {
+		"all": "nedra:block/scarlet_crystal_block"
+	}
+}

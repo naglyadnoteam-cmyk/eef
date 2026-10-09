@@ -49,6 +49,14 @@ public final class ModItemGroup {
 					entries.add(ModItems.OVERGROWN_ZOMBIE_SPAWN_EGG);
 					entries.add(ModItems.OVERGROWN_SKELETON_SPAWN_EGG);
 					entries.add(ModItems.OVERGROWN_CREEPER_SPAWN_EGG);
+					entries.add(ModItems.PRISM_GALE_SPAWN_EGG);
+					entries.add(ModItems.SCARLET_SHARD);
+					entries.add(ModBlocks.SCARLET_STONE);
+					entries.add(ModBlocks.SCARLET_CRYSTAL_BLOCK);
+					entries.add(ModBlocks.SCARLET_CLUSTER);
+					entries.add(ModBlocks.CRYSTAL_BRICKS);
+					entries.add(ModBlocks.CHISELED_CRYSTAL_BRICKS);
+					entries.add(ModBlocks.CRYSTAL_TILES);
 				})
 				.build());
 	}

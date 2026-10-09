@@ -90,7 +90,9 @@ public class DeepLayersFeature extends Feature<DefaultFeatureConfig> {
 		Optional<RegistryEntry.Reference<Biome>> magnetic = registry.getEntry(Identifier.of(NedraMod.MOD_ID, "magnetic_caverns"));
 		Optional<RegistryEntry.Reference<Biome>> crystal = registry.getEntry(Identifier.of(NedraMod.MOD_ID, "crystal_depths"));
 		Optional<RegistryEntry.Reference<Biome>> overgrown = registry.getEntry(Identifier.of(NedraMod.MOD_ID, "overgrown_depths"));
-		if (echo.isEmpty() || magnetic.isEmpty() || crystal.isEmpty() || overgrown.isEmpty()) {
+		Optional<RegistryEntry.Reference<Biome>> scarlet = registry.getEntry(Identifier.of(NedraMod.MOD_ID, "scarlet_grottoes"));
+		Optional<RegistryEntry.Reference<Biome>> lush = registry.getEntry(Identifier.ofVanilla("lush_caves"));
+		if (echo.isEmpty() || magnetic.isEmpty() || crystal.isEmpty() || overgrown.isEmpty() || scarlet.isEmpty() || lush.isEmpty()) {
 			return;
 		}
 		long seed = world.getSeed();
@@ -111,11 +113,17 @@ public class DeepLayersFeature extends Feature<DefaultFeatureConfig> {
 					return echo.get();
 				}
 			}
-			return switch (terrain.dominant(terrain.column(x, z), y)) {
+			DeepTerrain.Layer layer = terrain.dominant(terrain.column(x, z), y);
+			// пышные карманы - настоящий ванильный биом пышных пещер (аксолотли, музыка, туман)
+			if (layer != DeepTerrain.Layer.SCARLET && terrain.lush(x, y, z)) {
+				return lush.get();
+			}
+			return switch (layer) {
 				case ECHO -> echo.get();
 				case MAGNETIC -> magnetic.get();
 				case CRYSTAL -> crystal.get();
 				case JUNGLE -> overgrown.get();
+				case SCARLET -> scarlet.get();
 				case NONE -> current;
 			};
 		}, world.toServerWorld().getChunkManager().getNoiseConfig().getMultiNoiseSampler());

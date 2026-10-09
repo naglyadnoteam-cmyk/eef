@@ -5,6 +5,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.naglyadno.nedra.NedraMod;
 import com.naglyadno.nedra.guide.GuideBook;
 import com.naglyadno.nedra.pressure.PressureManager;
+import com.naglyadno.nedra.worldgen.deep.Citadels;
 import com.naglyadno.nedra.worldgen.deep.DeepLocator;
 import com.naglyadno.nedra.worldgen.deep.DeepTerrain;
 import net.minecraft.item.ItemStack;
@@ -18,7 +19,8 @@ import net.minecraft.util.Formatting;
 /**
  * /nedra guide  - выдать ещё один справочник
  * /nedra info   - текущая глубина, давление и защита
- * /nedra locate settlement|river|echo_hollows|magnetic_caverns|crystal_depths|overgrown_depths - найти место в недрах (операторы)
+ * /nedra locate settlement|river|waterfall|citadel|lush_pocket|echo_hollows|magnetic_caverns|crystal_depths|overgrown_depths|scarlet_grottoes
+ *     - найти место в недрах (операторы)
  * /nedra reload - перечитать config/nedra.json (только для операторов)
  */
 public final class NedraCommands {
@@ -37,7 +39,11 @@ public final class NedraCommands {
 						.then(CommandManager.literal("echo_hollows").executes(context -> locate(context.getSource(), "echo_hollows")))
 						.then(CommandManager.literal("magnetic_caverns").executes(context -> locate(context.getSource(), "magnetic_caverns")))
 						.then(CommandManager.literal("crystal_depths").executes(context -> locate(context.getSource(), "crystal_depths")))
-						.then(CommandManager.literal("overgrown_depths").executes(context -> locate(context.getSource(), "overgrown_depths"))))
+						.then(CommandManager.literal("overgrown_depths").executes(context -> locate(context.getSource(), "overgrown_depths")))
+						.then(CommandManager.literal("scarlet_grottoes").executes(context -> locate(context.getSource(), "scarlet_grottoes")))
+						.then(CommandManager.literal("lush_pocket").executes(context -> locate(context.getSource(), "lush_pocket")))
+						.then(CommandManager.literal("waterfall").executes(context -> locate(context.getSource(), "waterfall")))
+						.then(CommandManager.literal("citadel").executes(context -> locate(context.getSource(), "citadel"))))
 				.then(CommandManager.literal("reload")
 						.requires(CommandManager.requirePermissionLevel(CommandManager.GAMEMASTERS_CHECK))
 						.executes(context -> reload(context.getSource()))));
@@ -84,10 +90,21 @@ public final class NedraCommands {
 			case "echo_hollows" -> DeepLocator.layer(seed, DeepTerrain.Layer.ECHO, from.getX(), from.getZ());
 			case "magnetic_caverns" -> DeepLocator.layer(seed, DeepTerrain.Layer.MAGNETIC, from.getX(), from.getZ());
 			case "overgrown_depths" -> DeepLocator.layer(seed, DeepTerrain.Layer.JUNGLE, from.getX(), from.getZ());
+			case "scarlet_grottoes" -> DeepLocator.layer(seed, DeepTerrain.Layer.SCARLET, from.getX(), from.getZ());
+			case "lush_pocket" -> DeepLocator.lush(seed, from.getX(), from.getZ());
+			case "waterfall" -> {
+				DeepLocator.View view = DeepLocator.waterfall(seed, from.getY() < -170 ? 2 : 1, from.getX(), from.getZ());
+				yield view == null ? null : view.pos();
+			}
+			case "citadel" -> {
+				Citadels.Site site = DeepLocator.citadel(seed, from.getX(), from.getZ());
+				yield site == null ? null : DeepLocator.citadelEntrance(site);
+			}
 			default -> DeepLocator.layer(seed, DeepTerrain.Layer.CRYSTAL, from.getX(), from.getZ());
 		};
-		Text name = Text.translatable(what.equals("settlement") || what.equals("river")
-				? "command.nedra.locate." + what : "biome.nedra." + what);
+		boolean place = what.equals("settlement") || what.equals("river") || what.equals("lush_pocket")
+				|| what.equals("waterfall") || what.equals("citadel");
+		Text name = Text.translatable(place ? "command.nedra.locate." + what : "biome.nedra." + what);
 		if (found == null) {
 			source.sendError(Text.translatable("command.nedra.locate.none", name));
 			return 0;

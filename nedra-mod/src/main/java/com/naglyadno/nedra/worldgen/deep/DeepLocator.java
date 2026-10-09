@@ -24,17 +24,21 @@ public final class DeepLocator {
 		int centerY = switch (layer) {
 			case ECHO -> -128;
 			case MAGNETIC -> -224;
+			case SCARLET -> -202;
 			case CRYSTAL, JUNGLE -> -300;
 			case NONE -> -100;
 		};
-		for (int ring = 0; ring <= 64; ring++) {
+		// Алые гроты маленькие - их ищем более частой сеткой
+		int step = layer == Layer.SCARLET ? 8 : 24;
+		int rings = layer == Layer.SCARLET ? 200 : 64;
+		for (int ring = 0; ring <= rings; ring++) {
 			for (int i = -ring; i <= ring; i++) {
 				for (int j = -ring; j <= ring; j++) {
 					if (Math.max(Math.abs(i), Math.abs(j)) != ring) {
 						continue;
 					}
-					int cx = x + i * 24;
-					int cz = z + j * 24;
+					int cx = x + i * step;
+					int cz = z + j * step;
 					Column column = terrain.column(cx, cz);
 					if (terrain.weight(column, layer, centerY) < 0.85) {
 						continue;
@@ -43,6 +47,102 @@ public final class DeepLocator {
 					if (cave != null) {
 						return cave;
 					}
+				}
+			}
+		}
+		return null;
+	}
+
+	/** Точка обзора и направление взгляда (yaw). */
+	public record View(BlockPos pos, float yaw) {
+	}
+
+	/** Ближайшая Хрустальная цитадель или null. */
+	public static Citadels.Site citadel(long seed, int x, int z) {
+		return Citadels.nearest(seed, x, z, 6);
+	}
+
+	/** Конец входного туннеля цитадели - снаружи, в пещерах. */
+	public static BlockPos citadelEntrance(Citadels.Site site) {
+		int[] room = Citadels.entranceRoom(site);
+		int cx = site.roomX(room[0]) + 6;
+		int cz = site.roomZ(room[1]) + 6;
+		int out = Citadels.TUNNEL - 1;
+		return switch (site.entranceSide()) {
+			case 0 -> new BlockPos(cx, site.floorY(), site.z0() - out);
+			case 1 -> new BlockPos(site.maxX() + out, site.floorY(), cz);
+			case 2 -> new BlockPos(cx, site.floorY(), site.maxZ() + out);
+			default -> new BlockPos(site.x0() - out, site.floorY(), cz);
+		};
+	}
+
+	/** Пышный карман (мох, азалии, светящиеся ягоды) около -140…-215. */
+	public static BlockPos lush(long seed, int x, int z) {
+		DeepTerrain terrain = DeepTerrain.of(seed);
+		for (int ring = 0; ring <= 120; ring++) {
+			for (int i = -ring; i <= ring; i++) {
+				for (int j = -ring; j <= ring; j++) {
+					if (Math.max(Math.abs(i), Math.abs(j)) != ring) {
+						continue;
+					}
+					int cx = x + i * 12;
+					int cz = z + j * 12;
+					for (int y = -150; y >= -205; y -= 11) {
+						if (terrain.lushWeight(cx, y, cz) < 0.9) {
+							continue;
+						}
+						BlockPos cave = caveNear(terrain, cx, y, cz);
+						if (cave != null && terrain.lush(cave.getX(), cave.getY() - 1, cave.getZ())) {
+							return cave;
+						}
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Водопад подземной реки: точка в воде нижней ступени в нескольких блоках ниже по течению от
+	 * перепада и взгляд вверх по течению - на падающую воду.
+	 */
+	public static View waterfall(long seed, int which, int x, int z) {
+		DeepTerrain terrain = DeepTerrain.of(seed);
+		for (int ring = 0; ring <= 400; ring++) {
+			for (int i = -ring; i <= ring; i++) {
+				for (int j = -ring; j <= ring; j++) {
+					if (Math.max(Math.abs(i), Math.abs(j)) != ring) {
+						continue;
+					}
+					int cx = x + i * 6;
+					int cz = z + j * 6;
+					DeepTerrain.River here = terrain.river(which, cx, cz);
+					if (here.strength() < 0.75) {
+						continue;
+					}
+					double[] flow = terrain.riverFlow(which, cx, cz);
+					if (flow == null) {
+						continue;
+					}
+					// вода падает, если чуть ниже по течению уровень на ступень ниже
+					int ax = (int) Math.round(cx + flow[0] * 5);
+					int az = (int) Math.round(cz + flow[1] * 5);
+					DeepTerrain.River below = terrain.river(which, ax, az);
+					if (below.strength() < 0.5 || below.waterY() >= here.waterY()) {
+						continue;
+					}
+					Settlements.Site site = Settlements.nearest(seed, cx, cz, 1);
+					if (site != null && site.distance(cx, cz) < site.radius() + 14) {
+						continue;
+					}
+					int vx = (int) Math.round(cx + flow[0] * 12);
+					int vz = (int) Math.round(cz + flow[1] * 12);
+					DeepTerrain.River view = terrain.river(which, vx, vz);
+					if (view.strength() < 0.4) {
+						continue;
+					}
+					float yaw = (float) Math.toDegrees(Math.atan2(flow[0], -flow[1]));
+					return new View(new BlockPos(vx, view.waterY(), vz), yaw);
 				}
 			}
 		}

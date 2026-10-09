@@ -6,6 +6,12 @@
 		"nedra:echo_ore",
 		"nedra:unstable_stone",
 		"nedra:current_vent",
-		"nedra:lumenite_lamp"
+		"nedra:lumenite_lamp",
+		"nedra:scarlet_stone",
+		"nedra:scarlet_crystal_block",
+		"nedra:scarlet_cluster",
+		"nedra:crystal_bricks",
+		"nedra:chiseled_crystal_bricks",
+		"nedra:crystal_tiles"
 	]
 }
