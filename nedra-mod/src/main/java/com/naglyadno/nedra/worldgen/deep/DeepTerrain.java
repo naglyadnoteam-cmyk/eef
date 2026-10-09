@@ -83,7 +83,7 @@ public final class DeepTerrain {
 				smooth((regC.sample(x / 280.0, 0.5, z / 280.0) + 0.08) / 0.12),
 				smooth((regJ.sample(x / 300.0, 0.5, z / 300.0) + 0.02) / 0.12),
 				// Алые гроты - редкие небольшие пятна (десятки блоков) там, где шум особенно высок
-				smooth((regS.sample(x / 120.0, 0.5, z / 120.0) - 0.40) / 0.08));
+				smooth((regS.sample(x / 120.0, 0.5, z / 120.0) - 0.46) / 0.08));
 	}
 
 	public double weight(Column column, Layer layer, int y) {
