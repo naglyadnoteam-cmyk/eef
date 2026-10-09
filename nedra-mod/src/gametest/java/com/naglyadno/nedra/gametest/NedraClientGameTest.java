@@ -3,6 +3,7 @@ package com.naglyadno.nedra.gametest;
 import com.naglyadno.nedra.NedraMod;
 import com.naglyadno.nedra.client.ClientPressureState;
 import com.naglyadno.nedra.entity.ModEntities;
+import com.naglyadno.nedra.entity.PrismGaleEntity;
 import com.naglyadno.nedra.guide.GuideBook;
 import com.naglyadno.nedra.block.ModBlocks;
 import com.naglyadno.nedra.worldgen.deep.Citadels;
@@ -150,6 +151,7 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			shot(context, "nedra_19_prism_gale");
 			server.runCommand("effect clear @a minecraft:night_vision");
 			server.runCommand("kill @e[type=nedra:prism_gale]");
+			spawnerCheck(context, server);
 			server.runCommand("kill @e[type=minecraft:item]");
 			server.runCommand("difficulty peaceful");
 
@@ -262,6 +264,30 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			visit(context, singleplayer, scarlet, scarlet == null ? 0 : DeepLocator.bestYaw(seed, scarlet), 5, "nedra_22_scarlet_grottoes");
 			citadel(context, singleplayer, seed);
 		}
+	}
+
+	/**
+	 * Спавнер хрустальных вихрей: за первые 5 секунд должен выпустить ровно двоих, а следующие
+	 * 15 секунд - никого (задержка около минуты). Заодно здоровье стража.
+	 */
+	private static void spawnerCheck(ClientGameTestContext context, TestServerContext server) {
+		context.waitTicks(20);
+		server.runCommand("setblock 0 -191 -3 minecraft:spawner{SpawnData:{entity:{id:\"nedra:prism_gale\"}}}");
+		context.waitTicks(100);
+		int first = server.computeOnServer(s -> count(s, ModEntities.PRISM_GALE));
+		double health = server.computeOnServer(s -> {
+			for (Entity e : s.getOverworld().iterateEntities()) {
+				if (e instanceof PrismGaleEntity gale) {
+					return (double) gale.getMaxHealth();
+				}
+			}
+			return -1.0;
+		});
+		context.waitTicks(300);
+		int later = server.computeOnServer(s -> count(s, ModEntities.PRISM_GALE));
+		LOGGER.info("STATS| prism gale spawner: {} after 5 s, {} after 20 s; max health {}", first, later, health);
+		server.runCommand("setblock 0 -191 -3 minecraft:air");
+		server.runCommand("kill @e[type=nedra:prism_gale]");
 	}
 
 	/** Водопад подземной реки: снимок и замер течения - насколько игрока сносит за 4 секунды. */

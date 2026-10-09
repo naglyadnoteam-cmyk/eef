@@ -20,6 +20,7 @@
 		]
 	},
 	"mixins": [
+		"nedra.mixins.json",
 		{
 			"config": "nedra.client.mixins.json",
 			"environment": "client"
