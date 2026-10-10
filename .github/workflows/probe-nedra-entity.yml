@@ -55,13 +55,11 @@ jobs:
           g() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- $f :: $2"; [ -n "$f" ] && grep -n -E "$2" "$f" | head -${3:-25}; }
           full() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- FULL $f"; [ -n "$f" ] && sed -n "1,${2:-200}p" "$f"; }
           ctx() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- CTX $f :: $2"; [ -n "$f" ] && grep -n -A ${3:-8} -E "$2" "$f" | head -${4:-60}; }
-          sec WINDCHARGE; full net/minecraft/entity/projectile/BreezeWindChargeEntity.java 80
-          full net/minecraft/entity/projectile/AbstractWindChargeEntity.java 200 | grep -n -E "EXPLOSION_BEHAVIOR|createExplosion|AdvancedExplosionBehavior|class |protected|public" 
-          ctx net/minecraft/entity/projectile/AbstractWindChargeEntity.java "EXPLOSION_BEHAVIOR =" 6 10
-          full net/minecraft/world/explosion/AdvancedExplosionBehavior.java 80 | grep -n -E "public|knockback|Optional"
-          sec SPAWNERLOGIC; ctx net/minecraft/block/spawner/MobSpawnerLogic.java "public void serverTick" 70 80
-          full net/minecraft/block/spawner/MobSpawnerEntry.java 60 | grep -n -E "record|public|entity"
-          g net/minecraft/nbt/NbtCompound.java "public (Optional<String>|String) getString" 4
+          sec ENVATTR; grep -n -E "public static final EnvironmentAttribute|register\\(" $(find /tmp/src -path "*net/minecraft/world/attribute/EnvironmentAttributes.java" | head -1) | head -120
+          sec LIGHTMAP; f=$(find /tmp/src -name "LightmapTextureManager.java" | head -1); echo $f; sed -n '1,400p' "$f" | grep -n -E "Attribute|blockLight|BlockLight|block_light|tint|Tint|uniform|Uniform|ambient|Ambient|nightVision|NIGHT|float |Vector3f|update\\(" | head -120
+          f2=$(find /tmp/src -name "LightmapTextureManager.java" | head -1); sed -n '/public void update/,/^\t}/p' "$f2" | head -150
+          sec STRAY; ctx net/minecraft/entity/mob/StrayEntity.java "canSpawn" 12 20
+          sec SPAWNHELPER; g net/minecraft/world/SpawnHelper.java "getRandomPosInChunkSection|getRandomPosInChunk|heightmap|Heightmap" 20
           sec DONE; echo DONE
 
       - name: Fabric javap
@@ -86,10 +84,15 @@ jobs:
           curl -sSL -o client.jar "$CLIENT_URL"
           java -DbundlerMainClass=net.minecraft.data.Main -jar server.jar --server --output /tmp/vanilla/datagen > /dev/null 2>&1
           D=/tmp/vanilla/datagen/data/minecraft
-          for f in worldgen/structure_set/mineshafts.json worldgen/structure/mineshaft.json loot_table/entities/breeze.json loot_table/chests/trial_chambers/reward.json \
-                   tags/block/crystal_sound_blocks.json tags/entity_type/fall_damage_immune.json; do
-            echo ""; echo "######## DATA $f"; cat "$D/$f" 2>&1 | head -150
-          done
+          echo "######## ATTR KEYS USED IN VANILLA DATA"
+          grep -rhoE '"minecraft:(visual|audio|gameplay)/[a-z_]+"' $D | sort | uniq -c
+          echo "######## SHADERS"
+          mkdir -p cl && cd cl && unzip -oq ../client.jar 'assets/*' && cd ..
+          A=/tmp/vanilla/cl/assets/minecraft
+          ls $A/shaders/core | head -100
+          cat $A/shaders/core/lightmap.fsh 2>&1 | head -120
+          echo DONE
+          exit 0
           mkdir -p cl && cd cl && unzip -oq ../client.jar 'assets/*' && cd ..
           A=/tmp/vanilla/cl/assets/minecraft
           for f in blockstates/amethyst_cluster.json models/block/amethyst_cluster.json models/item/amethyst_cluster.json items/amethyst_cluster.json models/block/cube_column.json; do
