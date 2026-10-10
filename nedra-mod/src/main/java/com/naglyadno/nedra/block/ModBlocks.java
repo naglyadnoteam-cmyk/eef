@@ -107,11 +107,11 @@ public final class ModBlocks {
 					.sounds(BlockSoundGroup.AMETHYST_CLUSTER).luminance(state -> 10).pistonBehavior(PistonBehavior.DESTROY));
 
 	public static final Block ICICLE = registerWithItem("icicle", IcicleBlock::new,
-			AbstractBlock.Settings.create().mapColor(MapColor.ICE).noCollision().strength(0.3f).nonOpaque()
+			AbstractBlock.Settings.create().mapColor(MapColor.PALE_PURPLE).noCollision().strength(0.3f).nonOpaque()
 					.sounds(BlockSoundGroup.GLASS).pistonBehavior(PistonBehavior.DESTROY));
 
 	public static final Block FROST_LEAVES = registerWithItem("frost_leaves", Block::new,
-			AbstractBlock.Settings.create().mapColor(MapColor.ICE).strength(0.2f).nonOpaque()
+			AbstractBlock.Settings.create().mapColor(MapColor.PALE_PURPLE).strength(0.2f).nonOpaque()
 					.sounds(BlockSoundGroup.GLASS).allowsSpawning((state, world, pos, type) -> false)
 					.suffocates((state, world, pos) -> false).blockVision((state, world, pos) -> false));
 
