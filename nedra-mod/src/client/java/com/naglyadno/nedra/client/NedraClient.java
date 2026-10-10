@@ -34,10 +34,12 @@ public class NedraClient implements ClientModInitializer {
 			ClientPressureState.clear();
 			ClientAmbience.reset();
 			ClientRiverFlow.reset();
+			ClientFrostLight.reset();
 		});
 
 		ClientTickEvents.END_CLIENT_TICK.register(ClientAmbience::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(ClientRiverFlow::tick);
+		ClientTickEvents.END_CLIENT_TICK.register(ClientFrostLight::tick);
 
 		// виньетка - под остальным интерфейсом (рядом с ванильными оверлеями), манометр - поверх
 		HudElementRegistry.attachElementAfter(VanillaHudElements.MISC_OVERLAYS,

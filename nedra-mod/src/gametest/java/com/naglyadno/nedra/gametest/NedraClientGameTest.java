@@ -294,6 +294,11 @@ public class NedraClientGameTest implements FabricClientGameTest {
 		singleplayer.getClientWorld().waitForChunksRender();
 		context.waitTicks(40);
 		shot(context, "nedra_25_frozen_caverns");
+		// без ночного зрения - как пещеру видит игрок: голубой свет кристаллов и темнота между ними
+		server.runCommand("effect clear @a minecraft:night_vision");
+		context.waitTicks(40);
+		shot(context, "nedra_28_frozen_glow");
+		server.runCommand("effect give @a minecraft:night_vision infinite 0 true");
 		String census = server.computeOnServer(s -> {
 			ServerWorld world = s.getOverworld();
 			Map<String, Integer> counts = new java.util.TreeMap<>();

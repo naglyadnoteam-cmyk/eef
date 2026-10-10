@@ -388,12 +388,17 @@ public final class FrozenCaverns {
 				int x = site.cx + (int) Math.round(Math.cos(a) * main.rx() * t);
 				int z = site.cz + (int) Math.round(Math.sin(a) * main.rx() * t);
 				ColumnInfo column = sample(seed, site, x, z);
-				if (column.cavity() && !column.lake() && column.room() >= 8) {
+				if (column.cavity() && !column.lake() && column.room() >= 8 && !powder(seed, column, x, z)) {
 					return new BlockPos(x, column.top() + 1, z);
 				}
 			}
 		}
 		return new BlockPos(site.cx, site.floorY + 1, site.cz);
+	}
+
+	/** Пятна рыхлого снега на полу (ловушка: в нём вязнут и мёрзнут). */
+	public static boolean powder(long worldSeed, ColumnInfo c, int x, int z) {
+		return !c.lake() && !c.island() && c.e() < 0.85 && materialNoise(worldSeed, x / 9.0, 77.0, z / 9.0) > 0.62;
 	}
 
 	/** Точка внутри пещеры (с ледяной коркой) - там биом замёрзших пещер. */
@@ -542,9 +547,9 @@ public final class FrozenCaverns {
 	private static Camp planCamp(Site site, long seed, int cellX, int cellZ) {
 		double start = h(seed, cellX, cellZ, 110) * Math.PI * 2;
 		Lobe main = site.lobes[0];
-		for (int k = 0; k < 24; k++) {
+		for (int k = 0; k < 72; k++) {
 			double a = start + k * Math.PI / 12;
-			double t = 0.42 + (k % 3) * 0.1;
+			double t = 0.3 + (k / 24) * 0.12 + (k % 2) * 0.06;
 			int x = site.cx + (int) Math.round(Math.cos(a) * main.rx() * t);
 			int z = site.cz + (int) Math.round(Math.sin(a) * main.rz() * t);
 			if (campFits(seed, site, x, z)) {
@@ -565,10 +570,11 @@ public final class FrozenCaverns {
 		if (!center.cavity() || center.lake() || center.island() || center.room() < 9) {
 			return false;
 		}
-		for (int dx = -4; dx <= 4; dx += 4) {
-			for (int dz = -4; dz <= 4; dz += 4) {
+		// площадку лагерь выравнивает сам, поэтому перепад до 4 блоков допустим
+		for (int dx = -4; dx <= 4; dx += 2) {
+			for (int dz = -4; dz <= 4; dz += 2) {
 				ColumnInfo c = sample(seed, site, x + dx, z + dz);
-				if (!c.cavity() || c.lake() || c.room() < 6 || Math.abs(c.top() - center.top()) > 2) {
+				if (!c.cavity() || c.lake() || c.room() < 6 || Math.abs(c.top() - center.top()) > 4) {
 					return false;
 				}
 			}

@@ -3,7 +3,8 @@
 	"package": "com.naglyadno.nedra.mixin.client",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"DebugHudMixin"
+		"DebugHudMixin",
+		"LightmapTextureManagerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -184,7 +184,7 @@ public class FrozenCavernFeature extends Feature<DefaultFeatureConfig> {
 		}
 
 		private boolean powder(int x, int z, ColumnInfo c) {
-			return !c.lake() && !c.island() && c.e() < 0.85 && noise(x / 9.0, 77.0, z / 9.0) > 0.6;
+			return FrozenCaverns.powder(worldSeed, c, x, z);
 		}
 
 		private boolean nearCamp(int x, int z, int radius) {
@@ -640,7 +640,7 @@ public class FrozenCavernFeature extends Feature<DefaultFeatureConfig> {
 						set(x, yy, z, AIR);
 					}
 					set(x, y, z, SNOW_BLOCK);
-					for (int yy = y - 2; yy < y; yy++) {
+					for (int yy = y - 6; yy < y; yy++) {
 						BlockState below = get(x, yy, z);
 						if (below.isAir() || isFluid(below)) {
 							set(x, yy, z, SNOW_BLOCK);
@@ -769,8 +769,10 @@ public class FrozenCavernFeature extends Feature<DefaultFeatureConfig> {
 					if (!get(x, c.top() + 1, z).isAir()) {
 						continue;
 					}
+					// кристаллы на полу растут рощицами: между ними остаётся темнота
 					double h = hash(x, c.top(), z, 604);
-					if (h < 0.014 && !floor.isOf(Blocks.POWDER_SNOW)) {
+					boolean grove = noise(x / 14.0, 55.0, z / 14.0) > 0.32;
+					if (grove && h < 0.05 && !floor.isOf(Blocks.POWDER_SNOW)) {
 						set(x, c.top() + 1, z, crystal(Direction.UP, false));
 					} else if (floor.isOf(Blocks.SNOW_BLOCK) && noise(x / 6.0, 31.0, z / 6.0) > -0.15) {
 						int layers = Math.min(3, 1 + (int) (hash(x, c.top(), z, 605) * 2.4));
