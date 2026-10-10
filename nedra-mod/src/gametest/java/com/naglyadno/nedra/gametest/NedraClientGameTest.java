@@ -289,7 +289,7 @@ public class NedraClientGameTest implements FabricClientGameTest {
 		LOGGER.info("STATS| frozen cavern at {} {} {} (dome {}, tunnels {}, falls {}, camp {})", info[0], info[1], info[2],
 				info[6], info[13], info[14], info[7] == 1);
 		float yaw = (float) Math.toDegrees(Math.atan2(-(info[0] - info[3]), info[2] - info[5]));
-		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 %.1f -8", info[3], info[4], info[5], yaw));
+		server.runCommand(String.format(Locale.ROOT, "tp @a %.1f %d %.1f %.1f -8", info[3] + 0.5, info[4], info[5] + 0.5, yaw));
 		context.waitTicks(160);
 		singleplayer.getClientWorld().waitForChunksRender();
 		context.waitTicks(40);
@@ -368,22 +368,22 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			int x = info[8] + fx * 4;
 			int z = info[10] + fz * 4;
 			float campYaw = (float) Math.toDegrees(Math.atan2(fx, -fz));
-			server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 %.1f 25", x, info[9] + 2, z, campYaw));
+			server.runCommand(String.format(Locale.ROOT, "tp @a %.1f %d %.1f %.1f 25", x + 0.5, info[9] + 2, z + 0.5, campYaw));
 			context.waitTicks(80);
 			singleplayer.getClientWorld().waitForChunksRender();
 			context.waitTicks(20);
 			shot(context, "nedra_26_frozen_camp");
 		}
-		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5", info[3], info[4], info[5]));
+		server.runCommand(String.format(Locale.ROOT, "tp @a %.1f %d %.1f", info[3] + 0.5, info[4], info[5] + 0.5));
 		wildSpawns(context, singleplayer, "nedra_27_frostbitten_wild", ModEntities.FROSTBITTEN, EntityType.STRAY);
-		int wild = server.computeOnServer(s -> count(s, ModEntities.FROSTBITTEN) + count(s, EntityType.STRAY));
+		int wild = server.computeOnServer(s -> count(s, ModEntities.FROSTBITTEN));
 		if (wild == 0) {
 			// для снимка моба - призванный обмороженный шахтёр (в логе видно, что он не естественный)
 			server.runCommand("difficulty easy");
-			server.runCommand(String.format(Locale.ROOT, "summon nedra:frostbitten %d.5 %d %d.5 {NoAI:1b,Rotation:[%.1ff,0f]}",
+			server.runCommand(String.format(Locale.ROOT, "summon nedra:frostbitten %d %d %d {NoAI:1b,Rotation:[%.1ff,0f]}",
 					info[3] + Math.round((float) Math.sin(Math.toRadians(-yaw)) * 3), info[4],
 					info[5] + Math.round((float) Math.cos(Math.toRadians(yaw)) * 3), yaw + 180.0F));
-			server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 %.1f 15", info[3], info[4], info[5], yaw));
+			server.runCommand(String.format(Locale.ROOT, "tp @a %.1f %d %.1f %.1f 15", info[3] + 0.5, info[4], info[5] + 0.5, yaw));
 			context.waitTicks(40);
 			shot(context, "nedra_27_frostbitten_summoned");
 			server.runCommand("difficulty peaceful");
