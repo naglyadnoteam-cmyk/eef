@@ -28,6 +28,9 @@ public final class ModFeatures {
 	public static final Feature<DefaultFeatureConfig> DEEP_LAYERS =
 			register("deep_layers", new DeepLayersFeature(DefaultFeatureConfig.CODEC));
 
+	public static final Feature<DefaultFeatureConfig> FROZEN_CAVERN =
+			register("frozen_cavern", new FrozenCavernFeature(DefaultFeatureConfig.CODEC));
+
 	private static <C extends FeatureConfig, F extends Feature<C>> F register(String path, F feature) {
 		return Registry.register(Registries.FEATURE, Identifier.of(NedraMod.MOD_ID, path), feature);
 	}

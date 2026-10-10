@@ -1,6 +1,7 @@
 {
 	"replace": false,
 	"values": [
-		"nedra:deepmoss"
+		"nedra:deepmoss",
+		"nedra:frost_leaves"
 	]
 }

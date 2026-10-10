@@ -2,6 +2,7 @@ package com.naglyadno.nedra.hazard;
 
 import com.naglyadno.nedra.network.RiverFlowPayload;
 import com.naglyadno.nedra.worldgen.deep.Citadels;
+import com.naglyadno.nedra.worldgen.deep.FrozenCaverns;
 import com.naglyadno.nedra.worldgen.deep.DeepTerrain;
 import com.naglyadno.nedra.worldgen.deep.Settlements;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -43,7 +44,9 @@ public class RiverCurrentManager {
 				continue;
 			}
 			long seed = world.getSeed();
+			// озеро Замёрзшей пещеры может оказаться на месте русла - там течения нет
 			double[] flow = player.isTouchingWater() && !player.isSpectator()
+					&& !FrozenCaverns.isFrozenBiome(world, player.getBlockPos())
 					? flowAt(seed, terrain, player.getX(), player.getY(), player.getZ()) : null;
 			sendIfChanged(player, flow);
 			if (player.isSpectator()) {
@@ -54,7 +57,8 @@ public class RiverCurrentManager {
 				if (!pushed.add(entity)) {
 					continue;
 				}
-				double[] f = flowAt(seed, terrain, entity.getX(), entity.getY(), entity.getZ());
+				double[] f = FrozenCaverns.isFrozenBiome(world, entity.getBlockPos()) ? null
+						: flowAt(seed, terrain, entity.getX(), entity.getY(), entity.getZ());
 				if (f != null) {
 					entity.addVelocity(f[0] * ENTITY_PUSH, 0.0, f[1] * ENTITY_PUSH);
 				}

@@ -2,6 +2,7 @@
 	"replace": false,
 	"values": [
 		"nedra:scarlet_crystal_block",
-		"nedra:scarlet_cluster"
+		"nedra:scarlet_cluster",
+		"nedra:frost_crystal"
 	]
 }

@@ -1,4 +1,16 @@
 {
+	"block.nedra.frost_crystal": "Frost Crystal",
+	"block.nedra.icicle": "Icicle",
+	"block.nedra.frost_leaves": "Frost Leaves",
+	"block.nedra.frost_lamp": "Frost Lamp",
+	"item.nedra.frost_shard": "Frost Shard",
+	"item.nedra.frostbitten_spawn_egg": "Frostbitten Miner Spawn Egg",
+	"entity.nedra.frostbitten": "Frostbitten Miner",
+	"biome.nedra.frozen_caverns": "Frozen Caverns",
+	"advancements.nedra.frozen.title": "Permafrost",
+	"advancements.nedra.frozen.description": "Find a Frozen Cavern",
+	"tooltip.nedra.frost_shard": "Cold, and never melts, even in your hand",
+	"tooltip.nedra.frost_lamp": "Does not melt ice or snow",
 	"itemGroup.nedra": "Nedra",
 	"block.nedra.lumenite_ore": "Lumenite Ore",
 	"block.nedra.magnetite_ore": "Magnetite Ore",
@@ -127,7 +139,7 @@
 	"advancements.nedra.rust_brute.title": "Rust Never Sleeps",
 	"advancements.nedra.rust_brute.description": "Defeat a Rust Brute in the Magnetic Caverns",
 	"guide.nedra.page.1": "§1§lNEDRA§r\n§8Miner's handbook§r\n\nThe world is now 288 blocks deeper: it ends at §lY -352§r. The deeper you go, the harder the rock presses down.\n\n§8Lost this book? §0/nedra guide§8 gives a new one.",
-	"guide.nedra.page.2": "§1§lContents§r\n3  Pressure, tiers\n5  Protection, helmets\n7  Moss and tablets\n8  Cave-ins  9  Vents\n10 Lumenite\n11 Magnetite\n12 Echo  13 Geophone\n14 Deep biomes\n15 Caverns, water\n16 Towns  17 Brute\n18 Jungle  20 Rivers\n21 Grottoes\n22 Citadel",
+	"guide.nedra.page.2": "§1§lContents§r\n3  Pressure, tiers\n5  Protection, helmets\n7  Moss and tablets\n8  Cave-ins  9  Vents\n10 Lumenite\n11 Magnetite\n12 Echo  13 Geophone\n14 Deep biomes\n15 Caverns, water\n16 Towns  17 Brute\n18 Jungle  20 Rivers\n21 Grottoes  22 Castle  23 Ice",
 	"guide.nedra.page.3": "§1§lPressure§r\n\nAbove Y 0 the world is normal. Below zero the deep begins: pressure grows from 0% to 100% at the bottom, Y -352.\n\nA gauge appears at the lower right: level, tier, height, protection. Details: §0/nedra info§r.",
 	"guide.nedra.page.4": "§1§lPressure tiers§r\n\n§2Low§r 10%+: bearable.\n§2Moderate§r 30%+: mining gets slower.\n§6High§r 55%+: the rock groans, F3 glitches.\n§4Severe§r 75%+: heartbeat, darkening vision.\n§4§lCritical§r 92%+: the rock hurts you, but never kills.",
 	"guide.nedra.page.5": "§1§lProtection§r\n\nA helmet takes off part of the pressure:\n§8•§r Hard hat: %1$s%%\n§8•§r Reinforced: %2$s%%\n§8•§r Deepsuit: %3$s%%\n\nA tablet adds %4$s%% more for %5$s. Total is capped at 95%%.",
@@ -147,5 +159,7 @@
 	"guide.nedra.page.19": "§1§lOvergrown dwellers§r\n\n§2Zombie§r: its blow poisons with spores.\n§2Skeleton§r: arrows entangle and slow.\n§2Creeper§r: moss sprouts after its blast.\n\nNo burning in daylight. They drop vines and glowcaps.",
 	"guide.nedra.page.20": "§1§lRivers and falls§r\n\nLong underground rivers flow near Y -116 and -228, though not everywhere. Water steps down in waterfalls and the current pushes you downstream.\n\n§8Find one: /nedra locate waterfall§r",
 	"guide.nedra.page.21": "§1§lGrottoes, gardens§r\n\n§4Scarlet Grottoes§r near Y -200 are rare halls of red stone and crystals. Clusters drop scarlet shards.\n\nAt -140 to -215 rare §2lush caves§r grow: azaleas, moss, glow berries.",
-	"guide.nedra.page.22": "§1§lCrystal Citadel§r\n\nA maze castle at Y -110 to -255: 36 halls, vaults, libraries, gardens and the Heart with treasure.\n\nGuarded by §3Prism Gales§r. Entry is a tunnel from the caves: §8/nedra locate citadel§r"
+	"guide.nedra.page.22": "§1§lCrystal Citadel§r\n\nA maze castle at Y -110 to -255: 36 halls, vaults, libraries, gardens and the Heart with treasure.\n\nGuarded by §3Prism Gales§r. Entry is a tunnel from the caves: §8/nedra locate citadel§r",
+	"guide.nedra.page.23": "§1§lFrozen Caverns§r\n\nRare ice halls at any depth: giant icicles, frozen falls, lakes under ice, ice trees and snowy islets. §3Frost crystals§r give light.\n\n§8Find one: /nedra locate frozen_caverns§r",
+	"guide.nedra.page.24": "§1§lDwellers of the ice§r\n\n§3Frostbitten Miners§r: their blows freeze you. Leather armor keeps the frost off. Strays roam there too.\n\nLook for an abandoned expedition camp. A §3Frost Lamp§r never melts ice."
 }

@@ -17,6 +17,7 @@ import net.minecraft.world.gen.feature.DefaultFeatureConfig;
 import net.minecraft.world.gen.feature.Feature;
 import net.minecraft.world.gen.feature.util.FeatureContext;
 import com.naglyadno.nedra.worldgen.deep.DeepTerrain;
+import com.naglyadno.nedra.worldgen.deep.FrozenCaverns;
 import com.naglyadno.nedra.worldgen.deep.Settlements;
 
 import java.util.List;
@@ -92,7 +93,8 @@ public class DeepLayersFeature extends Feature<DefaultFeatureConfig> {
 		Optional<RegistryEntry.Reference<Biome>> overgrown = registry.getEntry(Identifier.of(NedraMod.MOD_ID, "overgrown_depths"));
 		Optional<RegistryEntry.Reference<Biome>> scarlet = registry.getEntry(Identifier.of(NedraMod.MOD_ID, "scarlet_grottoes"));
 		Optional<RegistryEntry.Reference<Biome>> lush = registry.getEntry(Identifier.ofVanilla("lush_caves"));
-		if (echo.isEmpty() || magnetic.isEmpty() || crystal.isEmpty() || overgrown.isEmpty() || scarlet.isEmpty() || lush.isEmpty()) {
+		Optional<RegistryEntry.Reference<Biome>> frozen = registry.getEntry(FrozenCaverns.BIOME.getValue());
+		if (frozen.isEmpty() || echo.isEmpty() || magnetic.isEmpty() || crystal.isEmpty() || overgrown.isEmpty() || scarlet.isEmpty() || lush.isEmpty()) {
 			return;
 		}
 		long seed = world.getSeed();
@@ -100,14 +102,21 @@ public class DeepLayersFeature extends Feature<DefaultFeatureConfig> {
 		int bx = chunk.getPos().getStartX();
 		int bz = chunk.getPos().getStartZ();
 		List<Settlements.Site> sites = Settlements.near(seed, bx, bz, bx + 15, bz + 15, 12);
+		List<FrozenCaverns.Site> caverns = FrozenCaverns.near(world.toServerWorld(), bx, bz, bx + 15, bz + 15);
 		chunk.populateBiomes((qx, qy, qz, noise) -> {
 			RegistryEntry<Biome> current = chunk.getBiomeForNoiseGen(qx, qy, qz);
 			int y = BiomeCoords.toBlock(qy);
+			int x = BiomeCoords.toBlock(qx) + 2;
+			int z = BiomeCoords.toBlock(qz) + 2;
+			// Замёрзшие пещеры бывают на любой высоте и важнее биома яруса
+			for (FrozenCaverns.Site cavern : caverns) {
+				if (FrozenCaverns.inBiome(seed, cavern, x, y + 2, z)) {
+					return frozen.get();
+				}
+			}
 			if (y >= DEEP_TOP) {
 				return current;
 			}
-			int x = BiomeCoords.toBlock(qx) + 2;
-			int z = BiomeCoords.toBlock(qz) + 2;
 			for (Settlements.Site site : sites) {
 				if (site.distance(x, z) < site.radius() + 12 && y > site.floorY() - 8 && y < site.floorY() + 26) {
 					return echo.get();

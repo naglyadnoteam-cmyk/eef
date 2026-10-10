@@ -1,6 +1,7 @@
 package com.naglyadno.nedra.client;
 
 import com.naglyadno.nedra.component.ModComponents;
+import com.naglyadno.nedra.block.ModBlocks;
 import com.naglyadno.nedra.item.ModItems;
 import com.naglyadno.nedra.network.ConfigSyncPayload;
 import net.minecraft.item.Item;
@@ -45,6 +46,10 @@ public final class NedraTooltips {
 			extra.add(flavor("tooltip.nedra.resonant_shard"));
 		} else if (item == ModItems.DEEPMOSS_CLUMP) {
 			extra.add(flavor("tooltip.nedra.deepmoss_clump"));
+		} else if (item == ModItems.FROST_SHARD) {
+			extra.add(flavor("tooltip.nedra.frost_shard"));
+		} else if (item == ModBlocks.FROST_LAMP.asItem()) {
+			extra.add(Text.translatable("tooltip.nedra.frost_lamp").formatted(Formatting.AQUA));
 		} else if (item == Items.COMPASS && Boolean.TRUE.equals(stack.get(ModComponents.MAGNETIZED))) {
 			extra.add(Text.translatable("tooltip.nedra.magnetized").formatted(Formatting.RED));
 		}

@@ -50,10 +50,12 @@ public class NedraClient implements ClientModInitializer {
 		EntityRendererRegistry.register(ModEntities.OVERGROWN_SKELETON, OvergrownSkeletonRenderer::new);
 		EntityRendererRegistry.register(ModEntities.OVERGROWN_CREEPER, OvergrownCreeperRenderer::new);
 		EntityRendererRegistry.register(ModEntities.PRISM_GALE, PrismGaleRenderer::new);
+		EntityRendererRegistry.register(ModEntities.FROSTBITTEN, FrostbittenRenderer::new);
 
 		// растения с прозрачными пикселями рисуются в том же слое, что и ванильные свисающие корни
 		BlockRenderLayerMap.putBlocks(BlockRenderLayers.getBlockLayer(Blocks.HANGING_ROOTS.getDefaultState()),
-				ModBlocks.DEEP_VINE, ModBlocks.DEEP_FERN, ModBlocks.GLOWCAP, ModBlocks.SCARLET_CLUSTER);
+				ModBlocks.DEEP_VINE, ModBlocks.DEEP_FERN, ModBlocks.GLOWCAP, ModBlocks.SCARLET_CLUSTER,
+				ModBlocks.FROST_CRYSTAL, ModBlocks.ICICLE, ModBlocks.FROST_LEAVES);
 
 		ItemTooltipCallback.EVENT.register((stack, tooltipContext, type, lines) -> NedraTooltips.append(stack, lines));
 	}

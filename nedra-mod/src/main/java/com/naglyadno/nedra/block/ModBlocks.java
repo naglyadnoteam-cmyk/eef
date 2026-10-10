@@ -99,6 +99,27 @@ public final class ModBlocks {
 			crystalMasonry().luminance(state -> 4));
 	public static final Block CRYSTAL_TILES = registerWithItem("crystal_tiles", Block::new, crystalMasonry());
 
+	// --- Замёрзшие пещеры ---
+	/** Светит на 10: рядом с ним лёд и снег не тают (тают при свете больше 11). */
+	public static final Block FROST_CRYSTAL = registerWithItem("frost_crystal",
+			settings -> new AmethystClusterBlock(7.0F, 3.0F, settings),
+			AbstractBlock.Settings.create().mapColor(MapColor.LIGHT_BLUE).solid().nonOpaque().strength(1.5f)
+					.sounds(BlockSoundGroup.AMETHYST_CLUSTER).luminance(state -> 10).pistonBehavior(PistonBehavior.DESTROY));
+
+	public static final Block ICICLE = registerWithItem("icicle", IcicleBlock::new,
+			AbstractBlock.Settings.create().mapColor(MapColor.ICE).noCollision().strength(0.3f).nonOpaque()
+					.sounds(BlockSoundGroup.GLASS).pistonBehavior(PistonBehavior.DESTROY));
+
+	public static final Block FROST_LEAVES = registerWithItem("frost_leaves", Block::new,
+			AbstractBlock.Settings.create().mapColor(MapColor.ICE).strength(0.2f).nonOpaque()
+					.sounds(BlockSoundGroup.GLASS).allowsSpawning((state, world, pos, type) -> false)
+					.suffocates((state, world, pos) -> false).blockVision((state, world, pos) -> false));
+
+	/** Морозный светильник: свет 11 - самый яркий, при котором лёд и снег рядом не тают. */
+	public static final Block FROST_LAMP = registerWithItem("frost_lamp", Block::new,
+			AbstractBlock.Settings.create().mapColor(MapColor.LIGHT_BLUE).strength(0.6f)
+					.luminance(state -> 11).sounds(BlockSoundGroup.GLASS));
+
 	private static Block registerWithItem(String path, Function<AbstractBlock.Settings, Block> factory,
 			AbstractBlock.Settings settings) {
 		RegistryKey<Block> key = RegistryKey.of(RegistryKeys.BLOCK, Identifier.of(NedraMod.MOD_ID, path));

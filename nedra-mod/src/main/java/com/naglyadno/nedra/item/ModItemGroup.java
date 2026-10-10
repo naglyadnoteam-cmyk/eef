@@ -57,6 +57,12 @@ public final class ModItemGroup {
 					entries.add(ModBlocks.CRYSTAL_BRICKS);
 					entries.add(ModBlocks.CHISELED_CRYSTAL_BRICKS);
 					entries.add(ModBlocks.CRYSTAL_TILES);
+					entries.add(ModItems.FROST_SHARD);
+					entries.add(ModBlocks.FROST_CRYSTAL);
+					entries.add(ModBlocks.FROST_LAMP);
+					entries.add(ModBlocks.ICICLE);
+					entries.add(ModBlocks.FROST_LEAVES);
+					entries.add(ModItems.FROSTBITTEN_SPAWN_EGG);
 				})
 				.build());
 	}

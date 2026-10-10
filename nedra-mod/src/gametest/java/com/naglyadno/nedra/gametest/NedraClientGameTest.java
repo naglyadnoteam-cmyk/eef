@@ -7,6 +7,7 @@ import com.naglyadno.nedra.entity.PrismGaleEntity;
 import com.naglyadno.nedra.guide.GuideBook;
 import com.naglyadno.nedra.block.ModBlocks;
 import com.naglyadno.nedra.worldgen.deep.Citadels;
+import com.naglyadno.nedra.worldgen.deep.FrozenCaverns;
 import net.minecraft.block.Blocks;
 import com.naglyadno.nedra.pressure.PressureManager;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
@@ -263,7 +264,76 @@ public class NedraClientGameTest implements FabricClientGameTest {
 			BlockPos scarlet = DeepLocator.layer(seed, DeepTerrain.Layer.SCARLET, 0, 0);
 			visit(context, singleplayer, scarlet, scarlet == null ? 0 : DeepLocator.bestYaw(seed, scarlet), 5, "nedra_22_scarlet_grottoes");
 			citadel(context, singleplayer, seed);
+			frozenCaverns(context, singleplayer);
 		}
+	}
+
+	/** Замёрзшая пещера: общий вид, лагерь экспедиции, перепись льда и естественный спавн её мобов. */
+	private static void frozenCaverns(ClientGameTestContext context, TestSingleplayerContext singleplayer) {
+		TestServerContext server = singleplayer.getServer();
+		int[] info = server.computeOnServer(s -> {
+			FrozenCaverns.Site site = FrozenCaverns.nearest(s.getOverworld(), 0, 0, 8);
+			if (site == null) {
+				return null;
+			}
+			BlockPos view = FrozenCaverns.viewPoint(s.getOverworld(), site);
+			FrozenCaverns.Camp camp = site.camp();
+			return new int[]{site.cx, site.floorY, site.cz, view.getX(), view.getY(), view.getZ(), site.maxHeight,
+					camp == null ? 0 : 1, camp == null ? 0 : camp.x(), camp == null ? 0 : camp.y(), camp == null ? 0 : camp.z(),
+					camp == null ? 0 : camp.fx(), camp == null ? 0 : camp.fz(), site.tunnels().length, site.falls().length};
+		});
+		if (info == null) {
+			LOGGER.info("STATS| frozen cavern: not found");
+			return;
+		}
+		LOGGER.info("STATS| frozen cavern at {} {} {} (dome {}, tunnels {}, falls {}, camp {})", info[0], info[1], info[2],
+				info[6], info[13], info[14], info[7] == 1);
+		float yaw = (float) Math.toDegrees(Math.atan2(-(info[0] - info[3]), info[2] - info[5]));
+		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 %.1f -8", info[3], info[4], info[5], yaw));
+		context.waitTicks(160);
+		singleplayer.getClientWorld().waitForChunksRender();
+		context.waitTicks(40);
+		shot(context, "nedra_25_frozen_caverns");
+		String census = server.computeOnServer(s -> {
+			ServerWorld world = s.getOverworld();
+			Map<String, Integer> counts = new java.util.TreeMap<>();
+			BlockPos.Mutable p = new BlockPos.Mutable();
+			for (int x = info[0] - 70; x <= info[0] + 70; x++) {
+				for (int z = info[2] - 70; z <= info[2] + 70; z++) {
+					if (!world.getChunkManager().isChunkLoaded(x >> 4, z >> 4)) {
+						continue;
+					}
+					for (int y = info[1] - 10; y <= info[1] + info[6] + 6; y++) {
+						var state = world.getBlockState(p.set(x, y, z));
+						for (var block : new net.minecraft.block.Block[]{Blocks.ICE, Blocks.PACKED_ICE, Blocks.BLUE_ICE, Blocks.SNOW_BLOCK,
+								Blocks.SNOW, Blocks.POWDER_SNOW, Blocks.WATER, Blocks.LAVA, Blocks.SEA_LANTERN, Blocks.CHEST,
+								ModBlocks.FROST_CRYSTAL, ModBlocks.ICICLE, ModBlocks.FROST_LEAVES}) {
+							if (state.isOf(block)) {
+								counts.merge(net.minecraft.registry.Registries.BLOCK.getId(block).getPath(), 1, Integer::sum);
+							}
+						}
+					}
+				}
+			}
+			BlockPos view = new BlockPos(info[3], info[4], info[5]);
+			String biome = world.getBiome(view).getKey().map(k -> k.getValue().toString()).orElse("?");
+			return counts + " biome at view: " + biome;
+		});
+		LOGGER.info("STATS| frozen cavern census (loaded part): {}", census);
+		if (info[7] == 1) {
+			int fx = info[11];
+			int fz = info[12];
+			int x = info[8] + fx * 6;
+			int z = info[10] + fz * 6;
+			float campYaw = (float) Math.toDegrees(Math.atan2(fx, -fz));
+			server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 %.1f 10", x, info[9] + 1, z, campYaw));
+			context.waitTicks(80);
+			singleplayer.getClientWorld().waitForChunksRender();
+			context.waitTicks(20);
+			shot(context, "nedra_26_frozen_camp");
+		}
+		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5", info[3], info[4], info[5]));
+		wildSpawns(context, singleplayer, "nedra_27_frostbitten_wild", ModEntities.FROSTBITTEN, EntityType.STRAY);
 	}
 
 	/**

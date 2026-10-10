@@ -12,6 +12,9 @@
 		"nedra:scarlet_cluster",
 		"nedra:crystal_bricks",
 		"nedra:chiseled_crystal_bricks",
-		"nedra:crystal_tiles"
+		"nedra:crystal_tiles",
+		"nedra:frost_crystal",
+		"nedra:frost_lamp",
+		"nedra:icicle"
 	]
 }

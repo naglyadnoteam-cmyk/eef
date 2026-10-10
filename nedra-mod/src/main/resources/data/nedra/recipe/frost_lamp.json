@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "building",
+	"key": {
+		"S": "nedra:frost_shard",
+		"P": "minecraft:packed_ice"
+	},
+	"pattern": [
+		" S ",
+		"SPS",
+		" S "
+	],
+	"result": {
+		"count": 1,
+		"id": "nedra:frost_lamp"
+	}
+}

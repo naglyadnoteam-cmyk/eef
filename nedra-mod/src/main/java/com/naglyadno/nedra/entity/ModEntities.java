@@ -60,6 +60,15 @@ public final class ModEntities {
 					.maxTrackingRange(8)
 					.notAllowedInPeaceful());
 
+	public static final EntityType<FrostbittenEntity> FROSTBITTEN = register("frostbitten",
+			EntityType.Builder.create(FrostbittenEntity::new, SpawnGroup.MONSTER)
+					.dimensions(0.6F, 1.95F)
+					.eyeHeight(1.74F)
+					.passengerAttachments(2.075F)
+					.vehicleAttachment(-0.7F)
+					.maxTrackingRange(8)
+					.notAllowedInPeaceful());
+
 	public static final EntityType<PrismGaleEntity> PRISM_GALE = register("prism_gale",
 			EntityType.Builder.create(PrismGaleEntity::new, SpawnGroup.MONSTER)
 					.dimensions(0.6F, 1.77F)
@@ -77,6 +86,8 @@ public final class ModEntities {
 		FabricDefaultAttributeRegistry.register(OVERGROWN_SKELETON, AbstractSkeletonEntity.createAbstractSkeletonAttributes());
 		FabricDefaultAttributeRegistry.register(OVERGROWN_CREEPER, CreeperEntity.createCreeperAttributes());
 		FabricDefaultAttributeRegistry.register(PRISM_GALE, PrismGaleEntity.createPrismGaleAttributes());
+		FabricDefaultAttributeRegistry.register(FROSTBITTEN, FrostbittenEntity.createFrostbittenAttributes());
+		registerDarkSpawn(FROSTBITTEN);
 		registerDarkSpawn(OVERGROWN_ZOMBIE);
 		registerDarkSpawn(OVERGROWN_SKELETON);
 		registerDarkSpawn(OVERGROWN_CREEPER);

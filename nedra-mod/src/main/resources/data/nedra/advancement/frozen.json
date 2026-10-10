@@ -1,0 +1,38 @@
+{
+	"parent": "nedra:explorer",
+	"criteria": {
+		"frozen": {
+			"trigger": "minecraft:location",
+			"conditions": {
+				"player": [
+					{
+						"condition": "minecraft:entity_properties",
+						"entity": "this",
+						"predicate": {
+							"location": {
+								"biomes": "nedra:frozen_caverns"
+							}
+						}
+					}
+				]
+			}
+		}
+	},
+	"display": {
+		"icon": {
+			"count": 1,
+			"id": "nedra:frost_crystal"
+		},
+		"title": {
+			"translate": "advancements.nedra.frozen.title"
+		},
+		"description": {
+			"translate": "advancements.nedra.frozen.description"
+		}
+	},
+	"requirements": [
+		[
+			"frozen"
+		]
+	]
+}

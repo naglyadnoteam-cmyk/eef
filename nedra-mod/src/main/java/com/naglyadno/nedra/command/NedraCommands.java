@@ -6,6 +6,7 @@ import com.naglyadno.nedra.NedraMod;
 import com.naglyadno.nedra.guide.GuideBook;
 import com.naglyadno.nedra.pressure.PressureManager;
 import com.naglyadno.nedra.worldgen.deep.Citadels;
+import com.naglyadno.nedra.worldgen.deep.FrozenCaverns;
 import com.naglyadno.nedra.worldgen.deep.DeepLocator;
 import com.naglyadno.nedra.worldgen.deep.DeepTerrain;
 import net.minecraft.item.ItemStack;
@@ -19,7 +20,7 @@ import net.minecraft.util.Formatting;
 /**
  * /nedra guide  - выдать ещё один справочник
  * /nedra info   - текущая глубина, давление и защита
- * /nedra locate settlement|river|waterfall|citadel|lush_pocket|echo_hollows|magnetic_caverns|crystal_depths|overgrown_depths|scarlet_grottoes
+ * /nedra locate settlement|river|waterfall|citadel|frozen_caverns|lush_pocket|echo_hollows|magnetic_caverns|crystal_depths|overgrown_depths|scarlet_grottoes
  *     - найти место в недрах (операторы)
  * /nedra reload - перечитать config/nedra.json (только для операторов)
  */
@@ -43,7 +44,8 @@ public final class NedraCommands {
 						.then(CommandManager.literal("scarlet_grottoes").executes(context -> locate(context.getSource(), "scarlet_grottoes")))
 						.then(CommandManager.literal("lush_pocket").executes(context -> locate(context.getSource(), "lush_pocket")))
 						.then(CommandManager.literal("waterfall").executes(context -> locate(context.getSource(), "waterfall")))
-						.then(CommandManager.literal("citadel").executes(context -> locate(context.getSource(), "citadel"))))
+						.then(CommandManager.literal("citadel").executes(context -> locate(context.getSource(), "citadel")))
+						.then(CommandManager.literal("frozen_caverns").executes(context -> locate(context.getSource(), "frozen_caverns"))))
 				.then(CommandManager.literal("reload")
 						.requires(CommandManager.requirePermissionLevel(CommandManager.GAMEMASTERS_CHECK))
 						.executes(context -> reload(context.getSource()))));
@@ -99,6 +101,10 @@ public final class NedraCommands {
 			case "citadel" -> {
 				Citadels.Site site = DeepLocator.citadel(seed, from.getX(), from.getZ());
 				yield site == null ? null : DeepLocator.citadelEntrance(site);
+			}
+			case "frozen_caverns" -> {
+				FrozenCaverns.Site site = FrozenCaverns.nearest(source.getServer().getOverworld(), from.getX(), from.getZ(), 8);
+				yield site == null ? null : FrozenCaverns.viewPoint(source.getServer().getOverworld(), site);
 			}
 			default -> DeepLocator.layer(seed, DeepTerrain.Layer.CRYSTAL, from.getX(), from.getZ());
 		};

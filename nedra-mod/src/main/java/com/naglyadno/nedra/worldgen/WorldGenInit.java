@@ -48,6 +48,8 @@ public final class WorldGenInit {
 
 		// самым последним: осушение глубинных пещер и биомы ярусов - после всех руд и украшений
 		add("deep_layers_placed", GenerationStep.Feature.TOP_LAYER_MODIFICATION);
+		// Замёрзшие пещеры - на любой высоте и поверх всего, что сгенерировалось раньше (их форма самодостаточна)
+		add("frozen_cavern_placed", GenerationStep.Feature.TOP_LAYER_MODIFICATION);
 
 		// пещеры и ущелья новых глубин (ванильные вырезатели оставлены на своих ванильных высотах)
 		addCarver("deep_cave");
