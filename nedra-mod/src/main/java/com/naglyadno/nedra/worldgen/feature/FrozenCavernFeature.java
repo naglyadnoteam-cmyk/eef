@@ -633,7 +633,7 @@ public class FrozenCavernFeature extends Feature<DefaultFeatureConfig> {
 				for (int b = -4; b <= 4; b++) {
 					int x = cx(camp, a, b);
 					int z = cz(camp, a, b);
-					if (!inside(x, z) || Math.max(Math.abs(a), Math.abs(b)) > 3) {
+					if (!inside(x, z)) {
 						continue;
 					}
 					for (int yy = y + 1; yy <= y + 5; yy++) {

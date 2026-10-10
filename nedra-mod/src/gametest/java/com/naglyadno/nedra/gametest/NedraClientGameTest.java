@@ -294,6 +294,43 @@ public class NedraClientGameTest implements FabricClientGameTest {
 		singleplayer.getClientWorld().waitForChunksRender();
 		context.waitTicks(40);
 		shot(context, "nedra_25_frozen_caverns");
+		String feet = server.computeOnServer(s -> {
+			ServerPlayerEntity p = s.getPlayerManager().getPlayerList().get(0);
+			ServerWorld w = s.getOverworld();
+			BlockPos b = p.getBlockPos();
+			return "frozenTicks=" + p.getFrozenTicks() + " feet=" + w.getBlockState(b) + " below=" + w.getBlockState(b.down())
+					+ " head=" + w.getBlockState(b.up());
+		});
+		LOGGER.info("STATS| frozen cavern view point: {}", feet);
+		String light = server.computeOnServer(s -> {
+			ServerWorld w = s.getOverworld();
+			FrozenCaverns.Site site = FrozenCaverns.nearest(w, 0, 0, 8);
+			int dark = 0;
+			int lit = 0;
+			Map<String, Integer> floors = new java.util.TreeMap<>();
+			for (int x = site.cx - 70; x <= site.cx + 70; x += 2) {
+				for (int z = site.cz - 70; z <= site.cz + 70; z += 2) {
+					if (!w.getChunkManager().isChunkLoaded(x >> 4, z >> 4)) {
+						continue;
+					}
+					FrozenCaverns.ColumnInfo c = FrozenCaverns.sample(w.getSeed(), site, x, z);
+					if (!c.cavity() || c.lake()) {
+						continue;
+					}
+					BlockPos p = new BlockPos(x, c.top() + 1, z);
+					if (w.getLightLevel(net.minecraft.world.LightType.BLOCK, p) == 0) {
+						dark++;
+						String key = net.minecraft.registry.Registries.BLOCK.getId(w.getBlockState(p.down()).getBlock()).getPath() + "/"
+								+ net.minecraft.registry.Registries.BLOCK.getId(w.getBlockState(p).getBlock()).getPath();
+						floors.merge(key, 1, Integer::sum);
+					} else {
+						lit++;
+					}
+				}
+			}
+			return "dark=" + dark + " lit=" + lit + " dark floor/feet=" + floors;
+		});
+		LOGGER.info("STATS| frozen cavern floor light: {}", light);
 		// без ночного зрения - как пещеру видит игрок: голубой свет кристаллов и темнота между ними
 		server.runCommand("effect clear @a minecraft:night_vision");
 		context.waitTicks(40);
@@ -328,10 +365,10 @@ public class NedraClientGameTest implements FabricClientGameTest {
 		if (info[7] == 1) {
 			int fx = info[11];
 			int fz = info[12];
-			int x = info[8] + fx * 6;
-			int z = info[10] + fz * 6;
+			int x = info[8] + fx * 4;
+			int z = info[10] + fz * 4;
 			float campYaw = (float) Math.toDegrees(Math.atan2(fx, -fz));
-			server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 %.1f 10", x, info[9] + 1, z, campYaw));
+			server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 %.1f 25", x, info[9] + 2, z, campYaw));
 			context.waitTicks(80);
 			singleplayer.getClientWorld().waitForChunksRender();
 			context.waitTicks(20);
@@ -339,6 +376,18 @@ public class NedraClientGameTest implements FabricClientGameTest {
 		}
 		server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5", info[3], info[4], info[5]));
 		wildSpawns(context, singleplayer, "nedra_27_frostbitten_wild", ModEntities.FROSTBITTEN, EntityType.STRAY);
+		int wild = server.computeOnServer(s -> count(s, ModEntities.FROSTBITTEN) + count(s, EntityType.STRAY));
+		if (wild == 0) {
+			// для снимка моба - призванный обмороженный шахтёр (в логе видно, что он не естественный)
+			server.runCommand("difficulty easy");
+			server.runCommand(String.format(Locale.ROOT, "summon nedra:frostbitten %d.5 %d %d.5 {NoAI:1b,Rotation:[%.1ff,0f]}",
+					info[3] + Math.round((float) Math.sin(Math.toRadians(-yaw)) * 3), info[4],
+					info[5] + Math.round((float) Math.cos(Math.toRadians(yaw)) * 3), yaw + 180.0F));
+			server.runCommand(String.format(Locale.ROOT, "tp @a %d.5 %d %d.5 %.1f 15", info[3], info[4], info[5], yaw));
+			context.waitTicks(40);
+			shot(context, "nedra_27_frostbitten_summoned");
+			server.runCommand("difficulty peaceful");
+		}
 	}
 
 	/**
