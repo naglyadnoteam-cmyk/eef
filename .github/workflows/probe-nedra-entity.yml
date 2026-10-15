@@ -55,11 +55,31 @@ jobs:
           g() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- $f :: $2"; [ -n "$f" ] && grep -n -E "$2" "$f" | head -${3:-25}; }
           full() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- FULL $f"; [ -n "$f" ] && sed -n "1,${2:-200}p" "$f"; }
           ctx() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- CTX $f :: $2"; [ -n "$f" ] && grep -n -A ${3:-8} -E "$2" "$f" | head -${4:-60}; }
-          sec ENVATTR; grep -n -E "public static final EnvironmentAttribute|register\\(" $(find /tmp/src -path "*net/minecraft/world/attribute/EnvironmentAttributes.java" | head -1) | head -120
-          sec LIGHTMAP; f=$(find /tmp/src -name "LightmapTextureManager.java" | head -1); echo $f; sed -n '1,400p' "$f" | grep -n -E "Attribute|blockLight|BlockLight|block_light|tint|Tint|uniform|Uniform|ambient|Ambient|nightVision|NIGHT|float |Vector3f|update\\(" | head -120
-          f2=$(find /tmp/src -name "LightmapTextureManager.java" | head -1); sed -n '/public void update/,/^\t}/p' "$f2" | head -150
-          sec STRAY; ctx net/minecraft/entity/mob/StrayEntity.java "canSpawn" 12 20
-          sec SPAWNHELPER; g net/minecraft/world/SpawnHelper.java "getRandomPosInChunkSection|getRandomPosInChunk|heightmap|Heightmap" 20
+          sec TOOLMAT; full net/minecraft/item/ToolMaterial.java 120
+          sec ITEMSETTINGS; g net/minecraft/item/Item.java "public Item.Settings (pickaxe|axe|shovel|hoe|sword|tool|armor|spear|weapon)|public Settings (pickaxe|axe|shovel|hoe|sword|tool|armor|spear|weapon)|public void postHit|public boolean postHit|postDamageEntity|public boolean postMine" 30
+          ctx net/minecraft/item/Item.java "public Item.Settings sword|public Settings sword" 12 30
+          ctx net/minecraft/item/Item.java "public Item.Settings pickaxe|public Settings pickaxe" 6 20
+          g net/minecraft/item/AxeItem.java "public AxeItem" 5
+          g net/minecraft/item/ShovelItem.java "public ShovelItem" 5
+          g net/minecraft/item/HoeItem.java "public HoeItem" 5
+          ls /tmp/src/net/minecraft/item/ | grep -i -E "sword|tool|mining" 
+          sec ARMORMATS; full net/minecraft/item/equipment/ArmorMaterials.java 80 | grep -n -E "IRON|DIAMOND|NETHERITE|new ArmorMaterial|Map.of" 
+          sec DROPS; g net/minecraft/block/Block.java "public static List<ItemStack> getDroppedStacks|public static void dropStacks" 10
+          sec RECIPE; g net/minecraft/recipe/ServerRecipeManager.java "public .*getFirstMatch|public .*Optional" 12
+          g net/minecraft/recipe/SingleStackRecipe.java "public|result" 20
+          g net/minecraft/recipe/input/SingleStackRecipeInput.java "record|public" 8
+          sec POWDER; ctx net/minecraft/block/PowderSnowBlock.java "canWalkOnPowderSnow" 6 12
+          sec GOLEM; g net/minecraft/entity/passive/IronGolemEntity.java "public IronGolemEntity|protected void initGoals|public boolean tryAttack|createIronGolemAttributes|public void handleStatus|public boolean canTarget|isPlayerCreated|public int getAttackTicksLeft|attackTicksLeft =|protected void mobTick|public void tickMovement" 30
+          ctx net/minecraft/entity/passive/IronGolemEntity.java "public boolean tryAttack" 25 30
+          full net/minecraft/client/render/entity/IronGolemEntityRenderer.java 60
+          full net/minecraft/client/render/entity/state/IronGolemEntityRenderState.java 30
+          sec BOSSBAR; g net/minecraft/entity/boss/ServerBossBar.java "public ServerBossBar|public void (addPlayer|removePlayer|setPercent)" 8
+          g net/minecraft/entity/boss/WitherEntity.java "bossBar|onStartedTrackingBy|onStoppedTrackingBy" 12
+          sec BLOCKUSE; g net/minecraft/block/AbstractBlock.java "protected ActionResult onUseWithItem|protected ActionResult onUse" 4
+          sec MOBXP; g net/minecraft/entity/mob/MobEntity.java "experiencePoints" 5
+          sec LIVING; g net/minecraft/entity/LivingEntity.java "public boolean isInvulnerableTo|public boolean damage\\(|protected void applyDamage|public boolean canHaveStatusEffect|public final boolean isFallFlying|public boolean handleFallDamage" 10
+          g net/minecraft/entity/Entity.java "public boolean isInvulnerableTo|public boolean handleFallDamage|public boolean isFireImmune" 6
+          sec SPAWNEGG; ls /tmp/src/net/minecraft/item/ | grep -i egg
           sec DONE; echo DONE
 
       - name: Fabric javap
@@ -84,13 +104,20 @@ jobs:
           curl -sSL -o client.jar "$CLIENT_URL"
           java -DbundlerMainClass=net.minecraft.data.Main -jar server.jar --server --output /tmp/vanilla/datagen > /dev/null 2>&1
           D=/tmp/vanilla/datagen/data/minecraft
-          echo "######## ATTR KEYS USED IN VANILLA DATA"
-          grep -rhoE '"minecraft:(visual|audio|gameplay)/[a-z_]+"' $D | sort | uniq -c
-          echo "######## SHADERS"
           mkdir -p cl && cd cl && unzip -oq ../client.jar 'assets/*' && cd ..
           A=/tmp/vanilla/cl/assets/minecraft
-          ls $A/shaders/core | head -100
-          cat $A/shaders/core/lightmap.fsh 2>&1 | head -120
+          echo "######## EQUIPMENT JSON"; cat $A/equipment/iron.json; cat $A/equipment/leather.json
+          ls $A/textures/entity/iron_golem
+          for t in textures/entity/iron_golem/iron_golem.png textures/entity/equipment/humanoid/iron.png textures/entity/equipment/humanoid_leggings/iron.png \
+                   textures/entity/equipment/humanoid/netherite.png textures/entity/equipment/humanoid_leggings/netherite.png \
+                   textures/item/iron_pickaxe.png textures/item/iron_axe.png textures/item/iron_shovel.png textures/item/iron_sword.png textures/item/iron_hoe.png \
+                   textures/item/iron_chestplate.png textures/item/iron_leggings.png textures/item/iron_boots.png textures/item/leather_boots.png \
+                   textures/item/echo_shard.png textures/item/trial_key.png textures/item/heart_of_the_sea.png textures/item/recovery_compass_16.png \
+                   textures/item/iron_golem_spawn_egg.png textures/item/zombie_spawn_egg.png textures/block/chiseled_deepslate.png textures/block/reinforced_deepslate_top.png textures/block/reinforced_deepslate_side.png \
+                   textures/entity/zombie/zombie.png; do
+            echo ""; echo "B64 $t $(base64 -w0 "$A/$t" 2>/dev/null)"
+          done
+          echo ""
           echo DONE
           exit 0
           mkdir -p cl && cd cl && unzip -oq ../client.jar 'assets/*' && cd ..
