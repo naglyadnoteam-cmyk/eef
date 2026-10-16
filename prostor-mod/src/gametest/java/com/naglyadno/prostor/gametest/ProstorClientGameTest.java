@@ -103,8 +103,8 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 		TestServerContext server = singleplayer.getServer();
 		server.runCommand("execute as @a at @s run prostor tp " + name);
 		context.waitTicks(20);
-		// камера чуть выше головы, чтобы не мешала трава
-		server.runCommand("execute as @a at @s run tp @s ~ ~" + CAMERA + " ~");
+		// обзор сверху: камера на 14 блоков выше точки обзора и на 10 позади, взгляд вниз на место
+		server.runCommand("execute as @a at @s rotated ~ 0 run tp @s ^ ^14 ^-10 ~ 38");
 		context.waitTicks(ticks);
 		render(singleplayer);
 		server.runOnServer(s -> {

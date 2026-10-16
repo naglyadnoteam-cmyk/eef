@@ -19,7 +19,7 @@ import net.minecraft.world.gen.feature.util.FeatureContext;
 /**
  * Широкие реки с поймами. Ванильная река остаётся на месте, но вокруг неё:
  * <ul>
- * <li>низкие берега (до 2 блоков над водой) уходят под воду - русло становится шире, с мелководьем;</li>
+ * <li>низкие берега (до 1 блока над водой) уходят под воду - русло становится шире, с мелководьем;</li>
  * <li>склоны до 12 блоков над водой опускаются в ровную пойму в 1 блок над рекой;</li>
  * <li>у края биома всё плавно возвращается к обычному рельефу (см. {@link BiomeFactor}).</li>
  * </ul>
@@ -78,7 +78,7 @@ public class FloodplainFeature extends Feature<DefaultFeatureConfig> {
 					continue;
 				}
 				double widen = Lakes.hash(seed, Math.floorDiv(x, 5), Math.floorDiv(z, 5), 31);
-				if (h <= 2 && f > 0.75 && (h <= 1 || widen < 0.55)) {
+				if (h <= 1 && f > 0.75 && (h <= 0 || widen < 0.6)) {
 					// низкий берег уходит под воду: у края - мелководье в 1 блок, глубже - 2
 					int depth = h <= 0 && f > 0.9 ? 2 : 1;
 					int floor = w - depth;

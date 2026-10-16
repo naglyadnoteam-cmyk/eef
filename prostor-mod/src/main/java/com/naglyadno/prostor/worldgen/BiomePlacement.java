@@ -47,20 +47,20 @@ public final class BiomePlacement {
 			// Озёрный край: прохладный холмистый край на стыке леса и тайги
 			new Rule(ProstorBiomes.LAKE_DISTRICT, Set.of(BiomeKeys.FOREST, BiomeKeys.TAIGA), T_COOL, INLAND,
 					ParameterRange.of(-0.375f, 0.45f), 0.06f, 0.16f),
-			// Широкие реки с поймами: реки умеренного пояса вдали от моря, на равнинах и пологих холмах
+			// Широкие реки с поймами: реки умеренного пояса вдали от моря, на равнинах
 			new Rule(ProstorBiomes.FLOODPLAIN, Set.of(BiomeKeys.RIVER), T_COOL_TO_TEMPERATE, MID_INLAND,
-					ParameterRange.of(-0.375f, 0.55f), 0.35f, 1.1f),
+					ParameterRange.of(0.05f, 0.55f), 0.35f, 1.3f),
 			// Речные каньоны: высокая холмистая суша умеренного и тёплого пояса, сухая сторона
 			new Rule(ProstorBiomes.RIVER_CANYON, Set.of(BiomeKeys.PLAINS, BiomeKeys.FOREST, BiomeKeys.SAVANNA,
 					BiomeKeys.MEADOW, BiomeKeys.SAVANNA_PLATEAU), T_TEMPERATE_TO_WARM, MID_INLAND,
 					ParameterRange.of(-0.78f, -0.2225f), -0.2f, 0.3f),
-			// Гигантские водопады: предгорья прохладного пояса, влажная сторона
+			// Гигантские водопады: крутые предгорья прохладного и умеренного пояса, влажная сторона
 			new Rule(ProstorBiomes.WATERFALL_CLIFFS, Set.of(BiomeKeys.FOREST, BiomeKeys.TAIGA, BiomeKeys.MEADOW,
-					BiomeKeys.PLAINS, BiomeKeys.OLD_GROWTH_SPRUCE_TAIGA), T_COOL, MID_INLAND,
-					ParameterRange.of(-0.78f, -0.375f), 0.25f, 0.5f),
-			// Болотистые низины: прохладная часть ванильного болота
+					BiomeKeys.PLAINS, BiomeKeys.OLD_GROWTH_SPRUCE_TAIGA, BiomeKeys.BIRCH_FOREST, BiomeKeys.OLD_GROWTH_BIRCH_FOREST),
+					T_COOL_TO_TEMPERATE, MID_INLAND, ParameterRange.of(-0.78f, -0.2225f), 0.3f, 0.6f),
+			// Болотистые низины: вся прохладная часть ванильного болота
 			new Rule(ProstorBiomes.MARSH, Set.of(BiomeKeys.SWAMP), T_COOL, INLAND,
-					ParameterRange.of(0.45f, 1.0f), 0.35f, 1.3f));
+					ParameterRange.of(0.45f, 1.0f), 0.0f, 2.0f));
 
 	private BiomePlacement() {
 	}

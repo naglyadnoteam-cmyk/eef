@@ -171,7 +171,8 @@ public final class ProstorCommands {
 				int x = found.getX() + dx;
 				int z = found.getZ() + dz;
 				double u = com.naglyadno.prostor.worldgen.Canyons.u(seed, x, z) + Math.hypot(dx, dz) / 2000.0;
-				if (u < bestU && terrain.isBiome(ProstorBiomes.RIVER_CANYON, x, terrain.surface(x, z), z)) {
+				// ось каньона глубоко внутри биома (у края биома каньон мелкий)
+				if (u < bestU && inside(terrain, ProstorBiomes.RIVER_CANYON, x, z, 24)) {
 					bestU = u;
 					px = x;
 					pz = z;
@@ -201,6 +202,17 @@ public final class ProstorCommands {
 			}
 		}
 		return standAt(world, ex, ez, px, pz, 35.0f, null);
+	}
+
+	private static boolean inside(Lakes.Terrain terrain, RegistryKey<Biome> key, int x, int z, int r) {
+		for (int[] o : new int[][]{{0, 0}, {r, 0}, {-r, 0}, {0, r}, {0, -r}}) {
+			int px = x + o[0];
+			int pz = z + o[1];
+			if (!terrain.isBiome(key, px, terrain.surface(px, pz), pz)) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/** Водопад: встаём на берегу озера напротив обрыва и смотрим на падающую воду. */

@@ -70,11 +70,11 @@ public class CanyonFeature extends Feature<DefaultFeatureConfig> {
 				if (u < Canyons.FLOOR) {
 					newTop = dryFloor;
 				} else if (u < 1.0) {
-					// стены: крутой подъём уступами по 4 блока
+					// стены: почти отвесные, с редкими полками через 7 блоков
 					double k = (u - Canyons.FLOOR) / (1.0 - Canyons.FLOOR);
-					double rise = Math.pow(k, 0.55);
+					double rise = Math.pow(k, 0.3);
 					int y = (int) Math.round(dryFloor + (top - dryFloor) * rise);
-					int ledge = 4;
+					int ledge = 7;
 					newTop = Math.min(top, dryFloor + ((y - dryFloor + ledge - 1) / ledge) * ledge);
 				} else {
 					newTop = top;
@@ -106,7 +106,7 @@ public class CanyonFeature extends Feature<DefaultFeatureConfig> {
 					BlockState surface = world.getBlockState(pos.set(x, newTop, z));
 					if (u < Canyons.FLOOR && newTop <= w + 2) {
 						world.setBlockState(pos, Blocks.GRAVEL.getDefaultState(), FLAGS);
-					} else if (!surface.isAir() && Lakes.hash(seed, x, z, 42) < 0.55) {
+					} else if (!surface.isAir() && u > 0.92 && Lakes.hash(seed, x, z, 42) < 0.55) {
 						world.setBlockState(pos, Blocks.GRASS_BLOCK.getDefaultState(), FLAGS);
 						world.setBlockState(pos.set(x, newTop - 1, z), Blocks.DIRT.getDefaultState(), FLAGS);
 					}

@@ -15,7 +15,7 @@ import java.util.Map;
 public final class Waterfalls {
 
 	public static final int CELL = 96;
-	public static final int MIN_DROP = 16;
+	public static final int MIN_DROP = 14;
 	private static final int DIRECTIONS = 16;
 
 	/**
@@ -82,7 +82,7 @@ public final class Waterfalls {
 	private static Site compute(Lakes.Terrain terrain, int cellX, int cellZ) {
 		Lakes.Rand rnd = new Lakes.Rand(terrain.seed() ^ 0x57415445524641L, cellX, cellZ);
 		// несколько попыток найти обрыв в клетке
-		for (int attempt = 0; attempt < 4; attempt++) {
+		for (int attempt = 0; attempt < 8; attempt++) {
 			int x = cellX * CELL + 20 + (int) (rnd.next() * (CELL - 40));
 			int z = cellZ * CELL + 20 + (int) (rnd.next() * (CELL - 40));
 			Site site = tryAt(terrain, cellX, cellZ, x, z);
@@ -105,7 +105,7 @@ public final class Waterfalls {
 			double a = Math.PI * 2 * i / DIRECTIONS;
 			double dx = Math.cos(a);
 			double dz = Math.sin(a);
-			for (int d = 4; d <= 16; d += 2) {
+			for (int d = 4; d <= 20; d += 2) {
 				int h = terrain.surface(MathHelper.floor(x + dx * d), MathHelper.floor(z + dz * d));
 				if (top - h > bestDrop) {
 					bestDrop = top - h;
@@ -118,9 +118,9 @@ public final class Waterfalls {
 			return null;
 		}
 		// наверху за кромкой нужна ровная площадка под ручей
-		for (int s = 1; s <= 6; s++) {
+		for (int s = 1; s <= 4; s++) {
 			int h = terrain.surface(MathHelper.floor(x - bestDirX * s), MathHelper.floor(z - bestDirZ * s));
-			if (Math.abs(h - top) > 2) {
+			if (Math.abs(h - top) > 3) {
 				return null;
 			}
 		}
