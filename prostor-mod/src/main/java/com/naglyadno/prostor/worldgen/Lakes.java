@@ -163,7 +163,7 @@ public final class Lakes {
 		}
 		// маленьких озёр больше, чем больших
 		double size = rnd.next();
-		int radius = MIN_RADIUS + (int) Math.round(Math.pow(size, 1.4) * (MAX_RADIUS - MIN_RADIUS));
+		int radius = MIN_RADIUS + (int) Math.round(Math.pow(size, 1.1) * (MAX_RADIUS - MIN_RADIUS));
 		float stretch = 1.0f + (float) rnd.next() * 0.35f;
 		float angle = (float) (rnd.next() * Math.PI);
 		float a2 = 0.08f + (float) rnd.next() * 0.12f;
@@ -199,7 +199,6 @@ public final class Lakes {
 	/** Проверяет место под озеро. Возвращает 7 и уровень воды в out[0], если озеро здесь хорошо смотрится. */
 	private static int check(Terrain terrain, Lake shape, int[] out) {
 		int radius = shape.radius();
-		// весь берег и полоса за ним - в Озёрном крае, иначе озеро может врезаться в соседний биом или реку
 		int minRim = Integer.MAX_VALUE;
 		int maxRim = Integer.MIN_VALUE;
 		for (int i = 0; i < RIM_SAMPLES; i++) {
@@ -213,8 +212,9 @@ public final class Lakes {
 			}
 			minRim = Math.min(minRim, top);
 			maxRim = Math.max(maxRim, top);
-			if (i % 4 == 0) {
-				double[] far = shape.rimPoint(theta, BANK + 3.0);
+			// вода и ближний берег - в Озёрном крае (дальний пологий склон может заходить в соседний лес)
+			if (i % 2 == 0) {
+				double[] far = shape.rimPoint(theta, 4.0);
 				int fx = MathHelper.floor(far[0]);
 				int fz = MathHelper.floor(far[1]);
 				if (!terrain.isLakeDistrict(fx, terrain.surface(fx, fz), fz)) {
