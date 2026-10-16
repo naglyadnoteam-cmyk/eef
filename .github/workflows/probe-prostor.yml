@@ -37,7 +37,7 @@ jobs:
         run: |
           set +e
           W=data/minecraft/worldgen
-          for b in forest birch_forest taiga old_growth_birch_forest meadow river; do
+          for b in swamp river; do
             echo "######## biome/$b.json"; jq -c . "$W/biome/$b.json"
           done
           echo "######## placed features (all names)"; ls $W/placed_feature | sed 's/.json$//' | tr '\n' ' '; echo
@@ -103,22 +103,18 @@ jobs:
           g() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- $f :: $2"; [ -n "$f" ] && grep -n -E "$2" "$f" | head -${3:-25}; }
           full() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- FULL $f"; [ -n "$f" ] && sed -n "${3:-1},${2:-200}p" "$f"; }
           ctx() { f=$(find /tmp/src -path "*$1" | head -1); echo "--- CTX $f :: $2"; [ -n "$f" ] && grep -n -A ${3:-8} -E "$2" "$f" | head -${4:-60}; }
-          sec VANILLA_BIOME_PARAMETERS; full net/minecraft/world/biome/source/util/VanillaBiomeParameters.java 700
-          sec PRESET; g net/minecraft/world/biome/source/MultiNoiseBiomeSourceParameterList.java "Preset|OVERWORLD|writeOverworldBiomeParameters|getEntries|public" 30
-          sec PARAMRANGE; g net/minecraft/world/biome/source/util/MultiNoiseUtil.java "record ParameterRange|public static ParameterRange|public long |public float |min\\(\\)|max\\(\\)|toFloat|toLong|record NoiseHypercube|record NoiseValuePoint|public static NoiseValuePoint" 40
-          sec LOCATE; g net/minecraft/server/world/ServerWorld.java "locateBiome" 6
-          ctx net/minecraft/server/command/LocateCommand.java "executeLocateBiome" 25 40
-          sec FEATURE; g net/minecraft/world/gen/feature/Feature.java "public static final Feature<|public abstract boolean generate|protected void setBlockState" 30
-          g net/minecraft/world/gen/feature/util/FeatureContext.java "public" 20
-          sec STRUCTUREACCESS; g net/minecraft/world/StructureWorldAccess.java "public|default|boolean|Server" 20
-          g net/minecraft/world/ChunkRegion.java "public ServerWorld toServerWorld|getSeed|public boolean setBlockState|isValidForSetBlock" 10
-          sec NOISE; g net/minecraft/util/math/noise/SimplexNoiseSampler.java "public" 10
-          g net/minecraft/util/math/noise/OctavePerlinNoiseSampler.java "public static|public double sample" 10
-          g net/minecraft/util/math/random/ChunkRandom.java "public" 20
-          sec HEIGHT; g net/minecraft/world/gen/chunk/ChunkGenerator.java "public abstract int getHeight|public int getHeightOnGround|getSeaLevel|getMinimumY" 10
-          sec STRUCTURES_AT; g net/minecraft/world/gen/StructureAccessor.java "public" 25
-          sec COMMANDS; g net/minecraft/server/command/TeleportCommand.java "requires|hasPermissionLevel|PermissionLevel" 6
-          g net/minecraft/server/command/ServerCommandSource.java "public boolean hasPermissionLevel|public .*getPlayerOrThrow|public void sendFeedback|public void sendError|public ServerWorld getWorld|public Vec3d getPosition" 12
-          sec TELEPORT; g net/minecraft/server/network/ServerPlayerEntity.java "public boolean teleport|public void teleport|teleportTo" 10
-          sec BIOMEKEYS; g net/minecraft/world/biome/BiomeKeys.java "FOREST|BIRCH|TAIGA" 10
-          sec CONFIG; g net/fabricmc/loader/api/FabricLoader.java "getConfigDir" 3
+          sec VBP_REST; full net/minecraft/world/biome/source/util/VanillaBiomeParameters.java 1200 700
+          sec DRIPLEAF; full net/minecraft/block/SmallDripleafBlock.java 200
+          sec TALLPLANT; full net/minecraft/block/TallPlantBlock.java 200
+          sec EFFECTS; full net/minecraft/world/biome/BiomeEffects.java 120
+          sec PROTOCHUNK; ctx net/minecraft/world/chunk/ProtoChunk.java "public BlockState setBlockState" 45 60
+          sec CHUNKREFS; g net/minecraft/world/chunk/Chunk.java "getStructureReferences|getStructureStarts|public Map" 10
+          sec BLOCKTAGS; g net/minecraft/registry/tag/BlockTags.java "DIRT|SAND|BAMBOO_PLANTABLE|SUPPORTS_|SMALL_DRIPLEAF|CONVERTABLE|SNIFFER" 30
+          sec ITEMGROUPS; g net/minecraft/item/ItemGroups.java "public static final RegistryKey<ItemGroup>" 20
+          sec SEAGRASS; g net/minecraft/block/SeagrassBlock.java "canPlantOnTop|class|getFluidState" 10
+          sec LILYPAD; g net/minecraft/block/LilyPadBlock.java "canPlantOnTop|class" 10
+          sec SUGARCANE; ctx net/minecraft/block/SugarCaneBlock.java "protected boolean canPlaceAt" 25 30
+          sec POSITIONFLAG; g net/minecraft/network/packet/s2c/play/PositionFlag.java "public static final|ROT|enum|VALUES" 20
+          sec PERMISSION; g net/minecraft/server/command/CommandManager.java "GAMEMASTERS_CHECK|requirePermissionLevel|public static final" 20
+          sec SUGGEST; g net/minecraft/command/CommandSource.java "static CompletableFuture<Suggestions> suggestMatching" 6
+          true
