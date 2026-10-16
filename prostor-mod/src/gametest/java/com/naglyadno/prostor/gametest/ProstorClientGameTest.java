@@ -28,6 +28,7 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
+		startWatchdog();
 		context.runOnClient(client -> {
 			// размытие фона меню на программном OpenGL (CI без видеокарты) занимает секунды на кадр
 			client.options.getMenuBackgroundBlurriness().setValue(0);
@@ -114,6 +115,31 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 			LakeCheck.area(s.getOverworld(), name, at, 40);
 		});
 		shot(context, shotName);
+	}
+
+	/** Если тест завис: раз в 4 минуты печатает стеки всех потоков (строки DUMP| в логе CI). */
+	private static void startWatchdog() {
+		Thread thread = new Thread(() -> {
+			try {
+				while (true) {
+					Thread.sleep(240_000);
+					for (java.util.Map.Entry<Thread, StackTraceElement[]> e : Thread.getAllStackTraces().entrySet()) {
+						String name = e.getKey().getName();
+						if (!name.contains("Server") && !name.contains("Worker") && !name.contains("Render") && !name.contains("Test")) {
+							continue;
+						}
+						LOGGER.info("DUMP| thread {} {}", name, e.getKey().getState());
+						StackTraceElement[] stack = e.getValue();
+						for (int i = 0; i < Math.min(18, stack.length); i++) {
+							LOGGER.info("DUMP|    at {}", stack[i]);
+						}
+					}
+				}
+			} catch (InterruptedException ignored) {
+			}
+		}, "prostor-watchdog");
+		thread.setDaemon(true);
+		thread.start();
 	}
 
 	/** Ждёт отрисовки чанков; если программный OpenGL не успел, снимок всё равно делается (с отметкой в логе). */

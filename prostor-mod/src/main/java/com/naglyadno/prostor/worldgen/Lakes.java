@@ -51,7 +51,7 @@ public final class Lakes {
 					islandChance, shelf, new AtomicLongArray(REASONS.length));
 		}
 
-		/** Описывающий радиус водоёма с берегом. */
+		/** Описывающий радиус водоёма с берегом (не больше половины клетки, иначе соседние водоёмы сольются). */
 		int reach(int radius, float stretch) {
 			return (int) Math.ceil(radius * 1.35 * stretch) + bank + 1;
 		}
@@ -63,7 +63,7 @@ public final class Lakes {
 
 	/** Болотные бочажины: частые, мелкие (1-2 блока), на ровном месте, с узким топким берегом. */
 	public static final Style MARSH = new Style("marsh", ProstorBiomes.MARSH, 1,
-			26, 3, 7, 3, 0.5, 0.85, 2, 1, 2, 0.0, 0.55);
+			34, 3, 7, 3, 0.5, 0.85, 2, 1, 2, 0.0, 0.55);
 
 	/** Один водоём. waterY - уровень поверхности воды (самый верхний блок воды). */
 	public record Lake(Style style, int cellX, int cellZ, int centerX, int centerZ, int radius, int waterY, int maxDepth,
@@ -200,6 +200,9 @@ public final class Lakes {
 		float p3 = (float) (rnd.next() * Math.PI * 2);
 		// водоём вместе с берегом целиком лежит в своей клетке, поэтому соседние водоёмы никогда не сливаются;
 		// маленькие можно сдвинуть по клетке сильнее, чем большие
+		while (radius > 2 && style.reach(radius, stretch) * 2 > style.cell()) {
+			radius--;
+		}
 		int reach = style.reach(radius, stretch);
 		int free = Math.max(0, style.cell() - 2 * reach);
 		int cx = cellX * style.cell() + reach + (int) (rnd.next() * (free + 1));

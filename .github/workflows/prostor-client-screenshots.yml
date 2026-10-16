@@ -22,7 +22,7 @@ jobs:
   screenshots:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, 'skip-ci-marker')"
-    timeout-minutes: 45
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: prostor-mod
