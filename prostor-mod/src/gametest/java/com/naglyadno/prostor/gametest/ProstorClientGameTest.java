@@ -104,8 +104,28 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 		TestServerContext server = singleplayer.getServer();
 		server.runCommand("execute as @a at @s run prostor tp " + name);
 		context.waitTicks(20);
-		// обзор сверху: камера на 14 блоков выше точки обзора и на 10 позади, взгляд вниз на место
-		server.runCommand("execute as @a at @s rotated ~ 0 run tp @s ^ ^14 ^-10 ~ 38");
+		// обзор сверху: камера в 12 блоках позади точки обзора, выше самого высокого блока рядом
+		// (по карте высот, поэтому не окажется внутри скалы или под нависающим берегом), взгляд на место
+		double[] cam = server.computeOnServer(s -> {
+			net.minecraft.server.network.ServerPlayerEntity p = s.getPlayerManager().getPlayerList().get(0);
+			ServerWorld world = s.getOverworld();
+			double yawRad = Math.toRadians(p.getYaw());
+			double tx = p.getX() - Math.sin(yawRad) * 10;
+			double tz = p.getZ() + Math.cos(yawRad) * 10;
+			double bx = p.getX() + Math.sin(yawRad) * 12;
+			double bz = p.getZ() - Math.cos(yawRad) * 12;
+			int top = 0;
+			for (int dx = -2; dx <= 2; dx++) {
+				for (int dz = -2; dz <= 2; dz++) {
+					top = Math.max(top, world.getTopY(Heightmap.Type.MOTION_BLOCKING, MathHelper.floor(bx) + dx, MathHelper.floor(bz) + dz));
+				}
+			}
+			double ty = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, MathHelper.floor(tx), MathHelper.floor(tz));
+			double cy = Math.max(top + 4, p.getY() + 12);
+			double pitch = Math.toDegrees(Math.atan2(cy - ty, Math.hypot(tx - bx, tz - bz)));
+			return new double[]{bx, cy, bz, yawTo(bx, bz, tx, tz), Math.min(60, Math.max(15, pitch))};
+		});
+		tp(server, cam[0], cam[1], cam[2], (float) cam[3], (float) cam[4]);
 		context.waitTicks(ticks);
 		render(singleplayer);
 		server.runOnServer(s -> {
