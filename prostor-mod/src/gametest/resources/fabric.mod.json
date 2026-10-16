@@ -1,0 +1,15 @@
+{
+	"schemaVersion": 1,
+	"id": "prostor-gametest",
+	"version": "1.0.0",
+	"name": "Prostor client gametest",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"com.naglyadno.prostor.gametest.ProstorClientGameTest"
+		]
+	},
+	"depends": {
+		"prostor": "*"
+	}
+}

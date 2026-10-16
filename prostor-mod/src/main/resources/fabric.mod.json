@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "prostor",
+	"version": "${version}",
+	"name": "Простор",
+	"description": "Новая природа верхнего мира: холмистые долины, каньоны, горы, гейзеры, ледники, вулканы, водопады и пустынные долины.",
+	"authors": [
+		"naglyadno.team"
+	],
+	"contact": {},
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.naglyadno.prostor.ProstorMod"
+		],
+		"client": [
+			"com.naglyadno.prostor.client.ProstorClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
