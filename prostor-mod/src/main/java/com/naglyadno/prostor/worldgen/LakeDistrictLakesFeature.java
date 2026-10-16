@@ -105,8 +105,14 @@ public class LakeDistrictLakesFeature extends Feature<DefaultFeatureConfig> {
 			return;
 		}
 
-		// берег: у самой воды земля вровень с водой (там растут тростник и камыш), дальше плавный подъём
-		int cap = w + (int) Math.floor(t * 4.5);
+		// берег: у самой воды земля вровень с водой (там растут тростник и камыш), дальше пологий подъём
+		// примерно 2 блока на 3; у внешнего края берега подъём плавно переходит в естественный рельеф
+		double d = Lakes.fromWater(lake, q);
+		int cap = w + (int) Math.floor(d * Lakes.BANK_SLOPE);
+		if (top > cap && d > Lakes.BANK - 3) {
+			double blend = (d - (Lakes.BANK - 3)) / 3.0;
+			cap += (int) Math.round((top - cap) * blend * blend);
+		}
 		if (top > cap) {
 			clear(world, x, z, cap + 1, top, pos);
 			BlockState surface = world.getBlockState(pos.set(x, cap, z));
@@ -122,13 +128,13 @@ public class LakeDistrictLakesFeature extends Feature<DefaultFeatureConfig> {
 			top = w;
 		}
 		// песок и галька у самой воды - пятнами
-		if (t < 0.35 && top <= w + 1 && world.getBlockState(pos.set(x, top + 1, z)).isAir()) {
+		if (d < 3.5 && top <= w + 1 && world.getBlockState(pos.set(x, top + 1, z)).isAir()) {
 			double patch = Lakes.hash(seed, Math.floorDiv(x, 3), Math.floorDiv(z, 3), 11);
 			if (patch < 0.3) {
 				world.setBlockState(pos.set(x, top, z), patch < 0.18 ? SAND : GRAVEL, FLAGS);
 			}
 		}
-		if (t < 0.6) {
+		if (d < 6) {
 			seal(world, x, z, w - lake.maxDepth() - 1, w, pos);
 		}
 	}

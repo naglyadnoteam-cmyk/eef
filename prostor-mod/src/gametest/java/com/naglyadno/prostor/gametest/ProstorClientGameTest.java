@@ -68,7 +68,7 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 			}
 			int vx = view[0], vy = view[1], vz = view[2], cx = view[3], cz = view[4], water = view[5];
 			float yaw = yawTo(vx + 0.5, vz + 0.5, cx + 0.5, cz + 0.5);
-			tp(server, vx + 0.5, vy + 1.2, vz + 0.5, yaw, 10);
+			tp(server, vx + 0.5, vy + 0.4, vz + 0.5, yaw, 10);
 			context.waitTicks(60);
 			render(singleplayer);
 			shot(context, "prostor_01_lake_shore");
@@ -82,26 +82,21 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 			render(singleplayer);
 			shot(context, "prostor_02_lake_aerial");
 
-			// камыш вблизи
-			int[] reeds = server.computeOnServer(s -> nearestReeds(s, cx, water, cz, vx, vz));
-			if (reeds != null) {
-				double rx = reeds[0] + 0.5 + (vx - reeds[0]) / dist(reeds[0], reeds[2], vx, vz) * 4.5;
-				double rz = reeds[2] + 0.5 + (vz - reeds[2]) / dist(reeds[0], reeds[2], vx, vz) * 4.5;
-				int ground = server.computeOnServer(s -> s.getOverworld().getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES,
-						MathHelper.floor(rx), MathHelper.floor(rz)));
-				tp(server, rx, Math.max(ground, water + 1) + 0.6, rz, yawTo(rx, rz, reeds[0] + 0.5, reeds[2] + 0.5), 18);
-				context.waitTicks(40);
-				render(singleplayer);
-				shot(context, "prostor_03_reeds");
-			}
+			// вид с воды на берег: заросли камыша, кувшинки, тростник
+			double sx = cx + 0.5 + (vx - cx) * 0.3;
+			double sz = cz + 0.5 + (vz - cz) * 0.3;
+			tp(server, sx, water + 2.2, sz, yawTo(sx, sz, vx + 0.5, vz + 0.5), 14);
+			context.waitTicks(40);
+			render(singleplayer);
+			shot(context, "prostor_03_reeds");
 
 			// закат над озером: встаём на восточный берег и смотрим на запад, на солнце
 			int[] west = server.computeOnServer(s -> sunsetView(s, cx, cz));
 			server.runCommand("time set 12000");
 			if (west != null) {
-				tp(server, west[0] + 0.5, west[1] + 1.2, west[2] + 0.5, yawTo(west[0] + 0.5, west[2] + 0.5, cx + 0.5, cz + 0.5), 4);
+				tp(server, west[0] + 0.5, west[1] + 0.4, west[2] + 0.5, yawTo(west[0] + 0.5, west[2] + 0.5, cx + 0.5, cz + 0.5), 4);
 			} else {
-				tp(server, vx + 0.5, vy + 1.2, vz + 0.5, yaw, 4);
+				tp(server, vx + 0.5, vy + 0.4, vz + 0.5, yaw, 4);
 			}
 			context.waitTicks(60);
 			render(singleplayer);
@@ -129,6 +124,11 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 		Lakes.Lake lake = view.lake();
 		LakeCheck.report(world, lake);
 		LakeCheck.reportArea(world, lake.centerX(), lake.centerZ());
+		StringBuilder reasons = new StringBuilder();
+		for (int i = 0; i < Lakes.REASONS.length; i++) {
+			reasons.append(Lakes.REASONS[i]).append('=').append(Lakes.STATS.get(i)).append(' ');
+		}
+		LOGGER.info("STATS| lake cells by outcome: {}", reasons);
 		return new int[]{view.x(), view.y(), view.z(), lake.centerX(), lake.centerZ(), lake.waterY()};
 	}
 
@@ -143,29 +143,6 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 		}
 		ProstorCommands.Viewpoint view = ProstorCommands.lakeViewpoint(world, lake, 0.0);
 		return view == null ? null : new int[]{view.x(), view.y(), view.z()};
-	}
-
-	/** Ближайший к точке обзора куст камыша у озера или null. */
-	private static int[] nearestReeds(MinecraftServer server, int cx, int water, int cz, int vx, int vz) {
-		ServerWorld world = server.getOverworld();
-		BlockPos.Mutable pos = new BlockPos.Mutable();
-		int[] best = null;
-		double bestDist = Double.MAX_VALUE;
-		for (int x = cx - 40; x <= cx + 40; x++) {
-			for (int z = cz - 40; z <= cz + 40; z++) {
-				for (int y = water; y <= water + 2; y++) {
-					if (world.getBlockState(pos.set(x, y, z)).isOf(com.naglyadno.prostor.block.ModBlocks.REEDS)) {
-						double d = dist(x, z, vx, vz);
-						if (d < bestDist && d > 3) {
-							bestDist = d;
-							best = new int[]{x, y, z};
-						}
-						break;
-					}
-				}
-			}
-		}
-		return best;
 	}
 
 	private static double dist(double ax, double az, double bx, double bz) {

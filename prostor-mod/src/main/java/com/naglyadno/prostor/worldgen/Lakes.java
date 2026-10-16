@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLongArray;
 
 /**
  * Геометрия озёр Озёрного края.
@@ -24,11 +25,13 @@ import java.util.Map;
  */
 public final class Lakes {
 
-	public static final int CELL = 64;
-	/** Ширина берега вокруг воды, который выравнивается под озеро. */
-	public static final int BANK = 5;
+	public static final int CELL = 72;
+	/** Ширина берега вокруг воды, который выравнивается под озеро (пологий подъём без обрывов). */
+	public static final int BANK = 10;
+	/** Подъём берега на блок расстояния от воды. */
+	public static final double BANK_SLOPE = 0.7;
 	private static final int MIN_RADIUS = 6;
-	private static final int MAX_RADIUS = 14;
+	private static final int MAX_RADIUS = 13;
 	private static final int RIM_SAMPLES = 28;
 
 	/** Одно озеро. waterY - уровень поверхности воды (самый верхний блок воды). */
@@ -108,6 +111,10 @@ public final class Lakes {
 	};
 	private static final Lake NONE = new Lake(0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, false, 0, 0, 0);
 
+	/** Счётчики решений по клеткам (для замеров в тестах): см. {@link #REASONS}. */
+	public static final String[] REASONS = {"empty", "not_in_biome", "rim_water", "slope", "edge_of_biome", "too_low", "hill", "lake"};
+	public static final AtomicLongArray STATS = new AtomicLongArray(REASONS.length);
+
 	private record CacheKey(long seed, int noiseId, int cellX, int cellZ) {
 	}
 
@@ -151,6 +158,7 @@ public final class Lakes {
 	private static Lake compute(Terrain terrain, int cellX, int cellZ) {
 		Rand rnd = new Rand(terrain.seed(), cellX, cellZ);
 		if (rnd.next() > 0.9) {
+			STATS.incrementAndGet(0);
 			return NONE;
 		}
 		// маленьких озёр больше, чем больших
@@ -168,12 +176,29 @@ public final class Lakes {
 		int free = Math.max(0, CELL - 2 * reach);
 		int cx = cellX * CELL + reach + (int) (rnd.next() * (free + 1));
 		int cz = cellZ * CELL + reach + (int) (rnd.next() * (free + 1));
-		Lake shape = new Lake(cellX, cellZ, cx, cz, radius, 0, 0, stretch, angle, a2, p2, a3, p3, false, 0, 0, 0);
-
-		int centerTop = terrain.surface(cx, cz);
-		if (!terrain.isLakeDistrict(cx, centerTop, cz)) {
+		if (!terrain.isLakeDistrict(cx, terrain.surface(cx, cz), cz)) {
+			STATS.incrementAndGet(1);
 			return NONE;
 		}
+		// если склон слишком крутой для большого озера, пробуем озеро поменьше
+		int reason = 0;
+		for (double shrink : new double[]{1.0, 0.75, 0.55}) {
+			int r = Math.max(MIN_RADIUS - 1, (int) Math.round(radius * shrink));
+			Lake shape = new Lake(cellX, cellZ, cx, cz, r, 0, 0, stretch, angle, a2, p2, a3, p3, false, 0, 0, 0);
+			int[] result = new int[1];
+			reason = check(terrain, shape, result);
+			if (reason == 7) {
+				STATS.incrementAndGet(7);
+				return finish(rnd, shape, result[0]);
+			}
+		}
+		STATS.incrementAndGet(reason);
+		return NONE;
+	}
+
+	/** Проверяет место под озеро. Возвращает 7 и уровень воды в out[0], если озеро здесь хорошо смотрится. */
+	private static int check(Terrain terrain, Lake shape, int[] out) {
+		int radius = shape.radius();
 		// весь берег и полоса за ним - в Озёрном крае, иначе озеро может врезаться в соседний биом или реку
 		int minRim = Integer.MAX_VALUE;
 		int maxRim = Integer.MIN_VALUE;
@@ -184,7 +209,7 @@ public final class Lakes {
 			int z = MathHelper.floor(p[1]);
 			int top = terrain.surface(x, z);
 			if (terrain.surfaceWithWater(x, z) != top) {
-				return NONE; // на берегу уже есть вода: река, болото или океан
+				return 2; // на берегу уже есть вода: река, болото или океан
 			}
 			minRim = Math.min(minRim, top);
 			maxRim = Math.max(maxRim, top);
@@ -193,27 +218,32 @@ public final class Lakes {
 				int fx = MathHelper.floor(far[0]);
 				int fz = MathHelper.floor(far[1]);
 				if (!terrain.isLakeDistrict(fx, terrain.surface(fx, fz), fz)) {
-					return NONE;
+					return 4;
 				}
 			}
 		}
-		// слишком крутой склон: озеро превратилось бы в яму со стеной с одной стороны
-		if (maxRim - minRim > 9) {
-			return NONE;
+		// слишком крутой склон: даже пологий берег не спасёт, озеро будет ямой со стеной с одной стороны
+		if (maxRim - minRim > 6) {
+			return 3;
 		}
 		int waterY = minRim;
-		int seaLevel = terrain.generator().getSeaLevel();
-		if (waterY < seaLevel + 2) {
-			return NONE;
+		if (waterY < terrain.generator().getSeaLevel() + 2) {
+			return 5;
 		}
 		// холм посреди озера: лучше без озера, чем с вырезанной в холме ямой
 		for (int i = 0; i < 6; i++) {
 			double[] p = shape.rimPoint(Math.PI * 2 * i / 6, -radius * 0.5);
 			int top = terrain.surface(MathHelper.floor(p[0]), MathHelper.floor(p[1]));
-			if (top > waterY + 9) {
-				return NONE;
+			if (top > waterY + 7) {
+				return 6;
 			}
 		}
+		out[0] = waterY;
+		return 7;
+	}
+
+	private static Lake finish(Rand rnd, Lake shape, int waterY) {
+		int radius = shape.radius();
 		int maxDepth = 3 + radius / 5 + (int) (rnd.next() * 2);
 		boolean island = radius >= 9 && rnd.next() < 0.45;
 		int islandX = 0;
@@ -226,7 +256,8 @@ public final class Lakes {
 			islandZ = MathHelper.floor(p[1]);
 			islandRadius = 2 + (int) (rnd.next() * 2.5);
 		}
-		return new Lake(cellX, cellZ, cx, cz, radius, waterY, maxDepth, stretch, angle, a2, p2, a3, p3,
+		return new Lake(shape.cellX(), shape.cellZ(), shape.centerX(), shape.centerZ(), radius, waterY, maxDepth,
+				shape.stretch(), shape.angle(), shape.a2(), shape.p2(), shape.a3(), shape.p3(),
 				island, islandX, islandZ, islandRadius);
 	}
 
@@ -249,9 +280,14 @@ public final class Lakes {
 		return Math.max(1, d);
 	}
 
+	/** Расстояние от кромки воды в блоках (приблизительно). */
+	public static double fromWater(Lake lake, double q) {
+		return (q - 1.0) * lake.radius();
+	}
+
 	/** Положение на берегу: 0 у самой воды, 1 на внешнем краю выровненного берега. Больше 1 - уже не берег. */
 	public static double bank(Lake lake, double q) {
-		return (q - 1.0) * lake.radius() / BANK;
+		return fromWater(lake, q) / BANK;
 	}
 
 	/** Детерминированный генератор псевдослучайных чисел для клетки (не зависит от порядка генерации). */

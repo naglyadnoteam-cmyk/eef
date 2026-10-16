@@ -49,8 +49,8 @@ public class LakeDistrictShoreFeature extends Feature<DefaultFeatureConfig> {
 					double h = Lakes.hash(seed, x, z, 21);
 					if (q < 1.0 && iq >= 1.0) {
 						water(world, lake, x, z, q, iq, h, pos);
-					} else if (Lakes.bank(lake, q) < 0.8 || iq < 1.0) {
-						shore(world, x, z, h, Lakes.hash(seed, x, z, 22), pos);
+					} else if (Lakes.fromWater(lake, q) < 8 || iq < 1.0) {
+						shore(world, x, z, h, Lakes.hash(seed, x, z, 22), iq < 1.0 ? 0.0 : Lakes.fromWater(lake, q), pos);
 					}
 				}
 			}
@@ -85,18 +85,23 @@ public class LakeDistrictShoreFeature extends Feature<DefaultFeatureConfig> {
 		}
 	}
 
-	private static void shore(StructureWorldAccess world, int x, int z, double h, double h2, BlockPos.Mutable pos) {
+	private static void shore(StructureWorldAccess world, int x, int z, double h, double h2, double fromWater,
+			BlockPos.Mutable pos) {
 		int top = LakeDistrictLakesFeature.solidTop(world, x, z, pos);
 		BlockState ground = world.getBlockState(pos.set(x, top, z));
 		BlockState above = world.getBlockState(pos.set(x, top + 1, z));
 		if (!(above.isAir() || above.isReplaceable() && above.getFluidState().isEmpty())) {
 			return;
 		}
-		if (!nextToWater(world, x, top, z, pos)) {
-			return;
-		}
 		boolean soil = ground.isIn(BlockTags.DIRT) || ground.isIn(BlockTags.SAND);
 		if (!soil) {
+			return;
+		}
+		if (!nextToWater(world, x, top, z, pos)) {
+			// светлячковые кусты - недалеко от воды: ночью берега озёр мерцают
+			if (fromWater < 5 && h < 0.05 && ground.isOf(Blocks.GRASS_BLOCK)) {
+				world.setBlockState(pos.set(x, top + 1, z), Blocks.FIREFLY_BUSH.getDefaultState(), FLAGS);
+			}
 			return;
 		}
 		if (h < 0.24 && world.isAir(pos.set(x, top + 2, z)) && ReedsBlock.isSoil(ground)) {

@@ -174,7 +174,7 @@ public final class ProstorCommands {
 		double bestScore = Double.MAX_VALUE;
 		BlockPos.Mutable pos = new BlockPos.Mutable();
 		for (int i = 0; i < 16; i++) {
-			double[] p = lake.rimPoint(Math.PI * 2 * i / 16, Lakes.BANK + 3.0);
+			double[] p = lake.rimPoint(Math.PI * 2 * i / 16, 6.0);
 			int x = MathHelper.floor(p[0]);
 			int z = MathHelper.floor(p[1]);
 			world.getChunk(x >> 4, z >> 4);
@@ -184,12 +184,8 @@ public final class ProstorCommands {
 			}
 			double score = obstruction(world, x + 0.5, y + 1.62, z + 0.5, lake.centerX() + 0.5, lake.waterY() + 0.5,
 					lake.centerZ() + 0.5, pos) * 4.0;
-			for (int dy = 2; dy <= 8; dy++) {
-				if (world.getBlockState(pos.set(x, y + dy, z)).isIn(BlockTags.LEAVES)) {
-					score += 2.0;
-					break;
-				}
-			}
+			// не под кроной и не вплотную к стволу: иначе листва закроет вид
+			score += canopy(world, x, y, z, pos) * 3.0;
 			double dir = Math.atan2(z + 0.5 - lake.centerZ(), x + 0.5 - lake.centerX());
 			score += Math.abs(MathHelper.wrapDegrees(Math.toDegrees(dir - preferred))) / 120.0;
 			if (score < bestScore) {
@@ -199,6 +195,22 @@ public final class ProstorCommands {
 			}
 		}
 		return best;
+	}
+
+	/** Сколько листвы и стволов рядом с головой и над ней (квадрат 3x3, высота до 6 блоков). */
+	private static int canopy(ServerWorld world, int x, int y, int z, BlockPos.Mutable pos) {
+		int count = 0;
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				for (int dy = 0; dy <= 6; dy++) {
+					BlockState state = world.getBlockState(pos.set(x + dx, y + dy, z + dz));
+					if (state.isIn(BlockTags.LEAVES) || state.isIn(BlockTags.LOGS)) {
+						count++;
+					}
+				}
+			}
+		}
+		return count;
 	}
 
 	/** Сколько твёрдых блоков и листвы на отрезке от глаз до точки (без повторов). */
