@@ -15,10 +15,10 @@ import net.minecraft.world.gen.feature.util.FeatureContext;
 import java.util.List;
 
 /**
- * Озёра Озёрного края. Выполняется до растительности, поэтому деревья, трава и цветы потом сами
+ * Озёра и пруды (стиль задаёт {@link Lakes.Style}). Выполняется до растительности, поэтому деревья, трава и цветы потом сами
  * вырастают по новым берегам. Меняет только блоки своего чанка.
  */
-public class LakeDistrictLakesFeature extends Feature<DefaultFeatureConfig> {
+public class LakeFeature extends Feature<DefaultFeatureConfig> {
 
 	private static final BlockState AIR = Blocks.AIR.getDefaultState();
 	private static final BlockState WATER = Blocks.WATER.getDefaultState();
@@ -27,10 +27,14 @@ public class LakeDistrictLakesFeature extends Feature<DefaultFeatureConfig> {
 	private static final BlockState SAND = Blocks.SAND.getDefaultState();
 	private static final BlockState GRAVEL = Blocks.GRAVEL.getDefaultState();
 	private static final BlockState CLAY = Blocks.CLAY.getDefaultState();
+	private static final BlockState MUD = Blocks.MUD.getDefaultState();
 	private static final int FLAGS = Block.NOTIFY_LISTENERS;
 
-	public LakeDistrictLakesFeature(Codec<DefaultFeatureConfig> codec) {
+	private final Lakes.Style style;
+
+	public LakeFeature(Codec<DefaultFeatureConfig> codec, Lakes.Style style) {
 		super(codec);
+		this.style = style;
 	}
 
 	public static Lakes.Terrain terrain(StructureWorldAccess world, net.minecraft.world.gen.chunk.ChunkGenerator generator) {
@@ -43,7 +47,7 @@ public class LakeDistrictLakesFeature extends Feature<DefaultFeatureConfig> {
 		ChunkPos chunk = new ChunkPos(context.getOrigin());
 		int bx = chunk.getStartX();
 		int bz = chunk.getStartZ();
-		List<Lakes.Lake> lakes = Lakes.near(terrain(world, context.getGenerator()), bx, bz, bx + 15, bz + 15);
+		List<Lakes.Lake> lakes = Lakes.near(style, terrain(world, context.getGenerator()), bx, bz, bx + 15, bz + 15);
 		if (lakes.isEmpty()) {
 			return false;
 		}
@@ -73,7 +77,7 @@ public class LakeDistrictLakesFeature extends Feature<DefaultFeatureConfig> {
 		return bottom;
 	}
 
-	private static void column(StructureWorldAccess world, Lakes.Lake lake, long seed, int x, int z, BlockPos.Mutable pos) {
+	private void column(StructureWorldAccess world, Lakes.Lake lake, long seed, int x, int z, BlockPos.Mutable pos) {
 		double q = lake.q(x + 0.5, z + 0.5);
 		double t = Lakes.bank(lake, q);
 		if (t >= 1.0) {
@@ -99,7 +103,8 @@ public class LakeDistrictLakesFeature extends Feature<DefaultFeatureConfig> {
 			for (int y = floor + 1; y <= w; y++) {
 				world.setBlockState(pos.set(x, y, z), WATER, FLAGS);
 			}
-			world.setBlockState(pos.set(x, floor, z), bedMaterial(seed, x, z, q), FLAGS);
+			world.setBlockState(pos.set(x, floor, z), style == Lakes.MARSH
+					? (Lakes.hash(seed, x, z, 7) < 0.6 ? MUD : CLAY) : bedMaterial(seed, x, z, q), FLAGS);
 			// дно не должно проваливаться в пещеру под озером
 			seal(world, x, z, floor - 3, floor - 1, pos);
 			return;
@@ -108,9 +113,11 @@ public class LakeDistrictLakesFeature extends Feature<DefaultFeatureConfig> {
 		// берег: у самой воды земля вровень с водой (там растут тростник и камыш), дальше пологий подъём
 		// примерно 2 блока на 3; у внешнего края берега подъём плавно переходит в естественный рельеф
 		double d = Lakes.fromWater(lake, q);
-		int cap = w + (int) Math.floor(d * Lakes.BANK_SLOPE);
-		if (top > cap && d > Lakes.BANK - 3) {
-			double blend = (d - (Lakes.BANK - 3)) / 3.0;
+		int bank = lake.style().bank();
+		int cap = w + (int) Math.floor(d * lake.style().bankSlope());
+		double blendFrom = Math.max(0, bank - 3);
+		if (top > cap && d > blendFrom) {
+			double blend = (d - blendFrom) / (bank - blendFrom);
 			cap += (int) Math.round((top - cap) * blend * blend);
 		}
 		if (top > cap) {
@@ -131,7 +138,8 @@ public class LakeDistrictLakesFeature extends Feature<DefaultFeatureConfig> {
 		if (d < 3.5 && top <= w + 1 && world.getBlockState(pos.set(x, top + 1, z)).isAir()) {
 			double patch = Lakes.hash(seed, Math.floorDiv(x, 3), Math.floorDiv(z, 3), 11);
 			if (patch < 0.3) {
-				world.setBlockState(pos.set(x, top, z), patch < 0.18 ? SAND : GRAVEL, FLAGS);
+				BlockState beach = style == Lakes.MARSH ? MUD : patch < 0.18 ? SAND : GRAVEL;
+				world.setBlockState(pos.set(x, top, z), beach, FLAGS);
 			}
 		}
 		if (d < 6) {

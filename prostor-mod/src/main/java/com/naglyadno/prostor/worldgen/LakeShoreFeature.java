@@ -24,12 +24,18 @@ import java.util.List;
  * Жизнь у воды: камыш на мелководье и у кромки, кувшинки, водоросли, тростник и светлячковые кусты
  * на берегу. Последний шаг растительности, ставит блоки только в своём чанке.
  */
-public class LakeDistrictShoreFeature extends Feature<DefaultFeatureConfig> {
+public class LakeShoreFeature extends Feature<DefaultFeatureConfig> {
 
 	private static final int FLAGS = Block.NOTIFY_LISTENERS;
 
-	public LakeDistrictShoreFeature(Codec<DefaultFeatureConfig> codec) {
+	private final Lakes.Style style;
+	/** Болото: камыш гуще, кувшинок больше, тростника нет. */
+	private final boolean marsh;
+
+	public LakeShoreFeature(Codec<DefaultFeatureConfig> codec, Lakes.Style style) {
 		super(codec);
+		this.style = style;
+		this.marsh = style == Lakes.MARSH;
 	}
 
 	@Override
@@ -38,7 +44,7 @@ public class LakeDistrictShoreFeature extends Feature<DefaultFeatureConfig> {
 		ChunkPos chunk = new ChunkPos(context.getOrigin());
 		int bx = chunk.getStartX();
 		int bz = chunk.getStartZ();
-		List<Lakes.Lake> lakes = Lakes.near(LakeDistrictLakesFeature.terrain(world, context.getGenerator()), bx, bz, bx + 15, bz + 15);
+		List<Lakes.Lake> lakes = Lakes.near(style, LakeFeature.terrain(world, context.getGenerator()), bx, bz, bx + 15, bz + 15);
 		long seed = world.getSeed();
 		BlockPos.Mutable pos = new BlockPos.Mutable();
 		for (Lakes.Lake lake : lakes) {
@@ -58,7 +64,7 @@ public class LakeDistrictShoreFeature extends Feature<DefaultFeatureConfig> {
 		return !lakes.isEmpty();
 	}
 
-	private static void water(StructureWorldAccess world, Lakes.Lake lake, int x, int z, double q, double iq, double h,
+	private void water(StructureWorldAccess world, Lakes.Lake lake, int x, int z, double q, double iq, double h,
 			BlockPos.Mutable pos) {
 		int w = lake.waterY();
 		if (!world.getBlockState(pos.set(x, w, z)).isOf(Blocks.WATER) || !world.isAir(pos.set(x, w + 1, z))) {
@@ -68,14 +74,14 @@ public class LakeDistrictShoreFeature extends Feature<DefaultFeatureConfig> {
 		int floor = w - depth;
 		if (depth == 1) {
 			// мелководье: заросли камыша, чаще у самой кромки
-			double chance = q > 0.9 ? 0.55 : 0.3;
+			double chance = marsh ? (q > 0.85 ? 0.7 : 0.45) : (q > 0.9 ? 0.55 : 0.3);
 			if (h < chance && world.isAir(pos.set(x, w + 2, z))
 					&& ReedsBlock.isSoil(world.getBlockState(pos.set(x, floor, z)))) {
 				placeReeds(world, x, w, z, true, pos);
 			}
 			return;
 		}
-		if (h < 0.06 && q < 0.85) {
+		if (h < (marsh ? 0.14 : 0.06) && q < 0.85) {
 			world.setBlockState(pos.set(x, w + 1, z), Blocks.LILY_PAD.getDefaultState(), FLAGS);
 		} else if (h > 0.78 && floor + 2 <= w) {
 			BlockState bed = world.getBlockState(pos.set(x, floor, z));
@@ -85,9 +91,9 @@ public class LakeDistrictShoreFeature extends Feature<DefaultFeatureConfig> {
 		}
 	}
 
-	private static void shore(StructureWorldAccess world, int x, int z, double h, double h2, double fromWater,
+	private void shore(StructureWorldAccess world, int x, int z, double h, double h2, double fromWater,
 			BlockPos.Mutable pos) {
-		int top = LakeDistrictLakesFeature.solidTop(world, x, z, pos);
+		int top = LakeFeature.solidTop(world, x, z, pos);
 		BlockState ground = world.getBlockState(pos.set(x, top, z));
 		BlockState above = world.getBlockState(pos.set(x, top + 1, z));
 		if (!(above.isAir() || above.isReplaceable() && above.getFluidState().isEmpty())) {
@@ -106,7 +112,7 @@ public class LakeDistrictShoreFeature extends Feature<DefaultFeatureConfig> {
 		}
 		if (h < 0.24 && world.isAir(pos.set(x, top + 2, z)) && ReedsBlock.isSoil(ground)) {
 			placeReeds(world, x, top + 1, z, false, pos);
-		} else if (h < 0.34) {
+		} else if (h < 0.34 && !marsh) {
 			int height = 2 + (int) (h2 * 2.0);
 			for (int i = 1; i <= height; i++) {
 				if (!world.isAir(pos.set(x, top + i, z)) && i > 1) {

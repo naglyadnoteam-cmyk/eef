@@ -11,10 +11,28 @@ import net.minecraft.world.gen.feature.FeatureConfig;
 public final class ModFeatures {
 
 	public static final Feature<DefaultFeatureConfig> LAKE_DISTRICT_LAKES =
-			register("lake_district_lakes", new LakeDistrictLakesFeature(DefaultFeatureConfig.CODEC));
+			register("lake_district_lakes", new LakeFeature(DefaultFeatureConfig.CODEC, Lakes.LAKE_DISTRICT));
 
 	public static final Feature<DefaultFeatureConfig> LAKE_DISTRICT_SHORE =
-			register("lake_district_shore", new LakeDistrictShoreFeature(DefaultFeatureConfig.CODEC));
+			register("lake_district_shore", new LakeShoreFeature(DefaultFeatureConfig.CODEC, Lakes.LAKE_DISTRICT));
+
+	public static final Feature<DefaultFeatureConfig> MARSH_POOLS =
+			register("marsh_pools", new LakeFeature(DefaultFeatureConfig.CODEC, Lakes.MARSH));
+
+	public static final Feature<DefaultFeatureConfig> MARSH_SHORE =
+			register("marsh_shore", new LakeShoreFeature(DefaultFeatureConfig.CODEC, Lakes.MARSH));
+
+	public static final Feature<DefaultFeatureConfig> MARSH_GROUND =
+			register("marsh_ground", new MarshGroundFeature(DefaultFeatureConfig.CODEC));
+
+	public static final Feature<DefaultFeatureConfig> FLOODPLAIN =
+			register("floodplain", new FloodplainFeature(DefaultFeatureConfig.CODEC));
+
+	public static final Feature<DefaultFeatureConfig> CANYON =
+			register("river_canyon", new CanyonFeature(DefaultFeatureConfig.CODEC));
+
+	public static final Feature<DefaultFeatureConfig> WATERFALLS =
+			register("waterfalls", new WaterfallFeature(DefaultFeatureConfig.CODEC));
 
 	private ModFeatures() {
 	}

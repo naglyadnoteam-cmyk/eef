@@ -1,9 +1,13 @@
 {
 	"biome.prostor.lake_district": "Озёрный край",
 	"block.prostor.reeds": "Камыш",
-	"command.prostor.unknown_biome": "Неизвестный биом «%s». Доступны: lake_district",
+	"command.prostor.unknown_biome": "Неизвестный биом «%s». Доступны: lake_district, floodplain, river_canyon, waterfall_cliffs, marsh",
 	"command.prostor.overworld_only": "Биомы «Простора» есть только в Верхнем мире",
 	"command.prostor.not_found": "%s не найден в радиусе %s блоков",
 	"command.prostor.tp": "Перенос: %s, %s %s %s (%s блоков отсюда)",
-	"command.prostor.locate": "%s: %s %s %s (%s блоков отсюда)"
+	"command.prostor.locate": "%s: %s %s %s (%s блоков отсюда)",
+	"biome.prostor.floodplain": "Широкая река с поймой",
+	"biome.prostor.river_canyon": "Речной каньон",
+	"biome.prostor.waterfall_cliffs": "Гигантские водопады",
+	"biome.prostor.marsh": "Болотистые низины"
 }

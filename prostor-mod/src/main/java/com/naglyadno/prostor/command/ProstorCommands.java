@@ -125,27 +125,181 @@ public final class ProstorCommands {
 			return null;
 		}
 		BlockPos found = pair.getFirst();
+		Viewpoint special = null;
 		if (key.equals(ProstorBiomes.LAKE_DISTRICT)) {
-			Viewpoint shore = lakeShore(world, found, from);
-			if (shore != null) {
-				return shore;
-			}
+			special = lakeShore(world, found, from);
+		} else if (key.equals(ProstorBiomes.RIVER_CANYON)) {
+			special = canyonRim(world, found);
+		} else if (key.equals(ProstorBiomes.WATERFALL_CLIFFS)) {
+			special = waterfallView(world, found);
+		} else if (key.equals(ProstorBiomes.MARSH)) {
+			special = marshPool(world, found, from);
+		} else if (key.equals(ProstorBiomes.FLOODPLAIN)) {
+			special = riverBank(world, found);
+		}
+		if (special != null) {
+			return special;
 		}
 		world.getChunk(found.getX() >> 4, found.getZ() >> 4);
 		int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, found.getX(), found.getZ());
 		return new Viewpoint(found.getX(), y, found.getZ(), 0, 10, null);
 	}
 
+	private static Lakes.Terrain terrain(ServerWorld world) {
+		return new Lakes.Terrain(world.getSeed(), world.getChunkManager().getChunkGenerator(),
+				world.getChunkManager().getNoiseConfig(), world);
+	}
+
+	private static Viewpoint standAt(ServerWorld world, double x, double z, double lookX, double lookZ, float pitch, Lakes.Lake lake) {
+		int ix = MathHelper.floor(x);
+		int iz = MathHelper.floor(z);
+		world.getChunk(ix >> 4, iz >> 4);
+		int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, ix, iz);
+		float yaw = (float) Math.toDegrees(Math.atan2(-(lookX - ix - 0.5), lookZ - iz - 0.5));
+		return new Viewpoint(ix, y, iz, yaw, pitch, lake);
+	}
+
+	/** Каньон: встаём на край обрыва и смотрим вниз на реку. */
+	private static Viewpoint canyonRim(ServerWorld world, BlockPos found) {
+		Lakes.Terrain terrain = terrain(world);
+		long seed = world.getSeed();
+		double bestU = Double.MAX_VALUE;
+		int px = 0;
+		int pz = 0;
+		for (int dx = -160; dx <= 160; dx += 4) {
+			for (int dz = -160; dz <= 160; dz += 4) {
+				int x = found.getX() + dx;
+				int z = found.getZ() + dz;
+				double u = com.naglyadno.prostor.worldgen.Canyons.u(seed, x, z) + Math.hypot(dx, dz) / 2000.0;
+				if (u < bestU && terrain.isBiome(ProstorBiomes.RIVER_CANYON, x, terrain.surface(x, z), z)) {
+					bestU = u;
+					px = x;
+					pz = z;
+				}
+			}
+		}
+		if (bestU > 0.3) {
+			return null;
+		}
+		// идём от оси каньона к ближайшему краю
+		double bestDist = Double.MAX_VALUE;
+		double ex = px;
+		double ez = pz;
+		for (int i = 0; i < 16; i++) {
+			double a = Math.PI * 2 * i / 16;
+			for (int d = 2; d <= 60; d++) {
+				double x = px + Math.cos(a) * d;
+				double z = pz + Math.sin(a) * d;
+				if (com.naglyadno.prostor.worldgen.Canyons.u(seed, x, z) > 1.15) {
+					if (d < bestDist) {
+						bestDist = d;
+						ex = px + Math.cos(a) * (d + 2);
+						ez = pz + Math.sin(a) * (d + 2);
+					}
+					break;
+				}
+			}
+		}
+		return standAt(world, ex, ez, px, pz, 35.0f, null);
+	}
+
+	/** Водопад: встаём на берегу озера напротив обрыва и смотрим на падающую воду. */
+	private static Viewpoint waterfallView(ServerWorld world, BlockPos found) {
+		Lakes.Terrain terrain = terrain(world);
+		int cx = Math.floorDiv(found.getX(), com.naglyadno.prostor.worldgen.Waterfalls.CELL);
+		int cz = Math.floorDiv(found.getZ(), com.naglyadno.prostor.worldgen.Waterfalls.CELL);
+		com.naglyadno.prostor.worldgen.Waterfalls.Site best = null;
+		double bestDist = Double.MAX_VALUE;
+		for (int dx = -4; dx <= 4; dx++) {
+			for (int dz = -4; dz <= 4; dz++) {
+				com.naglyadno.prostor.worldgen.Waterfalls.Site site =
+						com.naglyadno.prostor.worldgen.Waterfalls.site(terrain, cx + dx, cz + dz);
+				if (site != null) {
+					double d = Math.hypot(site.ex() - found.getX(), site.ez() - found.getZ());
+					if (d < bestDist) {
+						bestDist = d;
+						best = site;
+					}
+				}
+			}
+		}
+		if (best == null) {
+			return null;
+		}
+		double back = best.poolRadius() + 9;
+		return standAt(world, best.px() + best.dirX() * back, best.pz() + best.dirZ() * back, best.ex(), best.ez(), -12.0f, null);
+	}
+
+	/** Болото: берег ближайшей бочажины. */
+	private static Viewpoint marshPool(ServerWorld world, BlockPos found, BlockPos from) {
+		Lakes.Terrain terrain = terrain(world);
+		int cell = Lakes.MARSH.cell();
+		Lakes.Lake best = null;
+		double bestDist = Double.MAX_VALUE;
+		for (int dx = -5; dx <= 5; dx++) {
+			for (int dz = -5; dz <= 5; dz++) {
+				Lakes.Lake lake = Lakes.lake(Lakes.MARSH, terrain, Math.floorDiv(found.getX(), cell) + dx, Math.floorDiv(found.getZ(), cell) + dz);
+				if (lake != null) {
+					double d = Math.hypot(lake.centerX() - found.getX(), lake.centerZ() - found.getZ());
+					if (d < bestDist) {
+						bestDist = d;
+						best = lake;
+					}
+				}
+			}
+		}
+		if (best == null) {
+			return null;
+		}
+		double preferred = Math.atan2(from.getZ() - best.centerZ(), from.getX() - best.centerX());
+		return lakeViewpoint(world, best, preferred);
+	}
+
+	/** Пойма: встаём на ровном берегу в нескольких блоках от воды и смотрим на реку. */
+	private static Viewpoint riverBank(ServerWorld world, BlockPos found) {
+		world.getChunk(found.getX() >> 4, found.getZ() >> 4);
+		BlockPos.Mutable pos = new BlockPos.Mutable();
+		double bestScore = Double.MAX_VALUE;
+		Viewpoint best = null;
+		for (int dx = -48; dx <= 48; dx += 3) {
+			for (int dz = -48; dz <= 48; dz += 3) {
+				int x = found.getX() + dx;
+				int z = found.getZ() + dz;
+				world.getChunk(x >> 4, z >> 4);
+				int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+				if (!world.getFluidState(pos.set(x, y - 1, z)).isEmpty() || !world.getBiome(pos).matchesKey(ProstorBiomes.FLOODPLAIN)) {
+					continue;
+				}
+				// вода в 6-12 блоках в каком-нибудь направлении
+				for (int i = 0; i < 8; i++) {
+					double a = Math.PI * 2 * i / 8;
+					int wx = MathHelper.floor(x + Math.cos(a) * 9);
+					int wz = MathHelper.floor(z + Math.sin(a) * 9);
+					int wy = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, wx, wz);
+					if (world.getFluidState(pos.set(wx, wy - 1, wz)).isEmpty()) {
+						continue;
+					}
+					double score = Math.hypot(dx, dz) + canopy(world, x, y, z, pos) * 20;
+					if (score < bestScore) {
+						bestScore = score;
+						best = standAt(world, x + 0.5, z + 0.5, wx + 0.5, wz + 0.5, 15.0f, null);
+					}
+				}
+			}
+		}
+		return best;
+	}
+
 	private static Viewpoint lakeShore(ServerWorld world, BlockPos found, BlockPos from) {
 		Lakes.Terrain terrain = new Lakes.Terrain(world.getSeed(), world.getChunkManager().getChunkGenerator(),
 				world.getChunkManager().getNoiseConfig(), world);
-		int cellX = Math.floorDiv(found.getX(), Lakes.CELL);
-		int cellZ = Math.floorDiv(found.getZ(), Lakes.CELL);
+		int cellX = Math.floorDiv(found.getX(), Lakes.LAKE_DISTRICT.cell());
+		int cellZ = Math.floorDiv(found.getZ(), Lakes.LAKE_DISTRICT.cell());
 		Lakes.Lake best = null;
 		double bestDist = Double.MAX_VALUE;
 		for (int dx = -4; dx <= 4; dx++) {
 			for (int dz = -4; dz <= 4; dz++) {
-				Lakes.Lake lake = Lakes.lake(terrain, cellX + dx, cellZ + dz);
+				Lakes.Lake lake = Lakes.lake(Lakes.LAKE_DISTRICT, terrain, cellX + dx, cellZ + dz);
 				if (lake == null) {
 					continue;
 				}

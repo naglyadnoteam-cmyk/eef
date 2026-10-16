@@ -82,13 +82,13 @@ final class LakeCheck {
 	static void reportArea(ServerWorld world, int x, int z) {
 		Lakes.Terrain terrain = new Lakes.Terrain(world.getSeed(), world.getChunkManager().getChunkGenerator(),
 				world.getChunkManager().getNoiseConfig(), world);
-		int cx = Math.floorDiv(x, Lakes.CELL);
-		int cz = Math.floorDiv(z, Lakes.CELL);
+		int cx = Math.floorDiv(x, Lakes.LAKE_DISTRICT.cell());
+		int cz = Math.floorDiv(z, Lakes.LAKE_DISTRICT.cell());
 		int cells = 0, lakes = 0, islands = 0, radiusSum = 0;
 		for (int dx = -5; dx <= 5; dx++) {
 			for (int dz = -5; dz <= 5; dz++) {
 				cells++;
-				Lakes.Lake lake = Lakes.lake(terrain, cx + dx, cz + dz);
+				Lakes.Lake lake = Lakes.lake(Lakes.LAKE_DISTRICT, terrain, cx + dx, cz + dz);
 				if (lake != null) {
 					lakes++;
 					radiusSum += lake.radius();
@@ -99,6 +99,43 @@ final class LakeCheck {
 			}
 		}
 		LOGGER.info("STATS| lakes around: {} of {} cells ({}x{} blocks), islands {}, mean radius {}", lakes, cells,
-				11 * Lakes.CELL, 11 * Lakes.CELL, islands, lakes == 0 ? 0 : radiusSum / lakes);
+				11 * Lakes.LAKE_DISTRICT.cell(), 11 * Lakes.LAKE_DISTRICT.cell(), islands, lakes == 0 ? 0 : radiusSum / lakes);
+	}
+
+	/**
+	 * Вода в квадрате вокруг точки: родники (источники), висящие над воздухом, и источники с воздухом сбоку
+	 * (вода, которая потечёт при первом обновлении). Текущую воду водопадов не считаем.
+	 */
+	static void area(ServerWorld world, String name, BlockPos center, int radius) {
+		int sources = 0, floating = 0, leaks = 0, flowing = 0;
+		BlockPos.Mutable pos = new BlockPos.Mutable();
+		BlockPos.Mutable n = new BlockPos.Mutable();
+		for (int x = center.getX() - radius; x <= center.getX() + radius; x++) {
+			for (int z = center.getZ() - radius; z <= center.getZ() + radius; z++) {
+				int top = world.getTopY(net.minecraft.world.Heightmap.Type.WORLD_SURFACE, x, z);
+				for (int y = top - 12; y < top; y++) {
+					BlockState state = world.getBlockState(pos.set(x, y, z));
+					if (!state.isOf(Blocks.WATER)) {
+						continue;
+					}
+					if (!state.getFluidState().isStill()) {
+						flowing++;
+						continue;
+					}
+					sources++;
+					if (world.getBlockState(n.set(x, y - 1, z)).isAir()) {
+						floating++;
+					}
+					for (Direction d : Direction.Type.HORIZONTAL) {
+						if (world.getBlockState(n.set(x + d.getOffsetX(), y, z + d.getOffsetZ())).isAir()) {
+							leaks++;
+							break;
+						}
+					}
+				}
+			}
+		}
+		LOGGER.info("STATS| {} water: sources {} floatingSources {} sourcesNextToAir {} flowingWater {}", name, sources,
+				floating, leaks, flowing);
 	}
 }

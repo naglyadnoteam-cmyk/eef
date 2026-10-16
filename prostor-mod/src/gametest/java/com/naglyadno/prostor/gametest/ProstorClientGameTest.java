@@ -75,23 +75,6 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 			render(singleplayer);
 			shot(context, "prostor_01_lake_shore");
 
-			// вид сверху: несколько озёр между холмами
-			double back = 26;
-			double bx = vx + 0.5 - (cx - vx) / dist(vx, vz, cx, cz) * back;
-			double bz = vz + 0.5 - (cz - vz) / dist(vx, vz, cx, cz) * back;
-			tp(server, bx, water + 34, bz, yaw, 32);
-			context.waitTicks(60);
-			render(singleplayer);
-			shot(context, "prostor_02_lake_aerial");
-
-			// вид с воды на берег: заросли камыша, кувшинки, тростник
-			double sx = cx + 0.5 + (vx - cx) * 0.3;
-			double sz = cz + 0.5 + (vz - cz) * 0.3;
-			tp(server, sx, water + 2.2, sz, yawTo(sx, sz, vx + 0.5, vz + 0.5), 14);
-			context.waitTicks(40);
-			render(singleplayer);
-			shot(context, "prostor_03_reeds");
-
 			// закат над озером: встаём на восточный берег и смотрим на запад, на солнце
 			int[] west = server.computeOnServer(s -> sunsetView(s, cx, cz));
 			server.runCommand("time set 12000");
@@ -103,7 +86,34 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 			context.waitTicks(60);
 			render(singleplayer);
 			shot(context, "prostor_04_lake_sunset");
+
+			// ---- остальные биомы: команда сама выбирает точку обзора
+			server.runCommand("time set 1500");
+			biome(context, singleplayer, "floodplain", "prostor_05_floodplain", 60);
+			biome(context, singleplayer, "river_canyon", "prostor_06_river_canyon", 60);
+			// водопаду нужно время, чтобы вода дотекла до низа
+			biome(context, singleplayer, "waterfall_cliffs", "prostor_07_waterfall", 260);
+			biome(context, singleplayer, "marsh", "prostor_08_marsh", 60);
 		}
+	}
+
+	/** Переносит в биом командой мода, ждёт и снимает; печатает замеры воды вокруг. */
+	private static void biome(ClientGameTestContext context, TestSingleplayerContext singleplayer, String name, String shotName,
+			int ticks) {
+		TestServerContext server = singleplayer.getServer();
+		server.runCommand("execute as @a at @s run prostor tp " + name);
+		context.waitTicks(20);
+		// камера чуть выше головы, чтобы не мешала трава
+		server.runCommand("execute as @a at @s run tp @s ~ ~" + CAMERA + " ~");
+		context.waitTicks(ticks);
+		render(singleplayer);
+		server.runOnServer(s -> {
+			BlockPos at = s.getPlayerManager().getPlayerList().get(0).getBlockPos();
+			LOGGER.info("STATS| {} viewpoint {} {} {} biome {}", name, at.getX(), at.getY(), at.getZ(),
+					s.getOverworld().getBiome(at).getKey().map(k -> k.getValue().toString()).orElse("?"));
+			LakeCheck.area(s.getOverworld(), name, at, 40);
+		});
+		shot(context, shotName);
 	}
 
 	/** Ждёт отрисовки чанков; если программный OpenGL не успел, снимок всё равно делается (с отметкой в логе). */
@@ -134,7 +144,7 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 		LakeCheck.reportArea(world, lake.centerX(), lake.centerZ());
 		StringBuilder reasons = new StringBuilder();
 		for (int i = 0; i < Lakes.REASONS.length; i++) {
-			reasons.append(Lakes.REASONS[i]).append('=').append(Lakes.STATS.get(i)).append(' ');
+			reasons.append(Lakes.REASONS[i]).append('=').append(Lakes.LAKE_DISTRICT.stats().get(i)).append(' ');
 		}
 		LOGGER.info("STATS| lake cells by outcome: {}", reasons);
 		return new int[]{view.x(), view.y(), view.z(), lake.centerX(), lake.centerZ(), lake.waterY()};
@@ -145,7 +155,8 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 		ServerWorld world = server.getOverworld();
 		Lakes.Terrain terrain = new Lakes.Terrain(world.getSeed(), world.getChunkManager().getChunkGenerator(),
 				world.getChunkManager().getNoiseConfig(), world);
-		Lakes.Lake lake = Lakes.lake(terrain, Math.floorDiv(cx, Lakes.CELL), Math.floorDiv(cz, Lakes.CELL));
+		Lakes.Lake lake = Lakes.lake(Lakes.LAKE_DISTRICT, terrain, Math.floorDiv(cx, Lakes.LAKE_DISTRICT.cell()),
+				Math.floorDiv(cz, Lakes.LAKE_DISTRICT.cell()));
 		if (lake == null) {
 			return null;
 		}

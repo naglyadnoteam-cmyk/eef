@@ -1,9 +1,13 @@
 {
 	"biome.prostor.lake_district": "Lake District",
 	"block.prostor.reeds": "Cattails",
-	"command.prostor.unknown_biome": "Unknown biome '%s'. Available: lake_district",
+	"command.prostor.unknown_biome": "Unknown biome '%s'. Available: lake_district, floodplain, river_canyon, waterfall_cliffs, marsh",
 	"command.prostor.overworld_only": "Prostor biomes only exist in the Overworld",
 	"command.prostor.not_found": "%s not found within %s blocks",
 	"command.prostor.tp": "Teleported to %s at %s %s %s (%s blocks away)",
-	"command.prostor.locate": "%s: %s %s %s (%s blocks away)"
+	"command.prostor.locate": "%s: %s %s %s (%s blocks away)",
+	"biome.prostor.floodplain": "Floodplain River",
+	"biome.prostor.river_canyon": "River Canyon",
+	"biome.prostor.waterfall_cliffs": "Giant Waterfalls",
+	"biome.prostor.marsh": "Marsh Lowlands"
 }

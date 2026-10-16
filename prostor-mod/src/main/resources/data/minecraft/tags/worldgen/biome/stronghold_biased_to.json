@@ -1,5 +1,9 @@
 {
 	"values": [
-		"prostor:lake_district"
+		"prostor:lake_district",
+		"prostor:floodplain",
+		"prostor:river_canyon",
+		"prostor:waterfall_cliffs",
+		"prostor:marsh"
 	]
 }

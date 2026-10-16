@@ -47,12 +47,12 @@ jobs:
           # фиксированный сид, чтобы лог от запуска к запуску можно было сравнивать
           printf 'level-seed=prostor\nview-distance=8\n' > server.properties
 
-      - name: Run server for 120 seconds
+      - name: Run server (up to 200 seconds)
         working-directory: /tmp/server
         run: |
           set +e
           # после загрузки мира сервер сам ищет каждый биом мода и печатает результат
-          ( sleep 75; echo "prostor locate_all"; sleep 30; echo "stop" ) | timeout 120 java -Xmx3G -jar fabric-server-launch.jar nogui > console.log 2>&1
+          ( sleep 75; echo "prostor locate_all"; sleep 100; echo "stop" ) | timeout 200 java -Xmx3G -jar fabric-server-launch.jar nogui > console.log 2>&1
           echo "server ended with exit code $?"
 
       - name: Print server log
