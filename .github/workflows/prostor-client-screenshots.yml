@@ -1,0 +1,113 @@
+name: Prostor Client Screenshots
+
+on:
+  push:
+    branches:
+      - claude/stoic-bell-nkwv8g
+    paths:
+      - 'prostor-mod/src/**'
+      - 'prostor-mod/*.gradle'
+      - 'prostor-mod/gradle.properties'
+      - '.github/workflows/prostor-client-screenshots.yml'
+  workflow_dispatch: {}
+
+concurrency:
+  group: prostor-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, 'skip-ci-marker')"
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: prostor-mod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Install virtual display and software OpenGL
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri > /dev/null
+          chmod +x gradlew
+
+      - name: Run client gametest (real game client under xvfb)
+        env:
+          JAVA_TOOL_OPTIONS: -Dfabric.client.gametest.disableNetworkSynchronizer=true
+        run: |
+          set -o pipefail
+          xvfb-run -a -s "-screen 0 1600x900x24" ./gradlew runClientGameTest -PprostorClientTest --no-daemon --stacktrace 2>&1 | tee /tmp/gametest.log
+
+      - name: Client gametest API reference (for debugging compile errors)
+        if: always()
+        run: |
+          set +e
+          JAR=$(find ~/.gradle/caches -iname "fabric-client-gametest-api-v1-*.jar" | grep -v sources | head -1)
+          echo "jar: $JAR"
+          for c in FabricClientGameTest context.ClientGameTestContext context.TestSingleplayerContext context.TestServerContext context.TestClientWorldContext world.TestWorldBuilder; do
+            javap -classpath "$JAR" "net.fabricmc.fabric.api.client.gametest.v1.$c" 2>&1 | head -40
+          done
+
+      - name: Collect screenshots
+        if: always()
+        run: |
+          rm -rf docs/screenshots
+          mkdir -p docs/screenshots
+          find build/run -name "*.png" | head -40
+          for f in $(find build/run -name "*prostor_*.png"); do
+            name=$(basename "$f" | sed -E 's/^.*(prostor_)/\1/')
+            cp "$f" "docs/screenshots/$name"
+          done
+          ls -la docs/screenshots
+          LOG=$(find build -path "*clientGameTest*" -name "latest.log" | head -1)
+          echo "client log: $LOG"
+          if [ -n "$LOG" ]; then
+            echo "===== world loading state (last reports) ====="
+            grep "World loading finished" "$LOG" | tail -4
+            echo "===== world generation stats ====="
+            grep "STATS|" "$LOG" | sed -E 's/^.*STATS\| //' | head -400
+            echo "===== thread dumps (if loading hung) ====="
+            grep "DUMP|" "$LOG" | head -300
+            echo "===== prostor / error lines ====="
+            grep -iE "prostor|error|exception|failed|missing" "$LOG" | grep -vE "Realms|realms|flite|OpenAL|Anisotropic|user properties" | grep -vE "^\s+at " | cut -c1-300 | head -60
+            echo "===== log tail without stack frames ====="
+            grep -vE "^\s+at |^\s+\.\.\. [0-9]+ more|Suppressed:|World loading finished|DUMP\|" "$LOG" | cut -c1-300 | tail -80
+          fi
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prostor-screenshots
+          path: |
+            prostor-mod/docs/screenshots/*.png
+            prostor-mod/build/run/**/logs/latest.log
+          if-no-files-found: warn
+
+      - name: Commit screenshots back to the repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! ls docs/screenshots/*.png > /dev/null 2>&1; then
+            echo "No screenshots were produced."
+            exit 1
+          fi
+          git add -A -f docs/screenshots
+          if git diff --cached --quiet; then
+            echo "Screenshots unchanged."
+          else
+            git commit -m "Update Prostor in-game screenshots (skip-ci-marker)"
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
