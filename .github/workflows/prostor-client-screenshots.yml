@@ -47,7 +47,7 @@ jobs:
           JAVA_TOOL_OPTIONS: -Dfabric.client.gametest.disableNetworkSynchronizer=true
         run: |
           set -o pipefail
-          xvfb-run -a -s "-screen 0 1600x900x24" ./gradlew runClientGameTest -PprostorClientTest --no-daemon --stacktrace 2>&1 | tee /tmp/gametest.log
+          timeout 1080 xvfb-run -a -s "-screen 0 1600x900x24" ./gradlew runClientGameTest -PprostorClientTest --no-daemon --stacktrace 2>&1 | tee /tmp/gametest.log
 
       - name: Client gametest API reference (for debugging compile errors)
         if: always()
