@@ -12,10 +12,6 @@
         "feature": "minecraft:birch_bees_002"
       },
       {
-        "chance": 0.05,
-        "feature": "minecraft:rooted_azalea_tree"
-      },
-      {
         "chance": 0.015,
         "feature": "minecraft:fallen_spruce_tree"
       }
