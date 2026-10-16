@@ -170,6 +170,11 @@ public final class ProstorCommands {
 	 * направление от центра озера, 0 - восток).
 	 */
 	public static Viewpoint lakeViewpoint(ServerWorld world, Lakes.Lake lake, double preferred) {
+		return lakeViewpoint(world, lake, preferred, 1.62);
+	}
+
+	/** То же для заданной высоты глаз над землёй (у стоящего игрока 1.62). */
+	public static Viewpoint lakeViewpoint(ServerWorld world, Lakes.Lake lake, double preferred, double eyeHeight) {
 		Viewpoint best = null;
 		double bestScore = Double.MAX_VALUE;
 		BlockPos.Mutable pos = new BlockPos.Mutable();
@@ -182,7 +187,7 @@ public final class ProstorCommands {
 			if (!world.getFluidState(pos.set(x, y - 1, z)).isEmpty()) {
 				continue;
 			}
-			double score = obstruction(world, x + 0.5, y + 1.62, z + 0.5, lake.centerX() + 0.5, lake.waterY() + 0.5,
+			double score = obstruction(world, x + 0.5, y + eyeHeight, z + 0.5, lake.centerX() + 0.5, lake.waterY() + 0.5,
 					lake.centerZ() + 0.5, pos) * 4.0;
 			// не под кроной и не вплотную к стволу: иначе листва закроет вид
 			score += canopy(world, x, y, z, pos) * 3.0;

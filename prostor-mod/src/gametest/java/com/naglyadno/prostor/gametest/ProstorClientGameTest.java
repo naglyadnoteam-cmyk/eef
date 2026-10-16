@@ -23,6 +23,8 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 	private static final Logger LOGGER = LoggerFactory.getLogger("prostor-gametest");
 	/** Ожидание отрисовки чанков: программный OpenGL на CI медленный. */
 	private static final int RENDER_TIMEOUT = 2400;
+	/** Высота камеры (ног наблюдателя) над землёй на снимках с берега. */
+	private static final double CAMERA = 1.6;
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
@@ -68,7 +70,7 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 			}
 			int vx = view[0], vy = view[1], vz = view[2], cx = view[3], cz = view[4], water = view[5];
 			float yaw = yawTo(vx + 0.5, vz + 0.5, cx + 0.5, cz + 0.5);
-			tp(server, vx + 0.5, vy + 0.4, vz + 0.5, yaw, 10);
+			tp(server, vx + 0.5, vy + CAMERA, vz + 0.5, yaw, 14);
 			context.waitTicks(60);
 			render(singleplayer);
 			shot(context, "prostor_01_lake_shore");
@@ -94,9 +96,9 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 			int[] west = server.computeOnServer(s -> sunsetView(s, cx, cz));
 			server.runCommand("time set 12000");
 			if (west != null) {
-				tp(server, west[0] + 0.5, west[1] + 0.4, west[2] + 0.5, yawTo(west[0] + 0.5, west[2] + 0.5, cx + 0.5, cz + 0.5), 4);
+				tp(server, west[0] + 0.5, west[1] + CAMERA, west[2] + 0.5, yawTo(west[0] + 0.5, west[2] + 0.5, cx + 0.5, cz + 0.5), 4);
 			} else {
-				tp(server, vx + 0.5, vy + 0.4, vz + 0.5, yaw, 4);
+				tp(server, vx + 0.5, vy + CAMERA, vz + 0.5, yaw, 6);
 			}
 			context.waitTicks(60);
 			render(singleplayer);
@@ -122,6 +124,12 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 			return null;
 		}
 		Lakes.Lake lake = view.lake();
+		// камера в тесте висит выше головы игрока: точку выбираем для этой высоты глаз
+		ProstorCommands.Viewpoint high = ProstorCommands.lakeViewpoint(world, lake,
+				Math.atan2(view.z() - lake.centerZ(), view.x() - lake.centerX()), CAMERA + 1.62);
+		if (high != null) {
+			view = high;
+		}
 		LakeCheck.report(world, lake);
 		LakeCheck.reportArea(world, lake.centerX(), lake.centerZ());
 		StringBuilder reasons = new StringBuilder();
@@ -141,7 +149,7 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 		if (lake == null) {
 			return null;
 		}
-		ProstorCommands.Viewpoint view = ProstorCommands.lakeViewpoint(world, lake, 0.0);
+		ProstorCommands.Viewpoint view = ProstorCommands.lakeViewpoint(world, lake, 0.0, CAMERA + 1.62);
 		return view == null ? null : new int[]{view.x(), view.y(), view.z()};
 	}
 
