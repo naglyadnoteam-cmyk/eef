@@ -51,6 +51,9 @@ final class BiomeSurvey {
 		LOGGER.info("STATS| biome survey {}x{} blocks, step {}, {} samples, {} ms", 2 * HALF, 2 * HALF, STEP, total,
 				System.currentTimeMillis() - start);
 		final int all = total;
+		int ours = counts.getOrDefault("prostor:lake_district", 0);
+		LOGGER.info("STATS| lake_district share {}% ({} of {} samples)",
+				String.format(java.util.Locale.ROOT, "%.2f", 100.0 * ours / all), ours, all);
 		counts.entrySet().stream()
 				.sorted((a, b) -> b.getValue() - a.getValue())
 				.forEach(e -> LOGGER.info("STATS| biome {} {}%", e.getKey(),

@@ -1,0 +1,28 @@
+{
+	"type": "minecraft:block",
+	"pools": [
+		{
+			"rolls": 1,
+			"bonus_rolls": 0,
+			"entries": [
+				{
+					"type": "minecraft:item",
+					"name": "prostor:reeds"
+				}
+			],
+			"conditions": [
+				{
+					"condition": "minecraft:block_state_property",
+					"block": "prostor:reeds",
+					"properties": {
+						"half": "lower"
+					}
+				},
+				{
+					"condition": "minecraft:survives_explosion"
+				}
+			]
+		}
+	],
+	"random_sequence": "prostor:blocks/reeds"
+}

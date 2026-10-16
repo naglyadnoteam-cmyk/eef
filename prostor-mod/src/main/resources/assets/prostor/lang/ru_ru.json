@@ -1,1 +1,9 @@
-{}
+{
+	"biome.prostor.lake_district": "Озёрный край",
+	"block.prostor.reeds": "Камыш",
+	"command.prostor.unknown_biome": "Неизвестный биом «%s». Доступны: lake_district",
+	"command.prostor.overworld_only": "Биомы «Простора» есть только в Верхнем мире",
+	"command.prostor.not_found": "%s не найден в радиусе %s блоков",
+	"command.prostor.tp": "Перенос: %s, %s %s %s (%s блоков отсюда)",
+	"command.prostor.locate": "%s: %s %s %s (%s блоков отсюда)"
+}
