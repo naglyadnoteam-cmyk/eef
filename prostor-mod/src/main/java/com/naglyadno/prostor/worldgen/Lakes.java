@@ -255,7 +255,7 @@ public final class Lakes {
 			return 3;
 		}
 		int waterY = minRim;
-		if (waterY < terrain.generator().getSeaLevel() + 1) {
+		if (waterY < terrain.generator().getSeaLevel()) {
 			return 5;
 		}
 		// холм посреди водоёма: лучше без него, чем с вырезанной в холме ямой

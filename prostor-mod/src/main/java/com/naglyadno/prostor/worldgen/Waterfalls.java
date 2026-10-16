@@ -16,7 +16,7 @@ public final class Waterfalls {
 
 	public static final int CELL = 96;
 	public static final int MIN_DROP = 14;
-	private static final int DIRECTIONS = 16;
+	private static final int DIRECTIONS = 8;
 
 	/**
 	 * Водопад: кромка (ex, ez) на высоте воды topY, направление падения (dirX, dirZ), ширина width,
@@ -82,7 +82,7 @@ public final class Waterfalls {
 	private static Site compute(Lakes.Terrain terrain, int cellX, int cellZ) {
 		Lakes.Rand rnd = new Lakes.Rand(terrain.seed() ^ 0x57415445524641L, cellX, cellZ);
 		// несколько попыток найти обрыв в клетке
-		for (int attempt = 0; attempt < 8; attempt++) {
+		for (int attempt = 0; attempt < 6; attempt++) {
 			int x = cellX * CELL + 20 + (int) (rnd.next() * (CELL - 40));
 			int z = cellZ * CELL + 20 + (int) (rnd.next() * (CELL - 40));
 			Site site = tryAt(terrain, cellX, cellZ, x, z);
@@ -105,7 +105,7 @@ public final class Waterfalls {
 			double a = Math.PI * 2 * i / DIRECTIONS;
 			double dx = Math.cos(a);
 			double dz = Math.sin(a);
-			for (int d = 4; d <= 20; d += 2) {
+			for (int d = 4; d <= 20; d += 4) {
 				int h = terrain.surface(MathHelper.floor(x + dx * d), MathHelper.floor(z + dz * d));
 				if (top - h > bestDrop) {
 					bestDrop = top - h;

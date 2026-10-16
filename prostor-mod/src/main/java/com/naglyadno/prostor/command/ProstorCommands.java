@@ -102,14 +102,16 @@ public final class ProstorCommands {
 		BlockPos from = BlockPos.ofFloored(source.getPosition());
 		int found = 0;
 		for (RegistryKey<Biome> key : ProstorBiomes.ALL) {
-			Viewpoint view = find(world, key, from);
-			if (view == null) {
+			// только поиск биома, как ванильный /locate: без загрузки чанков, чтобы не подвесить сервер
+			Pair<BlockPos, RegistryEntry<Biome>> pair = world.locateBiome(entry -> entry.matchesKey(key), from, SEARCH_RADIUS, 32, 64);
+			if (pair == null) {
 				source.sendFeedback(() -> Text.translatable("command.prostor.not_found", biomeName(key), SEARCH_RADIUS), false);
 				continue;
 			}
 			found++;
-			int distance = (int) Math.hypot(view.x - from.getX(), view.z - from.getZ());
-			source.sendFeedback(() -> Text.translatable("command.prostor.locate", biomeName(key), view.x, view.y, view.z, distance), false);
+			BlockPos p = pair.getFirst();
+			int distance = (int) Math.hypot(p.getX() - from.getX(), p.getZ() - from.getZ());
+			source.sendFeedback(() -> Text.translatable("command.prostor.locate", biomeName(key), p.getX(), "~", p.getZ(), distance), false);
 		}
 		return found;
 	}
@@ -163,23 +165,31 @@ public final class ProstorCommands {
 	private static Viewpoint canyonRim(ServerWorld world, BlockPos found) {
 		Lakes.Terrain terrain = terrain(world);
 		long seed = world.getSeed();
-		double bestU = Double.MAX_VALUE;
-		int px = 0;
-		int pz = 0;
-		for (int dx = -160; dx <= 160; dx += 4) {
-			for (int dz = -160; dz <= 160; dz += 4) {
+		// кандидаты на ось каньона - по дешёвому шуму, проверка биома - только для лучших
+		java.util.List<int[]> candidates = new java.util.ArrayList<>();
+		for (int dx = -160; dx <= 160; dx += 8) {
+			for (int dz = -160; dz <= 160; dz += 8) {
 				int x = found.getX() + dx;
 				int z = found.getZ() + dz;
-				double u = com.naglyadno.prostor.worldgen.Canyons.u(seed, x, z) + Math.hypot(dx, dz) / 2000.0;
-				// ось каньона глубоко внутри биома (у края биома каньон мелкий)
-				if (u < bestU && inside(terrain, ProstorBiomes.RIVER_CANYON, x, z, 24)) {
-					bestU = u;
-					px = x;
-					pz = z;
+				double u = com.naglyadno.prostor.worldgen.Canyons.u(seed, x, z);
+				if (u < 0.3) {
+					candidates.add(new int[]{x, z, (int) (u * 1000 + Math.hypot(dx, dz))});
 				}
 			}
 		}
-		if (bestU > 0.3) {
+		candidates.sort(java.util.Comparator.comparingInt(c -> c[2]));
+		int px = 0;
+		int pz = 0;
+		boolean ok = false;
+		for (int i = 0; i < Math.min(12, candidates.size()) && !ok; i++) {
+			int[] c = candidates.get(i);
+			if (inside(terrain, ProstorBiomes.RIVER_CANYON, c[0], c[1], 24)) {
+				px = c[0];
+				pz = c[1];
+				ok = true;
+			}
+		}
+		if (!ok) {
 			return null;
 		}
 		// идём от оси каньона к ближайшему краю
@@ -222,8 +232,8 @@ public final class ProstorCommands {
 		int cz = Math.floorDiv(found.getZ(), com.naglyadno.prostor.worldgen.Waterfalls.CELL);
 		com.naglyadno.prostor.worldgen.Waterfalls.Site best = null;
 		double bestDist = Double.MAX_VALUE;
-		for (int dx = -4; dx <= 4; dx++) {
-			for (int dz = -4; dz <= 4; dz++) {
+		for (int dx = -2; dx <= 2; dx++) {
+			for (int dz = -2; dz <= 2; dz++) {
 				com.naglyadno.prostor.worldgen.Waterfalls.Site site =
 						com.naglyadno.prostor.worldgen.Waterfalls.site(terrain, cx + dx, cz + dz);
 				if (site != null) {
@@ -267,39 +277,35 @@ public final class ProstorCommands {
 		return lakeViewpoint(world, best, preferred);
 	}
 
-	/** Пойма: встаём на ровном берегу в нескольких блоках от воды и смотрим на реку. */
+	/** Пойма: встаём на ровном берегу в нескольких блоках от воды и смотрим на реку (поиск по шумам рельефа). */
 	private static Viewpoint riverBank(ServerWorld world, BlockPos found) {
-		world.getChunk(found.getX() >> 4, found.getZ() >> 4);
-		BlockPos.Mutable pos = new BlockPos.Mutable();
+		Lakes.Terrain terrain = terrain(world);
 		double bestScore = Double.MAX_VALUE;
-		Viewpoint best = null;
-		for (int dx = -48; dx <= 48; dx += 3) {
-			for (int dz = -48; dz <= 48; dz += 3) {
+		double[] best = null;
+		for (int dx = -48; dx <= 48; dx += 6) {
+			for (int dz = -48; dz <= 48; dz += 6) {
 				int x = found.getX() + dx;
 				int z = found.getZ() + dz;
-				world.getChunk(x >> 4, z >> 4);
-				int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
-				if (!world.getFluidState(pos.set(x, y - 1, z)).isEmpty() || !world.getBiome(pos).matchesKey(ProstorBiomes.FLOODPLAIN)) {
-					continue;
+				int top = terrain.surface(x, z);
+				if (terrain.surfaceWithWater(x, z) != top || top > world.getSeaLevel() + 3) {
+					continue; // в воде или высоко на склоне
 				}
-				// вода в 6-12 блоках в каком-нибудь направлении
 				for (int i = 0; i < 8; i++) {
 					double a = Math.PI * 2 * i / 8;
 					int wx = MathHelper.floor(x + Math.cos(a) * 9);
 					int wz = MathHelper.floor(z + Math.sin(a) * 9);
-					int wy = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, wx, wz);
-					if (world.getFluidState(pos.set(wx, wy - 1, wz)).isEmpty()) {
-						continue;
-					}
-					double score = Math.hypot(dx, dz) + canopy(world, x, y, z, pos) * 20;
-					if (score < bestScore) {
-						bestScore = score;
-						best = standAt(world, x + 0.5, z + 0.5, wx + 0.5, wz + 0.5, 15.0f, null);
+					if (terrain.surfaceWithWater(wx, wz) > terrain.surface(wx, wz)) {
+						double score = Math.hypot(dx, dz);
+						if (score < bestScore) {
+							bestScore = score;
+							best = new double[]{x + 0.5, z + 0.5, wx + 0.5, wz + 0.5};
+						}
+						break;
 					}
 				}
 			}
 		}
-		return best;
+		return best == null ? null : standAt(world, best[0], best[1], best[2], best[3], 15.0f, null);
 	}
 
 	private static Viewpoint lakeShore(ServerWorld world, BlockPos found, BlockPos from) {
