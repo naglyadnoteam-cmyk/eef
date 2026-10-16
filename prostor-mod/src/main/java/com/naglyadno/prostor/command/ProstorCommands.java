@@ -6,7 +6,9 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.datafixers.util.Pair;
 import com.naglyadno.prostor.worldgen.Lakes;
 import com.naglyadno.prostor.worldgen.ProstorBiomes;
+import net.minecraft.block.BlockState;
 import net.minecraft.command.CommandSource;
+import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.command.CommandManager;
@@ -158,13 +160,67 @@ public final class ProstorCommands {
 			return null;
 		}
 		// встаём на берег со стороны, откуда пришли, лицом к воде
-		double theta = Math.atan2(from.getZ() - best.centerZ(), from.getX() - best.centerX()) - best.angle();
-		double[] p = best.rimPoint(theta, Lakes.BANK + 3.0);
-		int x = MathHelper.floor(p[0]);
-		int z = MathHelper.floor(p[1]);
-		world.getChunk(x >> 4, z >> 4);
-		int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
-		float yaw = (float) Math.toDegrees(Math.atan2(-(best.centerX() - x - 0.5), best.centerZ() - z - 0.5));
-		return new Viewpoint(x, y, z, yaw, 12.0f, best);
+		double preferred = Math.atan2(from.getZ() - best.centerZ(), from.getX() - best.centerX());
+		return lakeViewpoint(world, best, preferred);
+	}
+
+	/**
+	 * Лучшая точка на берегу озера: перебирает 16 мест вокруг воды и выбирает то, откуда озеро видно
+	 * без деревьев и холмов на линии взгляда; при равенстве - ближе к направлению preferred (радианы,
+	 * направление от центра озера, 0 - восток).
+	 */
+	public static Viewpoint lakeViewpoint(ServerWorld world, Lakes.Lake lake, double preferred) {
+		Viewpoint best = null;
+		double bestScore = Double.MAX_VALUE;
+		BlockPos.Mutable pos = new BlockPos.Mutable();
+		for (int i = 0; i < 16; i++) {
+			double[] p = lake.rimPoint(Math.PI * 2 * i / 16, Lakes.BANK + 3.0);
+			int x = MathHelper.floor(p[0]);
+			int z = MathHelper.floor(p[1]);
+			world.getChunk(x >> 4, z >> 4);
+			int y = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, x, z);
+			if (!world.getFluidState(pos.set(x, y - 1, z)).isEmpty()) {
+				continue;
+			}
+			double score = obstruction(world, x + 0.5, y + 1.62, z + 0.5, lake.centerX() + 0.5, lake.waterY() + 0.5,
+					lake.centerZ() + 0.5, pos) * 4.0;
+			for (int dy = 2; dy <= 8; dy++) {
+				if (world.getBlockState(pos.set(x, y + dy, z)).isIn(BlockTags.LEAVES)) {
+					score += 2.0;
+					break;
+				}
+			}
+			double dir = Math.atan2(z + 0.5 - lake.centerZ(), x + 0.5 - lake.centerX());
+			score += Math.abs(MathHelper.wrapDegrees(Math.toDegrees(dir - preferred))) / 120.0;
+			if (score < bestScore) {
+				bestScore = score;
+				float yaw = (float) Math.toDegrees(Math.atan2(-(lake.centerX() - x - 0.5), lake.centerZ() - z - 0.5));
+				best = new Viewpoint(x, y, z, yaw, 12.0f, lake);
+			}
+		}
+		return best;
+	}
+
+	/** Сколько твёрдых блоков и листвы на отрезке от глаз до точки (без повторов). */
+	private static int obstruction(ServerWorld world, double x0, double y0, double z0, double x1, double y1, double z1,
+			BlockPos.Mutable pos) {
+		double length = Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0) + (z1 - z0) * (z1 - z0));
+		int steps = (int) Math.ceil(length * 2);
+		int count = 0;
+		long last = Long.MIN_VALUE;
+		for (int i = 1; i < steps; i++) {
+			double k = (double) i / steps;
+			pos.set(MathHelper.floor(x0 + (x1 - x0) * k), MathHelper.floor(y0 + (y1 - y0) * k), MathHelper.floor(z0 + (z1 - z0) * k));
+			long key = pos.asLong();
+			if (key == last) {
+				continue;
+			}
+			last = key;
+			BlockState state = world.getBlockState(pos);
+			if (state.isIn(BlockTags.LEAVES) || !state.getCollisionShape(world, pos).isEmpty()) {
+				count++;
+			}
+		}
+		return count;
 	}
 }

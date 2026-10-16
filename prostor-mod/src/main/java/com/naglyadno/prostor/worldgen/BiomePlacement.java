@@ -25,8 +25,11 @@ public final class BiomePlacement {
 	private static final ParameterRange LAKE_TEMPERATURE = ParameterRange.of(-0.45f, -0.15f);
 	private static final ParameterRange LAKE_CONTINENTALNESS = ParameterRange.of(-0.11f, 1.0f);
 	private static final ParameterRange LAKE_EROSION = ParameterRange.of(-0.375f, 0.45f);
-	/** Середина полосы влажности - граница леса и тайги: озёрный край лежит на стыке двух лесов. */
-	private static final float LAKE_HUMIDITY_CENTER = 0.1f;
+	/**
+	 * Середина полосы влажности - чуть суше границы леса и тайги (0.1): озёрный край лежит на стыке двух
+	 * лесов и забирает в основном площадь обычного леса, а редкую тайгу почти не трогает.
+	 */
+	private static final float LAKE_HUMIDITY_CENTER = 0.06f;
 	private static final Set<RegistryKey<Biome>> LAKE_HOSTS = Set.of(BiomeKeys.FOREST, BiomeKeys.TAIGA);
 
 	private BiomePlacement() {

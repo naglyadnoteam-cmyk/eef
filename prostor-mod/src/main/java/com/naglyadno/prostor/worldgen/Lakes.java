@@ -24,13 +24,11 @@ import java.util.Map;
  */
 public final class Lakes {
 
-	public static final int CELL = 88;
+	public static final int CELL = 64;
 	/** Ширина берега вокруг воды, который выравнивается под озеро. */
 	public static final int BANK = 5;
-	private static final int MIN_RADIUS = 7;
-	private static final int MAX_RADIUS = 16;
-	/** Отступ центра от края клетки: озеро с берегом и вытянутостью никогда не выходит за клетку. */
-	private static final int MARGIN = 36;
+	private static final int MIN_RADIUS = 6;
+	private static final int MAX_RADIUS = 14;
 	private static final int RIM_SAMPLES = 28;
 
 	/** Одно озеро. waterY - уровень поверхности воды (самый верхний блок воды). */
@@ -152,20 +150,24 @@ public final class Lakes {
 
 	private static Lake compute(Terrain terrain, int cellX, int cellZ) {
 		Rand rnd = new Rand(terrain.seed(), cellX, cellZ);
-		if (rnd.next() > 0.82) {
+		if (rnd.next() > 0.9) {
 			return NONE;
 		}
-		int cx = cellX * CELL + MARGIN + (int) (rnd.next() * (CELL - 2 * MARGIN));
-		int cz = cellZ * CELL + MARGIN + (int) (rnd.next() * (CELL - 2 * MARGIN));
 		// маленьких озёр больше, чем больших
 		double size = rnd.next();
-		int radius = MIN_RADIUS + (int) Math.round(size * size * (MAX_RADIUS - MIN_RADIUS));
+		int radius = MIN_RADIUS + (int) Math.round(Math.pow(size, 1.4) * (MAX_RADIUS - MIN_RADIUS));
 		float stretch = 1.0f + (float) rnd.next() * 0.35f;
 		float angle = (float) (rnd.next() * Math.PI);
 		float a2 = 0.08f + (float) rnd.next() * 0.12f;
 		float p2 = (float) (rnd.next() * Math.PI * 2);
 		float a3 = 0.04f + (float) rnd.next() * 0.1f;
 		float p3 = (float) (rnd.next() * Math.PI * 2);
+		// озеро вместе с берегом целиком лежит в своей клетке, поэтому соседние озёра никогда не сливаются;
+		// маленькие озёра можно сдвинуть по клетке сильнее, чем большие
+		int reach = (int) Math.ceil(radius * 1.35 * stretch) + BANK + 1;
+		int free = Math.max(0, CELL - 2 * reach);
+		int cx = cellX * CELL + reach + (int) (rnd.next() * (free + 1));
+		int cz = cellZ * CELL + reach + (int) (rnd.next() * (free + 1));
 		Lake shape = new Lake(cellX, cellZ, cx, cz, radius, 0, 0, stretch, angle, a2, p2, a3, p3, false, 0, 0, 0);
 
 		int centerTop = terrain.surface(cx, cz);
@@ -187,7 +189,7 @@ public final class Lakes {
 			minRim = Math.min(minRim, top);
 			maxRim = Math.max(maxRim, top);
 			if (i % 4 == 0) {
-				double[] far = shape.rimPoint(theta, BANK + 8.0);
+				double[] far = shape.rimPoint(theta, BANK + 3.0);
 				int fx = MathHelper.floor(far[0]);
 				int fz = MathHelper.floor(far[1]);
 				if (!terrain.isLakeDistrict(fx, terrain.surface(fx, fz), fz)) {
@@ -196,7 +198,7 @@ public final class Lakes {
 			}
 		}
 		// слишком крутой склон: озеро превратилось бы в яму со стеной с одной стороны
-		if (maxRim - minRim > 7) {
+		if (maxRim - minRim > 9) {
 			return NONE;
 		}
 		int waterY = minRim;
@@ -213,7 +215,7 @@ public final class Lakes {
 			}
 		}
 		int maxDepth = 3 + radius / 5 + (int) (rnd.next() * 2);
-		boolean island = radius >= 11 && rnd.next() < 0.35;
+		boolean island = radius >= 9 && rnd.next() < 0.45;
 		int islandX = 0;
 		int islandZ = 0;
 		int islandRadius = 0;

@@ -25,7 +25,7 @@ final class BiomeSurvey {
 	private static final Logger LOGGER = LoggerFactory.getLogger("prostor-gametest");
 	/** Половина стороны квадрата обзора в блоках и шаг выборки. */
 	private static final int HALF = 4096;
-	private static final int STEP = 64;
+	private static final int STEP = 96;
 
 	private BiomeSurvey() {
 	}

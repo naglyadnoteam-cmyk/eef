@@ -29,7 +29,7 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 		context.runOnClient(client -> {
 			// размытие фона меню на программном OpenGL (CI без видеокарты) занимает секунды на кадр
 			client.options.getMenuBackgroundBlurriness().setValue(0);
-			client.options.getViewDistance().setValue(8);
+			client.options.getViewDistance().setValue(6);
 			client.options.getSimulationDistance().setValue(5);
 			client.options.hudHidden = true;
 			client.options.language = "ru_ru";
@@ -95,9 +95,14 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 				shot(context, "prostor_03_reeds");
 			}
 
-			// закат над озером
-			server.runCommand("time set 12600");
-			tp(server, vx + 0.5, vy + 1.2, vz + 0.5, yaw, 6);
+			// закат над озером: встаём на восточный берег и смотрим на запад, на солнце
+			int[] west = server.computeOnServer(s -> sunsetView(s, cx, cz));
+			server.runCommand("time set 12000");
+			if (west != null) {
+				tp(server, west[0] + 0.5, west[1] + 1.2, west[2] + 0.5, yawTo(west[0] + 0.5, west[2] + 0.5, cx + 0.5, cz + 0.5), 4);
+			} else {
+				tp(server, vx + 0.5, vy + 1.2, vz + 0.5, yaw, 4);
+			}
 			context.waitTicks(60);
 			render(singleplayer);
 			shot(context, "prostor_04_lake_sunset");
@@ -125,6 +130,19 @@ public class ProstorClientGameTest implements FabricClientGameTest {
 		LakeCheck.report(world, lake);
 		LakeCheck.reportArea(world, lake.centerX(), lake.centerZ());
 		return new int[]{view.x(), view.y(), view.z(), lake.centerX(), lake.centerZ(), lake.waterY()};
+	}
+
+	/** Точка на восточном берегу того же озера: {x, y, z} или null. */
+	private static int[] sunsetView(MinecraftServer server, int cx, int cz) {
+		ServerWorld world = server.getOverworld();
+		Lakes.Terrain terrain = new Lakes.Terrain(world.getSeed(), world.getChunkManager().getChunkGenerator(),
+				world.getChunkManager().getNoiseConfig(), world);
+		Lakes.Lake lake = Lakes.lake(terrain, Math.floorDiv(cx, Lakes.CELL), Math.floorDiv(cz, Lakes.CELL));
+		if (lake == null) {
+			return null;
+		}
+		ProstorCommands.Viewpoint view = ProstorCommands.lakeViewpoint(world, lake, 0.0);
+		return view == null ? null : new int[]{view.x(), view.y(), view.z()};
 	}
 
 	/** Ближайший к точке обзора куст камыша у озера или null. */

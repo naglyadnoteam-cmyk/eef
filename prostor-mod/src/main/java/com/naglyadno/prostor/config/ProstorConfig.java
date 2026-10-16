@@ -22,7 +22,7 @@ public final class ProstorConfig {
 
 	/** Как часто встречается биом. Ширина полосы влажности, которую биом занимает в своей климатической зоне. */
 	public enum Frequency {
-		OFF(0.0f), RARE(0.12f), NORMAL(0.2f), COMMON(0.3f);
+		OFF(0.0f), RARE(0.1f), NORMAL(0.16f), COMMON(0.24f);
 
 		public final float humidityWidth;
 
